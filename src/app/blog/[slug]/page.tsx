@@ -27,7 +27,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-const funnelLabel = { tofu: '📗 Educação', mofu: '📙 Comparativo', bofu: '📕 Guia de Compra' }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -49,9 +48,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* Meta */}
       <div className="flex items-center gap-3 mb-4 text-sm text-gray-500">
-        <span>{funnelLabel[post.funnel as keyof typeof funnelLabel]}</span>
-        <span>·</span>
-        <span className="capitalize">{post.category}</span>
+        <span className="capitalize text-green-700 font-semibold">{post.category}</span>
         <span>·</span>
         <span>{date}</span>
         {post.readingTime && <><span>·</span><span>{post.readingTime} min</span></>}

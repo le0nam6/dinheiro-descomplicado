@@ -13,17 +13,6 @@ const categories = [
   { label: 'Educação Financeira', href: '/categoria/educacao-financeira', icon: '📚', desc: 'Score, orçamento, hábitos' },
 ]
 
-const funnelBadge: Record<string, string> = {
-  tofu: 'Educação',
-  mofu: 'Comparativo',
-  bofu: 'Guia de Compra',
-}
-const funnelColor: Record<string, string> = {
-  tofu: 'bg-emerald-500',
-  mofu: 'bg-amber-500',
-  bofu: 'bg-rose-500',
-}
-
 type Post = {
   title: string
   slug: { current: string }
@@ -66,10 +55,7 @@ export default async function Home() {
           {/* content */}
           <div className="relative z-10 p-7 md:p-10 w-full">
             <div className="flex items-center gap-2 mb-3">
-              <span className={`text-xs font-bold text-white px-2.5 py-1 rounded-full ${funnelColor[featured.funnel] ?? 'bg-green-600'}`}>
-                {funnelBadge[featured.funnel] ?? featured.funnel}
-              </span>
-              <span className="text-xs text-white/70 capitalize">{featured.category}</span>
+              <span className="text-xs text-white/70 capitalize font-semibold">{featured.category}</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-extrabold text-white leading-tight mb-3 max-w-2xl">
               {featured.title}
@@ -187,10 +173,7 @@ export default async function Home() {
                 {/* text */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-bold text-white px-2 py-0.5 rounded-full ${funnelColor[post.funnel] ?? 'bg-green-600'}`}>
-                      {funnelBadge[post.funnel] ?? post.funnel}
-                    </span>
-                    <span className="text-xs text-gray-400 capitalize">{post.category}</span>
+                    <span className="text-xs text-green-700 font-semibold capitalize">{post.category}</span>
                   </div>
                   <h3 className="font-bold text-gray-900 text-sm md:text-base leading-snug line-clamp-2 group-hover:text-green-700 transition-colors">
                     {post.title}
