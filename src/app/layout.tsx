@@ -52,12 +52,13 @@ function Header() {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
       {/* Logo centralizada */}
-      <div className="max-w-4xl mx-auto px-4 pt-4 pb-2 flex justify-center">
+      <div className="max-w-4xl mx-auto px-4 pt-1 pb-0 flex justify-center overflow-hidden">
         <a href="/">
           <img
             src="/logo-endinheirados.png"
             alt="Endinheirados"
-            className="h-28 md:h-36 w-auto object-contain"
+            className="w-auto object-contain"
+            style={{ height: 'clamp(80px, 10vw, 120px)', marginTop: '-8%', marginBottom: '-8%' }}
           />
         </a>
       </div>
