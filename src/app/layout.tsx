@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import { CustomCursor } from '@/components/CustomCursor'
+import { Newsletter } from '@/components/Newsletter'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -80,9 +81,21 @@ function Header() {
 function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-gray-50 mt-16">
-      <div className="max-w-4xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
-        <p>© {new Date().getFullYear()} Endinheirados · Conteúdo informativo, não é consultoria financeira.</p>
+      <div className="max-w-2xl mx-auto px-4 pt-10 pb-2 text-center">
+        <p className="text-lg font-bold text-gray-900 mb-1">Receba dinheiro no seu e-mail 💰</p>
+        <p className="text-sm text-gray-500 mb-4">As melhores dicas de finanças, sem enrolação. Direto na sua caixa de entrada.</p>
+        <Newsletter />
+      </div>
+      <div className="max-w-4xl mx-auto px-4 py-8 text-center text-sm text-gray-500 border-t border-gray-200 mt-8">
+        <p className="max-w-xl mx-auto text-xs text-gray-400 mb-4">
+          ⚠️ O conteúdo do Endinheirados é informativo e educacional, não constitui recomendação ou consultoria financeira. Consulte um profissional certificado antes de investir.
+        </p>
+        <p>© {new Date().getFullYear()} Endinheirados · Finanças sem complicação.</p>
         <p className="mt-1">
+          <a href="/sobre" className="hover:underline">Sobre</a>
+          {' · '}
+          <a href="/contato" className="hover:underline">Contato</a>
+          {' · '}
           <a href="/privacidade" className="hover:underline">Política de Privacidade</a>
           {' · '}
           <a href="/termos" className="hover:underline">Termos de Uso</a>

@@ -1,2 +1,3 @@
 import { postSchema } from './post'
-export const schemaTypes = [postSchema]
+import { subscriberSchema } from './subscriber'
+export const schemaTypes = [postSchema, subscriberSchema]
