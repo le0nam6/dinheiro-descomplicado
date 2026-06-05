@@ -16,7 +16,23 @@ export const postSchema = defineType({
       { name: 'alt', title: 'Alt text', type: 'string' },
       { name: 'credit', title: 'Crédito (Unsplash)', type: 'string' },
     ]}),
-    defineField({ name: 'body', title: 'Conteúdo', type: 'array', of: [{ type: 'block' }, { type: 'image' }] }),
+    defineField({ name: 'body', title: 'Conteúdo', type: 'array', of: [
+      { type: 'block' },
+      { type: 'image' },
+      {
+        type: 'object',
+        name: 'table',
+        title: 'Tabela',
+        fields: [
+          { name: 'rows', title: 'Linhas', type: 'array', of: [
+            { type: 'object', name: 'row', fields: [
+              { name: 'cells', title: 'Células', type: 'array', of: [{ type: 'string' }] },
+            ]},
+          ]},
+        ],
+        preview: { select: { rows: 'rows' }, prepare: ({ rows }) => ({ title: `Tabela (${rows?.length || 0} linhas)` }) },
+      },
+    ] }),
     defineField({ name: 'seoKeywords', title: 'Palavras-chave SEO', type: 'array', of: [{ type: 'string' }] }),
     defineField({ name: 'readingTime', title: 'Tempo de leitura (min)', type: 'number' }),
   ],

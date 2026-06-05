@@ -51,8 +51,25 @@ function markdownToBlocks(markdown) {
     listItems = []
   }
 
+  let tableLines = []
+  const flushTable = () => {
+    if (tableLines.length < 2) { tableLines = []; return }
+    // Remove a linha separadora (|---|---|)
+    const rows = tableLines
+      .filter(l => !/^\s*\|?[\s:|-]+\|?\s*$/.test(l) || !l.includes('-'))
+      .map(l => l.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim().replace(/\*\*/g, '')))
+    if (rows.length) {
+      blocks.push({ _type: 'table', _key: uid(), rows: rows.map(cells => ({ _key: uid(), cells })) })
+    }
+    tableLines = []
+  }
+
   for (const line of lines) {
     const trimmed = line.trim()
+
+    if (trimmed.startsWith('|')) { flushList(); tableLines.push(trimmed); continue }
+    else if (tableLines.length) flushTable()
+
     if (!trimmed) { flushList(); continue }
     if (line.startsWith('#### ')) { flushList(); blocks.push(makeBlock('h4', line.slice(5).trim())); continue }
     if (line.startsWith('### '))  { flushList(); blocks.push(makeBlock('h3', line.slice(4).trim())); continue }
@@ -60,12 +77,12 @@ function markdownToBlocks(markdown) {
     if (line.startsWith('> '))    { flushList(); blocks.push(makeBlock('blockquote', line.slice(2).trim())); continue }
     if (line.startsWith('- ') || line.startsWith('* ')) { listItems.push({ text: line.slice(2).trim(), style: 'bullet' }); continue }
     if (/^\d+\.\s/.test(line))   { listItems.push({ text: line.replace(/^\d+\.\s/, '').trim(), style: 'number' }); continue }
-    if (line.startsWith('|')) continue
     flushList()
     if (trimmed) blocks.push(makeBlock('normal', trimmed))
   }
   flushList()
-  return blocks.filter(b => b.children?.some(s => s.text?.trim()))
+  flushTable()
+  return blocks.filter(b => b._type === 'table' || b.children?.some(s => s.text?.trim()))
 }
 
 async function main() {

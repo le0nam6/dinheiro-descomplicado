@@ -74,6 +74,35 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* Conteúdo */}
       <div className="prose mt-8">
         {post.body && <PortableText value={post.body} components={{
+          types: {
+            table: ({value}: {value: {rows?: {cells: string[]}[]}}) => {
+              const rows = value?.rows ?? []
+              if (!rows.length) return null
+              const [header, ...body] = rows
+              return (
+                <div className="my-6 overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        {header.cells.map((cell, i) => (
+                          <th key={i} className="bg-green-50 text-green-900 font-bold text-left px-3 py-2 border border-gray-200">{cell}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {body.map((row, ri) => (
+                        <tr key={ri} className={ri % 2 ? 'bg-gray-50' : ''}>
+                          {row.cells.map((cell, ci) => (
+                            <td key={ci} className="px-3 py-2 border border-gray-200 text-gray-700">{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            },
+          },
           block: {
             h2: ({children}) => <h2 className="text-2xl font-bold mt-10 mb-4 text-gray-900 border-b border-gray-100 pb-2">{children}</h2>,
             h3: ({children}) => <h3 className="text-xl font-bold mt-8 mb-3 text-gray-800">{children}</h3>,

@@ -95,8 +95,25 @@ function markdownToBlocks(markdown) {
     listItems = []
   }
 
+  let tableLines = []
+  const flushTable = () => {
+    if (tableLines.length < 2) { tableLines = []; return }
+    const rows = tableLines
+      .filter(l => !/^\s*\|?[\s:|-]+\|?\s*$/.test(l) || !l.includes('-'))
+      .map(l => l.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim().replace(/\*\*/g, '')))
+    if (rows.length) {
+      blocks.push({ _type: 'table', _key: uid(), rows: rows.map(cells => ({ _key: uid(), cells })) })
+    }
+    tableLines = []
+  }
+
   for (const line of lines) {
     const trimmed = line.trim()
+
+    // Tabela
+    if (trimmed.startsWith('|')) { flushList(); tableLines.push(trimmed); continue }
+    else if (tableLines.length) flushTable()
+
     if (!trimmed) { flushList(); continue }
 
     // Headings
@@ -120,15 +137,13 @@ function markdownToBlocks(markdown) {
       listItems.push({ text: line.replace(/^\d+\.\s/, '').trim(), style: 'number' }); continue
     }
 
-    // Ignora linhas de tabela
-    if (line.startsWith('|')) continue
-
     // Parágrafo normal
     flushList()
     if (trimmed) blocks.push(makeBlock('normal', trimmed))
   }
   flushList()
-  return blocks.filter(b => b.children?.some(s => s.text?.trim()))
+  flushTable()
+  return blocks.filter(b => b._type === 'table' || b.children?.some(s => s.text?.trim()))
 }
 
 // ─── Publica no Sanity ────────────────────────────────────────────────────────
