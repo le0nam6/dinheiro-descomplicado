@@ -1,65 +1,67 @@
-import Image from "next/image";
+import { getPosts } from '@/lib/sanity'
+import { PostCard } from '@/components/PostCard'
+import { AdUnit } from '@/components/AdUnit'
 
-export default function Home() {
+export const revalidate = 3600
+
+const categories = [
+  { label: '💳 Empréstimo', href: '/categoria/emprestimo', desc: 'Consignado, pessoal, FGTS' },
+  { label: '🏦 Investimentos', href: '/categoria/investimentos', desc: 'Renda fixa, ações, fundos' },
+  { label: '💳 Cartão de Crédito', href: '/categoria/cartao-de-credito', desc: 'Cashback, milhas, sem anuidade' },
+  { label: '🏠 Financiamento', href: '/categoria/financiamento', desc: 'Imóvel, veículo, simulação' },
+  { label: '📊 Previdência', href: '/categoria/previdencia', desc: 'PGBL, VGBL, aposentadoria' },
+  { label: '📚 Educação Financeira', href: '/categoria/educacao-financeira', desc: 'Score, orçamento, hábitos' },
+]
+
+export default async function Home() {
+  const posts = await getPosts(9)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+    <>
+      {/* Hero */}
+      <section className="text-center py-12 mb-8">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
+          Finanças que <span className="text-green-700">qualquer um entende</span>
+        </h1>
+        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+          Empréstimo, cartão, investimento e crédito explicados sem enrolação. Atualizado 2x por dia.
+        </p>
+      </section>
+
+      {/* Categorias */}
+      <section className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+        {categories.map(cat => (
+          <a key={cat.href} href={cat.href}
+            className="border border-gray-200 rounded-xl p-4 hover:border-green-400 hover:shadow-sm transition-all bg-white">
+            <div className="font-semibold text-gray-900">{cat.label}</div>
+            <div className="text-xs text-gray-500 mt-1">{cat.desc}</div>
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        ))}
+      </section>
+
+      {/* Ad topo */}
+      <AdUnit slot="1234567890" format="horizontal" />
+
+      {/* Posts recentes */}
+      <section>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Artigos recentes</h2>
+        {posts.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {posts.map((post: Parameters<typeof PostCard>[0]['post']) => (
+              <PostCard key={post.slug.current} post={post} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 text-gray-400 border border-dashed border-gray-200 rounded-xl">
+            <p className="text-4xl mb-3">📝</p>
+            <p className="font-medium">Nenhum post publicado ainda.</p>
+            <p className="text-sm mt-1">O pipeline de automação vai preencher isso em breve!</p>
+          </div>
+        )}
+      </section>
+
+      {/* Ad fundo */}
+      <AdUnit slot="0987654321" className="mt-12" />
+    </>
+  )
 }
