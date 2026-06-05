@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import { CustomCursor } from '@/components/CustomCursor'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={inter.className}>
+        <CustomCursor />
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
         <Footer />
@@ -55,7 +57,7 @@ function Header() {
           <img
             src="/logo-endinheirados.png"
             alt="Endinheirados"
-            className="h-20 md:h-24 w-auto object-contain"
+            className="h-28 md:h-36 w-auto object-contain"
           />
         </a>
       </div>
