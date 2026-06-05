@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/studio/', '/api/'],
     },
-    sitemap: 'https://dinheirodescomplicado.com.br/sitemap.xml',
+    sitemap: 'https://endinheirados.vercel.app/sitemap.xml',
   }
 }
