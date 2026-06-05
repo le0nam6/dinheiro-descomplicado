@@ -1,6 +1,7 @@
 import { getPostBySlug, getPosts } from '@/lib/sanity'
 import { PortableText } from '@portabletext/react'
 import { AdUnit } from '@/components/AdUnit'
+import { ArticleCTA } from '@/components/ArticleCTA'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
@@ -142,22 +143,26 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* Ad meio do artigo */}
       <AdUnit slot="2222222222" className="my-8" />
 
-      {/* FAQ Schema */}
-      {post.seoKeywords && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'Article',
-              headline: post.title,
-              description: post.excerpt,
-              datePublished: post.publishedAt,
-              publisher: { '@type': 'Organization', name: 'Dinheiro Descomplicado' },
-            }),
-          }}
-        />
-      )}
+      {/* CTA: Ferramentas + Links internos */}
+      <ArticleCTA slug={post.slug.current} category={post.category ?? ''} />
+
+      {/* Ad fim de artigo */}
+      <AdUnit slot="2222222222" className="mt-8" />
+
+      {/* JSON-LD Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: post.title,
+            description: post.excerpt,
+            datePublished: post.publishedAt,
+            publisher: { '@type': 'Organization', name: 'Endinheirados' },
+          }),
+        }}
+      />
     </article>
   )
 }
