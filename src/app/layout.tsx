@@ -82,8 +82,8 @@ function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-gray-50 mt-16">
       <div className="max-w-2xl mx-auto px-4 pt-10 pb-2 text-center">
-        <p className="text-lg font-bold text-gray-900 mb-1">Receba dinheiro no seu e-mail 💰</p>
-        <p className="text-sm text-gray-500 mb-4">As melhores dicas de finanças, sem enrolação. Direto na sua caixa de entrada.</p>
+        <p className="text-lg font-bold text-gray-900 mb-1">Fique por dentro do seu dinheiro 💰</p>
+        <p className="text-sm text-gray-500 mb-4">Receba as melhores dicas de finanças e oportunidades direto no seu e-mail, sem enrolação.</p>
         <Newsletter />
       </div>
       <div className="max-w-4xl mx-auto px-4 py-8 text-center text-sm text-gray-500 border-t border-gray-200 mt-8">
