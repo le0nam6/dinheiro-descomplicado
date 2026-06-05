@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://endinheirados.vercel.app'),
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
-  verification: { google: 'google9c81f0b4386d1467' },
+  verification: { google: 'anSq3ftdvYVOnIJvtePaBPVD6sbcmn7GosnaisjOmcY' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
