@@ -89,8 +89,8 @@ export default async function Home() {
         <section className="relative rounded-2xl overflow-hidden mb-10 min-h-[320px] flex items-center justify-center bg-gradient-to-br from-green-900 to-green-700">
           <div className="text-center text-white/60 px-8">
             <p className="text-5xl mb-4">💰</p>
-            <p className="text-xl font-bold text-white">Dinheiro Descomplicado</p>
-            <p className="text-sm mt-2">Finanças pessoais, investimentos e crédito explicados sem enrolação.</p>
+            <p className="text-xl font-bold text-white">Endinheirados</p>
+            <p className="text-sm mt-2">Ganhe dinheiro. Garanta que ele nunca acabe.</p>
           </div>
         </section>
       )}
@@ -208,7 +208,7 @@ export default async function Home() {
         <div className="text-center py-16 text-gray-400 border border-dashed border-gray-200 rounded-xl mb-12">
           <p className="text-4xl mb-3">📝</p>
           <p className="font-medium text-gray-500">Nenhum post publicado ainda.</p>
-          <p className="text-sm mt-1">A automação publica às 12h e 18h diariamente.</p>
+          <p className="text-sm mt-1">Publicamos 2 artigos por dia. Volte em breve!</p>
         </div>
       )}
 

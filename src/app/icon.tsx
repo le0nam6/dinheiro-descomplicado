@@ -17,8 +17,8 @@ export default function Icon() {
           justifyContent: 'center',
         }}
       >
-        <span style={{ fontSize: 18, color: 'white', fontWeight: 900, fontFamily: 'sans-serif', lineHeight: 1 }}>
-          R$
+        <span style={{ fontSize: 14, color: 'white', fontWeight: 900, fontFamily: 'sans-serif', lineHeight: 1 }}>
+          E$
         </span>
       </div>
     ),

@@ -6,10 +6,10 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: { default: 'Dinheiro Descomplicado', template: '%s | Dinheiro Descomplicado' },
-  description: 'Finanças pessoais, investimentos, empréstimos e crédito explicados de forma simples.',
-  metadataBase: new URL('https://dinheirodescomplicado.com.br'),
-  openGraph: { siteName: 'Dinheiro Descomplicado', locale: 'pt_BR', type: 'website' },
+  title: { default: 'Endinheirados', template: '%s | Endinheirados' },
+  description: 'Aprenda a ganhar dinheiro e garantir que ele nunca acabe. Investimentos, renda extra, independência financeira e muito mais.',
+  metadataBase: new URL('https://endinheirados.vercel.app'),
+  openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
   verification: { google: 'google9c81f0b4386d1467' },
 }
@@ -48,17 +48,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function Header() {
   return (
-    <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-        <a href="/" className="text-2xl font-bold text-green-700">💰 Dinheiro Descomplicado</a>
-        <nav className="hidden md:flex gap-6 text-sm font-medium text-gray-600">
-          <a href="/blog" className="hover:text-green-700">Blog</a>
-          <a href="/categoria/emprestimo" className="hover:text-green-700">Empréstimo</a>
-          <a href="/categoria/investimentos" className="hover:text-green-700">Investimentos</a>
-          <a href="/categoria/cartao-de-credito" className="hover:text-green-700">Cartão</a>
-          <a href="/calculadora" className="hover:text-green-700 text-green-600 font-semibold">📊 Calculadora</a>
-        </nav>
+    <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      {/* Logo centralizada */}
+      <div className="max-w-4xl mx-auto px-4 pt-4 pb-2 flex justify-center">
+        <a href="/">
+          <img
+            src="/logo-endinheirados.png"
+            alt="Endinheirados"
+            className="h-14 md:h-16 w-auto object-contain"
+          />
+        </a>
       </div>
+      {/* Nav como submenu centralizado */}
+      <nav className="border-t border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-center gap-1 flex-wrap">
+          <a href="/blog" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
+          <a href="/categoria/emprestimo" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
+          <a href="/categoria/investimentos" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
+          <a href="/categoria/cartao-de-credito" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
+          <a href="/categoria/educacao-financeira" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação</a>
+          <a href="/calculadora" className="px-3 py-1.5 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">📊 Calculadora</a>
+        </div>
+      </nav>
     </header>
   )
 }
@@ -67,7 +78,7 @@ function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-gray-50 mt-16">
       <div className="max-w-4xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
-        <p>© {new Date().getFullYear()} Dinheiro Descomplicado · Conteúdo informativo, não é consultoria financeira.</p>
+        <p>© {new Date().getFullYear()} Endinheirados · Conteúdo informativo, não é consultoria financeira.</p>
         <p className="mt-1">
           <a href="/privacidade" className="hover:underline">Política de Privacidade</a>
           {' · '}
