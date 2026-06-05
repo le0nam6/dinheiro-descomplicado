@@ -56,44 +56,79 @@ async function fetchUnsplashImage(keyword) {
   }
 }
 
+// ─── Parser inline: detecta negrito e texto normal ───────────────────────────
+function uid() { return Math.random().toString(36).slice(2, 10) }
+
+function parseInline(text) {
+  const spans = []
+  const regex = /\*\*(.+?)\*\*/g
+  let last = 0, m
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) spans.push({ _type: 'span', _key: uid(), text: text.slice(last, m.index), marks: [] })
+    spans.push({ _type: 'span', _key: uid(), text: m[1], marks: ['strong'] })
+    last = regex.lastIndex
+  }
+  if (last < text.length) spans.push({ _type: 'span', _key: uid(), text: text.slice(last), marks: [] })
+  return spans.length ? spans : [{ _type: 'span', _key: uid(), text, marks: [] }]
+}
+
+function makeBlock(style, text, extra = {}) {
+  return { _type: 'block', _key: uid(), style, markDefs: [], children: parseInline(text), ...extra }
+}
+
 // ─── Converte markdown para Portable Text ─────────────────────────────────────
 function markdownToBlocks(markdown) {
   const lines = markdown.split('\n')
   const blocks = []
-  const listItems = []
+  let listItems = []
+  let listStyle = 'bullet'
 
   const flushList = () => {
-    if (listItems.length === 0) return
-    listItems.forEach(item => {
+    if (!listItems.length) return
+    listItems.forEach(({ text, style }) => {
       blocks.push({
-        _type: 'block', _key: Math.random().toString(36).slice(2),
-        style: 'normal', listItem: 'bullet', level: 1,
-        children: [{ _type: 'span', _key: Math.random().toString(36).slice(2), text: item, marks: [] }],
-        markDefs: [],
+        _type: 'block', _key: uid(), style: 'normal',
+        listItem: style, level: 1, markDefs: [],
+        children: parseInline(text),
       })
     })
-    listItems.length = 0
+    listItems = []
   }
-
-  const makeBlock = (style, text) => ({
-    _type: 'block', _key: Math.random().toString(36).slice(2),
-    style, markDefs: [],
-    children: [{ _type: 'span', _key: Math.random().toString(36).slice(2), text: text.replace(/\*\*(.+?)\*\*/g, '$1'), marks: [] }],
-  })
 
   for (const line of lines) {
-    if (!line.trim()) { flushList(); continue }
-    if (line.startsWith('## '))       { flushList(); blocks.push(makeBlock('h2', line.slice(3).trim())) }
-    else if (line.startsWith('### ')) { flushList(); blocks.push(makeBlock('h3', line.slice(4).trim())) }
-    else if (line.startsWith('- ') || line.startsWith('* ')) listItems.push(line.slice(2).trim())
-    else if (/^\d+\.\s/.test(line))   listItems.push(line.replace(/^\d+\.\s/, '').trim())
-    else if (!line.startsWith('|') && !line.startsWith('#')) {
+    const trimmed = line.trim()
+    if (!trimmed) { flushList(); continue }
+
+    // Headings
+    if (line.startsWith('#### ')) { flushList(); blocks.push(makeBlock('h4', line.slice(5).trim())); continue }
+    if (line.startsWith('### '))  { flushList(); blocks.push(makeBlock('h3', line.slice(4).trim())); continue }
+    if (line.startsWith('## '))   { flushList(); blocks.push(makeBlock('h2', line.slice(3).trim())); continue }
+    if (line.startsWith('# '))    { flushList(); blocks.push(makeBlock('h1', line.slice(2).trim())); continue }
+
+    // Blockquote
+    if (line.startsWith('> ')) {
       flushList()
-      blocks.push(makeBlock('normal', line))
+      blocks.push(makeBlock('blockquote', line.slice(2).trim()))
+      continue
     }
+
+    // Listas
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      listItems.push({ text: line.slice(2).trim(), style: 'bullet' }); continue
+    }
+    if (/^\d+\.\s/.test(line)) {
+      listItems.push({ text: line.replace(/^\d+\.\s/, '').trim(), style: 'number' }); continue
+    }
+
+    // Ignora linhas de tabela
+    if (line.startsWith('|')) continue
+
+    // Parágrafo normal
+    flushList()
+    if (trimmed) blocks.push(makeBlock('normal', trimmed))
   }
   flushList()
-  return blocks.filter(b => b.children?.[0]?.text?.trim())
+  return blocks.filter(b => b.children?.some(s => s.text?.trim()))
 }
 
 // ─── Publica no Sanity ────────────────────────────────────────────────────────

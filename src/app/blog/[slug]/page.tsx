@@ -76,7 +76,41 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* Conteúdo */}
       <div className="prose mt-8">
-        {post.body && <PortableText value={post.body} />}
+        {post.body && <PortableText value={post.body} components={{
+          block: {
+            h2: ({children}) => <h2 className="text-2xl font-bold mt-10 mb-4 text-gray-900 border-b border-gray-100 pb-2">{children}</h2>,
+            h3: ({children}) => <h3 className="text-xl font-bold mt-8 mb-3 text-gray-800">{children}</h3>,
+            h4: ({children}) => (
+              <div className="flex items-start gap-2 mt-8 mb-2">
+                <span className="text-green-600 font-black text-lg leading-tight mt-0.5">?</span>
+                <h4 className="text-base font-bold text-gray-900 leading-snug">{children}</h4>
+              </div>
+            ),
+            normal: ({children}) => <p className="text-gray-700 leading-relaxed mb-4 text-[17px]">{children}</p>,
+            blockquote: ({children}) => (
+              <blockquote className="border-l-4 border-green-500 bg-green-50 pl-4 pr-4 py-3 my-6 rounded-r-xl italic text-gray-700 text-base">
+                {children}
+              </blockquote>
+            ),
+          },
+          list: {
+            bullet: ({children}) => <ul className="list-none space-y-2 my-4">{children}</ul>,
+            number: ({children}) => <ol className="list-decimal list-inside space-y-2 my-4 text-gray-700">{children}</ol>,
+          },
+          listItem: {
+            bullet: ({children}) => (
+              <li className="flex items-start gap-2 text-gray-700 text-[17px]">
+                <span className="text-green-500 font-bold mt-1 shrink-0">✓</span>
+                <span>{children}</span>
+              </li>
+            ),
+            number: ({children}) => <li className="text-gray-700 text-[17px] leading-relaxed">{children}</li>,
+          },
+          marks: {
+            strong: ({children}) => <strong className="font-bold text-gray-900">{children}</strong>,
+            em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+          },
+        }} />}
       </div>
 
       {/* Ad meio do artigo */}
