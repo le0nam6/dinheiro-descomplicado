@@ -43,6 +43,7 @@ function Header() {
           <a href="/categoria/emprestimo" className="hover:text-green-700">Empréstimo</a>
           <a href="/categoria/investimentos" className="hover:text-green-700">Investimentos</a>
           <a href="/categoria/cartao-de-credito" className="hover:text-green-700">Cartão</a>
+          <a href="/calculadora" className="hover:text-green-700 text-green-600 font-semibold">📊 Calculadora</a>
         </nav>
       </div>
     </header>
