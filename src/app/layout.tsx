@@ -55,7 +55,7 @@ function Header() {
           <img
             src="/logo-endinheirados.png"
             alt="Endinheirados"
-            className="h-14 md:h-16 w-auto object-contain"
+            className="h-20 md:h-24 w-auto object-contain"
           />
         </a>
       </div>
