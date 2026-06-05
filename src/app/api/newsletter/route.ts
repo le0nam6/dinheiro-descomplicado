@@ -14,6 +14,27 @@ const client = isConfigured
     })
   : null
 
+// Inscreve o e-mail no Beehiiv (envio automático da newsletter)
+async function subscribeToBeehiiv(email: string) {
+  const apiKey = process.env.BEEHIIV_API_KEY
+  const pubId = process.env.BEEHIIV_PUBLICATION_ID
+  if (!apiKey || !pubId) return // ainda não configurado — ignora silenciosamente
+
+  await fetch(`https://api.beehiiv.com/v2/publications/${pubId}/subscriptions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      reactivate_existing: false,
+      send_welcome_email: true,
+      utm_source: 'site',
+    }),
+  })
+}
+
 export async function POST(request: Request) {
   try {
     const { email } = await request.json()
@@ -22,23 +43,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 })
     }
 
-    if (!client) {
-      // Sem Sanity configurado — aceita silenciosamente para não quebrar o front
-      return NextResponse.json({ ok: true })
-    }
+    // 1. Inscreve no Beehiiv (newsletter) — não bloqueia se falhar
+    await subscribeToBeehiiv(email).catch(() => {})
 
-    // Evita duplicados
-    const existing = await client.fetch(
-      `*[_type == "subscriber" && email == $email][0]`,
-      { email }
-    )
-
-    if (!existing) {
-      await client.create({
-        _type: 'subscriber',
-        email,
-        subscribedAt: new Date().toISOString(),
-      })
+    // 2. Salva backup no Sanity
+    if (client) {
+      const existing = await client.fetch(
+        `*[_type == "subscriber" && email == $email][0]`,
+        { email }
+      )
+      if (!existing) {
+        await client.create({
+          _type: 'subscriber',
+          email,
+          subscribedAt: new Date().toISOString(),
+        })
+      }
     }
 
     return NextResponse.json({ ok: true })
