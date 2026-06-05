@@ -11,12 +11,25 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://dinheirodescomplicado.com.br'),
   openGraph: { siteName: 'Dinheiro Descomplicado', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
+  verification: { google: 'google9c81f0b4386d1467' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
+        {/* Google Analytics 4 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-C1TGQHVY23"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-C1TGQHVY23');
+        `}</Script>
+        {/* Google AdSense */}
         <Script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
