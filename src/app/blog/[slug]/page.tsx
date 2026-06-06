@@ -2,8 +2,16 @@ import { getPostBySlug, getPosts, getRelatedPosts } from '@/lib/sanity'
 import { PortableText } from '@portabletext/react'
 import { AdUnit } from '@/components/AdUnit'
 import { ArticleCTA } from '@/components/ArticleCTA'
+import { AffiliateBox } from '@/components/AffiliateBox'
+import { TableOfContents } from '@/components/TableOfContents'
+import { extractHeadings, extractFaqs, slugifyHeading } from '@/lib/postStructure'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+
+function headingText(value: { children?: { text?: string }[] }) {
+  return (value?.children || []).map(c => c.text || '').join('')
+}
 
 export const revalidate = 3600
 
@@ -35,10 +43,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   if (!post) notFound()
 
   const related = await getRelatedPosts(slug, post.category ?? '', 4)
+  const headings = extractHeadings(post.body || [])
+  const faqs = extractFaqs(post.body || [])
   const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   return (
-    <article className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[1fr_240px] lg:gap-10 lg:items-start">
+    <article className="max-w-2xl w-full mx-auto min-w-0">
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-400 mb-6">
         <a href="/" className="hover:text-green-700">Início</a>
@@ -49,8 +60,10 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       </nav>
 
       {/* Meta */}
-      <div className="flex items-center gap-3 mb-4 text-sm text-gray-500">
+      <div className="flex items-center gap-3 mb-4 text-sm text-gray-500 flex-wrap">
         <span className="capitalize text-green-700 font-semibold">{post.category}</span>
+        <span>·</span>
+        <Link href="/autor" className="hover:text-green-700">por Equipe Endinheirados</Link>
         <span>·</span>
         <span>{date}</span>
         {post.readingTime && <><span>·</span><span>{post.readingTime} min</span></>}
@@ -106,7 +119,10 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             },
           },
           block: {
-            h2: ({children}) => <h2 className="text-2xl font-bold mt-10 mb-4 text-gray-900 border-b border-gray-100 pb-2">{children}</h2>,
+            h2: ({children, value}) => {
+              const id = slugifyHeading(headingText(value as { children?: { text?: string }[] }))
+              return <h2 id={id} className="text-2xl font-bold mt-10 mb-4 text-gray-900 border-b border-gray-100 pb-2 scroll-mt-24">{children}</h2>
+            },
             h3: ({children}) => <h3 className="text-xl font-bold mt-8 mb-3 text-gray-800">{children}</h3>,
             h4: ({children}) => (
               <div className="flex items-start gap-2 mt-8 mb-2">
@@ -154,16 +170,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         }} />}
       </div>
 
-      {/* Ad meio do artigo */}
-      <AdUnit slot="2222222222" className="my-8" />
+      {/* Ofertas de afiliado (MoFu/BoFu) */}
+      {(post.funnel === 'bofu' || post.funnel === 'mofu') && <AffiliateBox category={post.category ?? ''} />}
 
       {/* CTA: Ferramentas + Links internos */}
       <ArticleCTA category={post.category ?? ''} related={related} />
 
-      {/* Ad fim de artigo */}
-      <AdUnit slot="2222222222" className="mt-8" />
-
-      {/* JSON-LD Schema */}
+      {/* JSON-LD: Article + Author */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -173,10 +186,37 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             headline: post.title,
             description: post.excerpt,
             datePublished: post.publishedAt,
-            publisher: { '@type': 'Organization', name: 'Endinheirados' },
+            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: 'https://endinheirados.cc/autor' },
+            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/icon.png' } },
           }),
         }}
       />
+
+      {/* JSON-LD: FAQ (rich snippets) */}
+      {faqs.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: faqs.map(f => ({
+                '@type': 'Question',
+                name: f.q,
+                acceptedAnswer: { '@type': 'Answer', text: f.a },
+              })),
+            }),
+          }}
+        />
+      )}
     </article>
+
+    {/* Índice navegável (sticky, só em telas grandes e guias longos) */}
+    <aside className="hidden lg:block">
+      <div className="sticky top-24">
+        <TableOfContents headings={headings} />
+      </div>
+    </aside>
+    </div>
   )
 }
