@@ -4,27 +4,22 @@
  */
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
-export const runtime = 'edge'
+// Node.js runtime para acesso ao filesystem (fontes e logo)
+export const runtime = 'nodejs'
 
-async function loadFont(url: string): Promise<ArrayBuffer> {
-  const res = await fetch(url)
-  return res.arrayBuffer()
-}
+// Carrega fontes e logo uma única vez (cached no módulo)
+const bebasNeue = readFileSync(join(process.cwd(), 'public/fonts/BebasNeue.ttf'))
+const roboto    = readFileSync(join(process.cwd(), 'public/fonts/Roboto.ttf'))
+const logoData  = readFileSync(join(process.cwd(), 'public/logo-og.png'))
+const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url)
+  const { searchParams } = new URL(req.url)
   const title    = searchParams.get('title') || 'ENDINHEIRADOS'
   const photoUrl = searchParams.get('photo') || ''
-
-  // Carrega fontes do Google Fonts
-  const [bebasNeue, roboto] = await Promise.all([
-    loadFont('https://fonts.gstatic.com/s/bebasneu/v14/JTUSjIg69CK48gW7PXoo9WlhyyTh89Y.woff2'),
-    loadFont('https://fonts.gstatic.com/s/roboto/v47/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DY.woff2'),
-  ])
-
-  // Logo como URL absoluta (precisa estar em public/logo-endinheirados.png)
-  const logoUrl = `${origin}/logo-og.png`
 
   return new ImageResponse(
     (
@@ -74,20 +69,15 @@ export async function GET(req: NextRequest) {
             padding: '0 68px 68px',
           }}
         >
-          {/* Logo Endinheirados */}
+          {/* Logo Endinheirados — base64 inline */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={logoUrl}
+            src={logoBase64}
             alt="Endinheirados"
-            style={{
-              height: 90,
-              width: 'auto',
-              objectFit: 'contain',
-              objectPosition: 'left center',
-            }}
+            style={{ height: 90, width: 'auto', objectFit: 'contain', objectPosition: 'left' }}
           />
 
-          {/* Título — Bebas Neue, CAIXA ALTA, branco, máx 3 linhas */}
+          {/* Título — Bebas Neue, CAIXA ALTA */}
           <div
             style={{
               fontFamily: 'BebasNeue',
@@ -123,8 +113,8 @@ export async function GET(req: NextRequest) {
       width: 1080,
       height: 1080,
       fonts: [
-        { name: 'BebasNeue', data: bebasNeue, style: 'normal', weight: 400 },
-        { name: 'Roboto',    data: roboto,    style: 'normal', weight: 400 },
+        { name: 'BebasNeue', data: bebasNeue.buffer, style: 'normal', weight: 400 },
+        { name: 'Roboto',    data: roboto.buffer,    style: 'normal', weight: 400 },
       ],
     }
   )
