@@ -72,7 +72,7 @@ function Header() {
           <a href="/categoria/emprestimo" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
           <a href="/categoria/investimentos" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
           <a href="/categoria/cartao-de-credito" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
-          <a href="/categoria/educacao-financeira" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação</a>
+          <a href="/categoria/educacao-financeira" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
           <a href="/ferramentas" className="px-3 py-1.5 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">🧰 Ferramentas</a>
         </div>
       </nav>
