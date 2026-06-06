@@ -31,13 +31,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           gtag('js', new Date());
           gtag('config', 'G-C1TGQHVY23');
         `}</Script>
-        {/* Google AdSense */}
-        <Script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        {/* Google AdSense — só carrega quando houver Publisher ID real */}
+        {process.env.NEXT_PUBLIC_ADSENSE_ID?.startsWith('ca-pub-') && !process.env.NEXT_PUBLIC_ADSENSE_ID.includes('SEU_ID') && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
       </head>
       <body className={inter.className}>
         <CustomCursor />
