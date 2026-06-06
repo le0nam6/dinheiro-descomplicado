@@ -2,7 +2,7 @@
  * Gera imagem 1080x1080 no padrão do template Endinheirados para o Instagram.
  * GET /api/og?title=TITULO&photo=URL_FOTO
  */
-import { ImageResponse } from '@vercel/og'
+import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
