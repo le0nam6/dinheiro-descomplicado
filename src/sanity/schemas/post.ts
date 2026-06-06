@@ -35,6 +35,8 @@ export const postSchema = defineType({
     ] }),
     defineField({ name: 'seoKeywords', title: 'Palavras-chave SEO', type: 'array', of: [{ type: 'string' }] }),
     defineField({ name: 'readingTime', title: 'Tempo de leitura (min)', type: 'number' }),
+    defineField({ name: 'igPublished', title: 'Publicado no Instagram', type: 'boolean' }),
+    defineField({ name: 'igPostId', title: 'ID do post no Instagram', type: 'string' }),
   ],
   preview: {
     select: { title: 'title', subtitle: 'funnel', media: 'coverImage' },

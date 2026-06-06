@@ -20,7 +20,7 @@ config({ path: resolve(__dirname, '../.env.local') })
 const IG_USER_ID = process.env.IG_USER_ID
 const IG_TOKEN = process.env.IG_ACCESS_TOKEN
 const SITE = 'https://endinheirados.cc'
-const GRAPH = 'https://graph.facebook.com/v21.0'
+const GRAPH = 'https://graph.instagram.com/v21.0'
 
 const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
