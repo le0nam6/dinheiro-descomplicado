@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
           <img
             src={logoBase64}
             alt="Endinheirados"
-            style={{ height: 90, width: 'auto', objectFit: 'contain', objectPosition: 'left' }}
+            style={{ height: 80, width: 240, objectFit: 'contain' }}
           />
 
           {/* Título — Bebas Neue, CAIXA ALTA */}
