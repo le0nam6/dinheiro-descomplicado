@@ -69,14 +69,13 @@ export function ToolGate({ toolName, toolDescription, children }: Props) {
   if (unlocked) return <>{children}</>
 
   return (
-    <div className="relative">
-      {/* Preview borrada da ferramenta */}
-      <div className="opacity-10 blur-sm pointer-events-none select-none" aria-hidden>
-        {children}
-      </div>
-
-      {/* Gate */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
+    <div>
+      {/* Container cresce com o gate; fundo borrado fica atrás */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-green-50/30 border border-gray-200">
+        <div className="opacity-[0.04] blur-md pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden>
+          {children}
+        </div>
+        <div className="relative flex items-center justify-center p-5 sm:p-8">
         <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-7 w-full max-w-md">
           <div className="text-center mb-5">
             <span className="text-4xl">🔓</span>
@@ -132,6 +131,7 @@ export function ToolGate({ toolName, toolDescription, children }: Props) {
               Sem spam. Você receberá nossas dicas de finanças. Cancele quando quiser.
             </p>
           </form>
+        </div>
         </div>
       </div>
     </div>

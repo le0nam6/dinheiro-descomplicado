@@ -19,8 +19,8 @@ const tools = [
   {
     href: '/ferramentas/calculadora-juros',
     emoji: '📈',
-    title: 'Calculadora de Juros Compostos',
-    desc: 'Veja quanto rende qualquer investimento com aportes mensais ao longo do tempo.',
+    title: 'Calculadora de Investimentos',
+    desc: 'Veja quanto rende qualquer investimento com aportes mensais e compare produtos financeiros.',
     tags: ['Investimentos', 'Popular'],
     color: 'bg-green-50 border-green-200',
     tagColor: 'bg-green-100 text-green-700',
@@ -35,13 +35,14 @@ const tools = [
     tagColor: 'bg-red-100 text-red-700',
   },
   {
-    href: '/calculadora',
-    emoji: '📊',
-    title: 'Calculadora de Patrimônio',
-    desc: 'Compare Tesouro Selic, CDB, LCI/LCA e poupança e descubra onde seu dinheiro rende mais.',
-    tags: ['Investimentos'],
-    color: 'bg-violet-50 border-violet-200',
-    tagColor: 'bg-violet-100 text-violet-700',
+    href: '/ferramentas/simulador-ir',
+    emoji: '📋',
+    title: 'Simulador de IR em Investimentos',
+    desc: 'Calcule o imposto de renda sobre seus rendimentos de renda fixa e descubra o líquido real.',
+    tags: ['Impostos'],
+    color: 'bg-amber-50 border-amber-200',
+    tagColor: 'bg-amber-100 text-amber-700',
+    comingSoon: true,
   },
 ]
 
@@ -57,23 +58,24 @@ export default function FerramentasPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-5 mb-12">
-        {tools.map(tool => (
-          <Link
-            key={tool.href}
-            href={tool.href}
-            className={`group border rounded-2xl p-6 hover:shadow-md transition-all ${tool.color}`}
-          >
-            <div className="text-3xl mb-3">{tool.emoji}</div>
-            <div className="flex gap-2 mb-2 flex-wrap">
-              {tool.tags.map(tag => (
-                <span key={tag} className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tool.tagColor}`}>{tag}</span>
-              ))}
+        {tools.map(tool => {
+          const cs = (tool as {comingSoon?: boolean}).comingSoon
+          const card = (
+            <div className={`group border rounded-2xl p-6 transition-all ${tool.color} ${cs ? 'opacity-60' : 'hover:shadow-md'}`}>
+              <div className="text-3xl mb-3">{tool.emoji}</div>
+              <div className="flex gap-2 mb-2 flex-wrap">
+                {tool.tags.map(tag => (
+                  <span key={tag} className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tool.tagColor}`}>{tag}</span>
+                ))}
+                {cs && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Em breve</span>}
+              </div>
+              <h2 className={`font-bold text-gray-900 text-base mb-1 transition-colors ${!cs && 'group-hover:text-green-700'}`}>{tool.title}</h2>
+              <p className="text-sm text-gray-600 leading-relaxed">{tool.desc}</p>
+              {!cs && <p className="text-sm font-semibold text-green-700 mt-3">Acessar grátis →</p>}
             </div>
-            <h2 className="font-bold text-gray-900 text-base mb-1 group-hover:text-green-700 transition-colors">{tool.title}</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">{tool.desc}</p>
-            <p className="text-sm font-semibold text-green-700 mt-3">Acessar grátis →</p>
-          </Link>
-        ))}
+          )
+          return cs ? <div key={tool.href}>{card}</div> : <Link key={tool.href} href={tool.href}>{card}</Link>
+        })}
       </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center">

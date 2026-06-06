@@ -12,9 +12,9 @@ export default function Page() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-2"><Link href="/ferramentas" className="text-sm text-green-700 hover:underline">← Todas as ferramentas</Link></div>
-      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Calculadora de Juros Compostos</h1>
-      <p className="text-gray-500 text-sm mb-6">Simule quanto seu dinheiro rende com aportes mensais e compare produtos.</p>
-      <ToolGate toolName="Calculadora de Juros Compostos" toolDescription="Simule investimentos e veja o efeito bola de neve ao longo do tempo.">
+      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Calculadora de Investimentos</h1>
+      <p className="text-gray-500 text-sm mb-6">Simule quanto seu dinheiro rende com aportes mensais e compare produtos financeiros.</p>
+      <ToolGate toolName="Calculadora de Investimentos" toolDescription="Simule aportes mensais, compare Tesouro Selic, CDB, LCI/LCA e veja o efeito bola de neve.">
         <CalculadoraInvestimentos />
       </ToolGate>
       <div className="mt-8 bg-green-50 border border-green-200 rounded-2xl p-5 text-sm">
