@@ -13,7 +13,8 @@ export const runtime = 'nodejs'
 // Carrega fontes e logo uma única vez (cached no módulo)
 const bebasNeue = readFileSync(join(process.cwd(), 'public/fonts/BebasNeue.ttf'))
 const roboto    = readFileSync(join(process.cwd(), 'public/fonts/Roboto.ttf'))
-const logoData  = readFileSync(join(process.cwd(), 'public/logo-og.png'))
+// Logo original em alta resolução (1536×1024)
+const logoData  = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
 const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`
 
 export async function GET(req: NextRequest) {
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
           <img
             src={logoBase64}
             alt="Endinheirados"
-            style={{ height: 80, width: 240, objectFit: 'contain' }}
+            style={{ height: 160, width: 480, objectFit: 'contain', objectPosition: 'left center' }}
           />
 
           {/* Título — Bebas Neue, CAIXA ALTA */}
