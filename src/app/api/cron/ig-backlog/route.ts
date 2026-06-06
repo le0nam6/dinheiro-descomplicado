@@ -16,7 +16,7 @@ const sanity = createClient({
 const IG_USER_ID = process.env.IG_USER_ID!
 const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
 const GRAPH      = 'https://graph.instagram.com/v21.0'
-const SITE       = 'https://endinheirados.cc'
+const SITE       = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
 
 const TOPIC_MAP: Record<string, string> = {
   'fii': 'real estate buildings', 'fundo imobiliário': 'real estate buildings',
@@ -111,11 +111,16 @@ export async function GET(request: Request) {
 
     const caption = await buildCaption(post)
 
+    // Gera imagem no padrão Endinheirados via /api/og
+    const igTitle = encodeURIComponent(post.title.toUpperCase())
+    const igPhoto = encodeURIComponent(photoUrl)
+    const igImageUrl = `${SITE}/api/og?title=${igTitle}&photo=${igPhoto}`
+
     // Criar container de mídia
     const createRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: photoUrl, caption, access_token: IG_TOKEN }),
+      body: JSON.stringify({ image_url: igImageUrl, caption, access_token: IG_TOKEN }),
     })
     const createData = await createRes.json()
     if (!createData.id) throw new Error(`Erro ao criar mídia: ${JSON.stringify(createData)}`)

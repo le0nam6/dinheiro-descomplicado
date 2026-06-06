@@ -97,11 +97,17 @@ ESTILO OBRIGATÓRIO — linguagem informal, descontraída, acessível:
 - Comparações com coisas do dia a dia: Nubank, Netflix, iFood, PIX
 - Zero jargão corporativo. Se usar termo técnico, explica na mesma frase
 - Começa o artigo direto no assunto — sem "Olá leitores" nem introduções genéricas
-- Pode usar "Né?", "Sabe?", "Tipo assim" com moderação
 
-Retorne SOMENTE um JSON válido (sem markdown, sem texto fora do JSON):
+REGRAS DO CORPO (body) — CRÍTICO:
+- ZERO markdown inline: sem asteriscos, sem underline, sem backticks, sem colchetes
+- Textos em negrito ou itálico são PROIBIDOS — escreva em texto puro
+- Subtítulos de seção começam EXATAMENTE com "## " (dois sustenidos + espaço)
+- Cada item do array body é uma string: ou "## Subtítulo" ou um parágrafo simples
+- Links são proibidos dentro do body
+
+Retorne SOMENTE um JSON válido (sem texto fora do JSON):
 {
-  "title": "título chamativo em português, max 70 chars, sem ano obrigatório",
+  "title": "título chamativo em português, max 70 chars",
   "slug": "slug-url-amigavel-sem-acento",
   "excerpt": "resumo de até 155 chars para SEO, direto ao ponto",
   "funnel": "${funnel}",
@@ -110,9 +116,11 @@ Retorne SOMENTE um JSON válido (sem markdown, sem texto fora do JSON):
   "readingTime": 5,
   "coverQuery": "termo em inglês para buscar foto no Unsplash (ex: money investment coins)",
   "body": [
-    "## Subtítulo H2 quando necessário",
-    "Parágrafo de texto normal",
-    "Mais parágrafos..."
+    "## Subtítulo da primeira seção",
+    "Parágrafo com texto puro, sem asteriscos nem markdown inline.",
+    "Mais um parágrafo simples.",
+    "## Outra seção",
+    "Parágrafo puro continuando o conteúdo."
   ],
   "igCaption": "legenda instagram com 3 parágrafos de 4-5 linhas cada, tom informal genZ, sem emojis no corpo, finaliza com: \\n\\n🔗 Acesse o guia completo em endinheirados.cc/blog/SLUG\\n\\n#finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados",
   "igTitle": "título em CAIXA ALTA para o card do Instagram, max 3 linhas de 25 chars"
@@ -228,11 +236,14 @@ export async function GET(request: Request) {
     const sanityDoc = await publishToSanity(post, photo)
     console.log(`[cron/publish] Publicado no Sanity: ${sanityDoc._id}`)
 
-    // 5. Publicar no Instagram com foto do Unsplash
+    // 5. Gerar imagem no padrão Endinheirados via /api/og e publicar no Instagram
     let igPostId: string | null = null
     if (photo.url) {
+      const igTitle = encodeURIComponent(post.igTitle as string || post.title as string)
+      const igPhoto = encodeURIComponent(photo.url)
+      const igImageUrl = `${SITE}/api/og?title=${igTitle}&photo=${igPhoto}`
       const caption = (post.igCaption as string).replace('SLUG', post.slug as string)
-      igPostId = await publishToInstagram(photo.url, caption)
+      igPostId = await publishToInstagram(igImageUrl, caption)
       console.log(`[cron/publish] Publicado no Instagram: ${igPostId}`)
     }
 
