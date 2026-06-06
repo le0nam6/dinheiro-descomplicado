@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   ])
 
   // Logo como URL absoluta (precisa estar em public/logo-endinheirados.png)
-  const logoUrl = `${origin}/logo-endinheirados.png`
+  const logoUrl = `${origin}/logo-og.png`
 
   return new ImageResponse(
     (
