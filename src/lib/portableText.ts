@@ -2,21 +2,34 @@
 
 function uid() { return Math.random().toString(36).slice(2, 10) }
 
-function parseInline(text: string) {
-  const spans: { _type: string; _key: string; text: string; marks: string[] }[] = []
-  const regex = /\*\*(.+?)\*\*/g
+type Span = { _type: string; _key: string; text: string; marks: string[] }
+type MarkDef = { _key: string; _type: string; href: string }
+
+// Suporta **negrito** e [texto](url) — gera children + markDefs
+function parseInline(text: string): { children: Span[]; markDefs: MarkDef[] } {
+  const children: Span[] = []
+  const markDefs: MarkDef[] = []
+  const regex = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\)/g
   let last = 0, m: RegExpExecArray | null
   while ((m = regex.exec(text)) !== null) {
-    if (m.index > last) spans.push({ _type: 'span', _key: uid(), text: text.slice(last, m.index), marks: [] })
-    spans.push({ _type: 'span', _key: uid(), text: m[1], marks: ['strong'] })
+    if (m.index > last) children.push({ _type: 'span', _key: uid(), text: text.slice(last, m.index), marks: [] })
+    if (m[1] !== undefined) {
+      children.push({ _type: 'span', _key: uid(), text: m[1], marks: ['strong'] })
+    } else {
+      const key = uid()
+      markDefs.push({ _key: key, _type: 'link', href: m[3] })
+      children.push({ _type: 'span', _key: uid(), text: m[2], marks: [key] })
+    }
     last = regex.lastIndex
   }
-  if (last < text.length) spans.push({ _type: 'span', _key: uid(), text: text.slice(last), marks: [] })
-  return spans.length ? spans : [{ _type: 'span', _key: uid(), text, marks: [] }]
+  if (last < text.length) children.push({ _type: 'span', _key: uid(), text: text.slice(last), marks: [] })
+  if (!children.length) children.push({ _type: 'span', _key: uid(), text, marks: [] })
+  return { children, markDefs }
 }
 
 function makeBlock(style: string, text: string) {
-  return { _type: 'block', _key: uid(), style, markDefs: [], children: parseInline(text) }
+  const { children, markDefs } = parseInline(text)
+  return { _type: 'block', _key: uid(), style, markDefs, children }
 }
 
 export function markdownToBlocks(markdown: string) {
@@ -27,7 +40,8 @@ export function markdownToBlocks(markdown: string) {
   const flushList = () => {
     if (!listItems.length) return
     listItems.forEach(({ text, style }) => {
-      blocks.push({ _type: 'block', _key: uid(), style: 'normal', listItem: style, level: 1, markDefs: [], children: parseInline(text) })
+      const { children, markDefs } = parseInline(text)
+      blocks.push({ _type: 'block', _key: uid(), style: 'normal', listItem: style, level: 1, markDefs, children })
     })
     listItems = []
   }
@@ -76,7 +90,15 @@ export function blocksToMarkdown(blocks: Record<string, unknown>[]): string {
       continue
     }
     const children = (b.children as { text: string; marks?: string[] }[]) || []
-    const text = children.map(c => c.marks?.includes('strong') ? `**${c.text}**` : c.text).join('')
+    const markDefs = (b.markDefs as { _key: string; href: string }[]) || []
+    const text = children.map(c => {
+      const linkMark = c.marks?.find(mk => markDefs.some(d => d._key === mk))
+      if (linkMark) {
+        const href = markDefs.find(d => d._key === linkMark)?.href || ''
+        return `[${c.text}](${href})`
+      }
+      return c.marks?.includes('strong') ? `**${c.text}**` : c.text
+    }).join('')
     const style = b.style as string
     const listItem = b.listItem as string | undefined
     if (listItem === 'bullet') lines.push(`- ${text}`)

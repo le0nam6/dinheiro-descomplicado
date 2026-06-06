@@ -1,4 +1,4 @@
-import { getPostBySlug, getPosts } from '@/lib/sanity'
+import { getPostBySlug, getPosts, getRelatedPosts } from '@/lib/sanity'
 import { PortableText } from '@portabletext/react'
 import { AdUnit } from '@/components/AdUnit'
 import { ArticleCTA } from '@/components/ArticleCTA'
@@ -34,6 +34,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const post = await getPostBySlug(slug)
   if (!post) notFound()
 
+  const related = await getRelatedPosts(slug, post.category ?? '', 4)
   const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   return (
@@ -136,6 +137,19 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           marks: {
             strong: ({children}) => <strong className="font-bold text-gray-900">{children}</strong>,
             em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+            link: ({children, value}: {children: React.ReactNode; value?: {href?: string}}) => {
+              const href = value?.href || '#'
+              const internal = href.startsWith('/')
+              return (
+                <a
+                  href={href}
+                  className="text-green-700 font-semibold underline decoration-green-300 underline-offset-2 hover:decoration-green-600"
+                  {...(internal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+                >
+                  {children}
+                </a>
+              )
+            },
           },
         }} />}
       </div>
@@ -144,7 +158,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       <AdUnit slot="2222222222" className="my-8" />
 
       {/* CTA: Ferramentas + Links internos */}
-      <ArticleCTA slug={post.slug.current} category={post.category ?? ''} />
+      <ArticleCTA category={post.category ?? ''} related={related} />
 
       {/* Ad fim de artigo */}
       <AdUnit slot="2222222222" className="mt-8" />

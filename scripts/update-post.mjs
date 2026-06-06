@@ -22,20 +22,29 @@ const sanity = createClient({
 function uid() { return Math.random().toString(36).slice(2, 10) }
 
 function parseInline(text) {
-  const spans = []
-  const regex = /\*\*(.+?)\*\*/g
+  const children = []
+  const markDefs = []
+  const regex = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\)/g
   let last = 0, m
   while ((m = regex.exec(text)) !== null) {
-    if (m.index > last) spans.push({ _type: 'span', _key: uid(), text: text.slice(last, m.index), marks: [] })
-    spans.push({ _type: 'span', _key: uid(), text: m[1], marks: ['strong'] })
+    if (m.index > last) children.push({ _type: 'span', _key: uid(), text: text.slice(last, m.index), marks: [] })
+    if (m[1] !== undefined) {
+      children.push({ _type: 'span', _key: uid(), text: m[1], marks: ['strong'] })
+    } else {
+      const key = uid()
+      markDefs.push({ _key: key, _type: 'link', href: m[3] })
+      children.push({ _type: 'span', _key: uid(), text: m[2], marks: [key] })
+    }
     last = regex.lastIndex
   }
-  if (last < text.length) spans.push({ _type: 'span', _key: uid(), text: text.slice(last), marks: [] })
-  return spans.length ? spans : [{ _type: 'span', _key: uid(), text, marks: [] }]
+  if (last < text.length) children.push({ _type: 'span', _key: uid(), text: text.slice(last), marks: [] })
+  if (!children.length) children.push({ _type: 'span', _key: uid(), text, marks: [] })
+  return { children, markDefs }
 }
 
 function makeBlock(style, text) {
-  return { _type: 'block', _key: uid(), style, markDefs: [], children: parseInline(text) }
+  const { children, markDefs } = parseInline(text)
+  return { _type: 'block', _key: uid(), style, markDefs, children }
 }
 
 function markdownToBlocks(markdown) {
@@ -46,7 +55,8 @@ function markdownToBlocks(markdown) {
   const flushList = () => {
     if (!listItems.length) return
     listItems.forEach(({ text, style }) => {
-      blocks.push({ _type: 'block', _key: uid(), style: 'normal', listItem: style, level: 1, markDefs: [], children: parseInline(text) })
+      const { children, markDefs } = parseInline(text)
+      blocks.push({ _type: 'block', _key: uid(), style: 'normal', listItem: style, level: 1, markDefs, children })
     })
     listItems = []
   }

@@ -32,6 +32,25 @@ export async function getPostBySlug(slug: string) {
   } catch { return null }
 }
 
+// Posts relacionados: mesma categoria primeiro, completa com recentes de outras
+export async function getRelatedPosts(slug: string, category: string, limit = 4) {
+  if (!client) return []
+  try {
+    const sameCategory = await client.fetch(
+      `*[_type == "post" && category == $category && slug.current != $slug] | order(publishedAt desc) [0...$limit] { title, slug, category }`,
+      { category, slug, limit }
+    )
+    if (sameCategory.length >= limit) return sameCategory
+    // completa com outros recentes
+    const fillIds = sameCategory.map((p: { slug: { current: string } }) => p.slug.current)
+    const extra = await client.fetch(
+      `*[_type == "post" && slug.current != $slug && !(slug.current in $exclude)] | order(publishedAt desc) [0...$n] { title, slug, category }`,
+      { slug, exclude: fillIds, n: limit - sameCategory.length }
+    )
+    return [...sameCategory, ...extra]
+  } catch { return [] }
+}
+
 export async function getPostsByCategory(category: string) {
   if (!client) return []
   try {
