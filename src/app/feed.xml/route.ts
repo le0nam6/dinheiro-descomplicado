@@ -1,6 +1,6 @@
 import { getPosts } from '@/lib/sanity'
 
-const BASE_URL = 'https://endinheirados.vercel.app'
+const BASE_URL = 'https://endinheirados.cc'
 
 type Post = {
   title: string

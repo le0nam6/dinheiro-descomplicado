@@ -1,7 +1,7 @@
 import { getPosts } from '@/lib/sanity'
 import type { MetadataRoute } from 'next'
 
-const BASE_URL = 'https://endinheirados.vercel.app'
+const BASE_URL = 'https://endinheirados.cc'
 
 const staticRoutes = [
   { url: BASE_URL, priority: 1.0, changeFrequency: 'daily' as const },

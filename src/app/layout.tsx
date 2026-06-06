@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: { default: 'Endinheirados', template: '%s | Endinheirados' },
   description: 'Aprenda a ganhar dinheiro e garantir que ele nunca acabe. Investimentos, renda extra, independência financeira e muito mais.',
-  metadataBase: new URL('https://endinheirados.vercel.app'),
+  metadataBase: new URL('https://endinheirados.cc'),
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
   verification: { google: 'anSq3ftdvYVOnIJvtePaBPVD6sbcmn7GosnaisjOmcY' },
