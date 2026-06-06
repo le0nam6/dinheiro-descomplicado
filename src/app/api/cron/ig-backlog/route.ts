@@ -18,29 +18,49 @@ const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
 const GRAPH      = 'https://graph.instagram.com/v21.0'
 const SITE       = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
 
-const TOPIC_MAP: Record<string, string> = {
-  'fii': 'real estate buildings', 'fundo imobiliário': 'real estate buildings',
-  'tesouro': 'government treasury bonds', 'selic': 'interest rates bank',
-  'cdb': 'bank savings investment', 'lci': 'bank savings',
-  'cartão': 'credit card payment wallet', 'crédito': 'credit card wallet',
-  'score': 'credit score bank approval', 'dívida': 'debt finance stress',
-  'empréstimo': 'loan bank contract', 'financiamento': 'house keys mortgage',
-  'imóvel': 'real estate house keys', 'renda passiva': 'passive income growth',
-  'investimento': 'investment growth chart', 'carteira': 'portfolio diversification',
-  'imposto': 'tax documents calculator', 'previdência': 'retirement savings',
-  'reserva': 'emergency savings jar', 'pix': 'mobile payment smartphone',
-  'juros': 'compound interest growth', 'negativ': 'debt finance worry',
-}
+// Gera query de busca específica usando Claude Haiku
+async function getPhotoQuery(title: string, excerpt: string): Promise<string> {
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 60,
+      messages: [{
+        role: 'user',
+        content: `Gere uma query em inglês para buscar uma foto relevante no Pexels para este artigo financeiro brasileiro.
 
-function getPhotoQuery(title: string): string {
-  const lower = title.toLowerCase()
-  for (const [kw, q] of Object.entries(TOPIC_MAP)) {
-    if (lower.includes(kw)) return q
+Título: ${title}
+Resumo: ${excerpt?.slice(0, 100) || ''}
+
+Regras:
+- Máximo 5 palavras em inglês
+- Seja ESPECÍFICO: mencione marcas, lugares ou objetos reais quando relevante
+- Evite termos genéricos como "money", "business", "finance" sozinhos
+- Exemplos bons: "Azul airline Brazil airport", "Nubank credit card Brazil", "real estate apartment keys", "stock market chart screen"
+
+Responda APENAS com a query, sem explicações.`,
+      }],
+    })
+    return (msg.content[0] as { text: string }).text.trim()
+  } catch {
+    // Fallback simples se Claude falhar
+    return `${title.split(' ').slice(0, 3).join(' ')} Brazil finance`
   }
-  return 'personal finance money'
 }
 
-async function getUnsplashPhoto(query: string) {
+async function getPhoto(query: string): Promise<string | null> {
+  // 1. Pexels — busca mais específica e relevante
+  if (process.env.PEXELS_API_KEY) {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
+      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+    )
+    const d = await res.json()
+    const photo = d.photos?.[0]
+    if (photo) return photo.src.large2x || photo.src.large
+  }
+  // 2. Unsplash — fallback
   const res = await fetch(
     `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
     { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
@@ -106,7 +126,9 @@ export async function GET(request: Request) {
 
     console.log(`[ig-backlog] Publicando: "${post.title}"`)
 
-    const photoUrl = await getUnsplashPhoto(getPhotoQuery(post.title))
+    const photoQuery = await getPhotoQuery(post.title, post.excerpt)
+    console.log(`[ig-backlog] Query de foto: "${photoQuery}"`)
+    const photoUrl = await getPhoto(photoQuery)
     if (!photoUrl) throw new Error('Unsplash não retornou foto')
 
     const caption = await buildCaption(post)

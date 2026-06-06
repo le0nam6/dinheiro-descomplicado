@@ -63,16 +63,32 @@ function getSearchQuery(title, cats) {
 }
 
 const query = getSearchQuery(title, cats)
+const PEXELS_KEY = process.env.PEXELS_API_KEY
 
-const url = `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`
-const res = await fetch(url, { headers: { Authorization: `Client-ID ${KEY}` } })
+// 1. Pexels — busca mais específica e relevante
+if (PEXELS_KEY) {
+  const res = await fetch(
+    `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
+    { headers: { Authorization: PEXELS_KEY } }
+  )
+  const data = await res.json()
+  const photo = data.photos?.[0]
+  if (photo) {
+    console.log(photo.src.large2x || photo.src.large)
+    process.exit(0)
+  }
+}
+
+// 2. Unsplash — fallback
+const res = await fetch(
+  `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
+  { headers: { Authorization: `Client-ID ${KEY}` } }
+)
 const data = await res.json()
 
 if (!data.urls?.regular) {
-  console.error('❌ Unsplash não retornou foto:', JSON.stringify(data))
+  console.error('❌ Nenhuma foto encontrada:', JSON.stringify(data))
   process.exit(1)
 }
 
-// Retorna URL em alta resolução (1080px)
-const photoUrl = data.urls.regular.replace('w=1080', 'w=1350') || data.urls.full
-console.log(photoUrl)
+console.log(data.urls.regular)

@@ -58,17 +58,35 @@ async function fetchNews(): Promise<string> {
     'https://g1.globo.com/rss/g1/economia/',
     'https://exame.com/feed/',
   ]
-  const items: string[] = []
-  await Promise.allSettled(feeds.map(async url => {
+  const items: Array<{ title: string; description: string; url: string; imageUrl?: string }> = []
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
+
+  await Promise.allSettled(feeds.map(async feedUrl => {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+      const res = await fetch(feedUrl, { signal: AbortSignal.timeout(5000) })
       const xml = await res.text()
-      const titles = [...xml.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/g)]
-        .slice(1, 4).map(m => (m[1] || m[2]).trim())
-      items.push(...titles)
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g
+      let match
+      while ((match = itemRegex.exec(xml)) !== null) {
+        const block = match[1]
+        const get = (tag: string) => {
+          const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`))
+          return m ? (m[1] || m[2] || '').trim() : ''
+        }
+        const title = get('title')
+        const description = get('description').replace(/<[^>]+>/g, '').slice(0, 300)
+        const link = get('link')
+        const pubDate = get('pubDate')
+        if (!title || !link) continue
+        if (pubDate && new Date(pubDate) < cutoff) continue
+        const mediaMatch = block.match(/<media:content[^>]+url=["']([^"']+)["']/) ||
+                           block.match(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/)
+        const imageUrl = mediaMatch?.[1]
+        items.push({ title, description, url: link, imageUrl })
+      }
     } catch { /* feed indisponível */ }
   }))
-  return items.slice(0, 8).join('\n')
+  return JSON.stringify(items.slice(0, 6))
 }
 
 // --- Gerar post com Claude ---
@@ -82,9 +100,21 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
     bofu: 'fundo de funil (decision): recomendações específicas, ranking, melhores opções do momento',
   }[funnel]
 
-  const context = type === 'news'
-    ? `Com base nestas notícias financeiras recentes do mercado brasileiro:\n${news}\n\nEscolha a mais relevante e educativa.`
-    : `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
+  // Para notícias, inclui imageUrl do artigo original se disponível
+  let articleImageUrl: string | undefined
+  let context: string
+  if (type === 'news') {
+    try {
+      const newsItems: Array<{ title: string; description: string; url: string; imageUrl?: string }> = JSON.parse(news)
+      const picked = newsItems[0]
+      articleImageUrl = picked?.imageUrl || undefined
+      context = `Com base nesta notícia financeira recente do mercado brasileiro:\nTítulo: ${picked?.title}\nDescrição: ${picked?.description}\nURL: ${picked?.url}\n\nCrie um post educativo que explica o impacto dessa notícia para o brasileiro comum.`
+    } catch {
+      context = `Com base nestas notícias financeiras recentes:\n${news}\n\nEscolha a mais relevante.`
+    }
+  } else {
+    context = `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
+  }
 
   const prompt = `${context}
 
@@ -114,7 +144,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   "category": "uma de: empréstimo | cartão de crédito | financiamento | investimentos | previdência | educação financeira",
   "seoKeywords": ["kw1", "kw2", "kw3", "kw4", "kw5"],
   "readingTime": 5,
-  "coverQuery": "termo em inglês para buscar foto no Unsplash (ex: money investment coins)",
+  "coverQuery": "query específica em inglês para buscar foto no Pexels. Para notícias: descreva o assunto real (ex: 'Azul airline Brazil airport plane', 'Selic interest rate Brazil bank', 'Nubank credit card Brazil'). Para evergreen: descreva a cena visual (ex: 'person counting money table', 'couple planning finances laptop'). Seja ESPECÍFICO — evite termos genéricos como 'money', 'finance', 'business'.",
   "body": [
     "## Subtítulo da primeira seção",
     "Parágrafo com texto puro, sem asteriscos nem markdown inline.",
@@ -133,12 +163,38 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   })
 
   const text = (msg.content[0] as { type: string; text: string }).text.trim()
-  return JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  const parsed = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  // Injeta imageUrl do artigo original se existir
+  if (articleImageUrl) parsed.articleImageUrl = articleImageUrl
+  return parsed
 }
 
-// --- Foto Unsplash ---
+// --- Foto: Pexels (primário) → Unsplash (fallback) ---
 
-async function getPhoto(query: string) {
+async function getPhoto(query: string, articleImageUrl?: string) {
+  // 1. Imagem extraída diretamente do artigo de notícia (mais relevante)
+  if (articleImageUrl) {
+    return { url: articleImageUrl, alt: query, credit: 'Foto: Fonte original' }
+  }
+
+  // 2. Pexels — melhor para buscas específicas (notícias, marcas, locais)
+  if (process.env.PEXELS_API_KEY) {
+    const pRes = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
+      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+    )
+    const pData = await pRes.json()
+    const photo = pData.photos?.[0]
+    if (photo) {
+      return {
+        url: photo.src.large2x || photo.src.large,
+        alt: photo.alt || query,
+        credit: `Foto: ${photo.photographer} via Pexels`,
+      }
+    }
+  }
+
+  // 3. Unsplash — fallback
   const res = await fetch(
     `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
     { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
@@ -229,8 +285,9 @@ export async function GET(request: Request) {
     const post = await generatePost(schedule, news)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
-    // 3. Foto Unsplash
-    const photo = await getPhoto(post.coverQuery || 'personal finance money')
+    // 3. Foto: tenta imagem do artigo original → Pexels → Unsplash
+    const articleImageUrl = schedule.type === 'news' ? (post.articleImageUrl as string | undefined) : undefined
+    const photo = await getPhoto(post.coverQuery || 'personal finance money', articleImageUrl)
 
     // 4. Publicar no Sanity
     const sanityDoc = await publishToSanity(post, photo)
