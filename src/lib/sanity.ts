@@ -36,8 +36,23 @@ export async function getPostsByCategory(category: string) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "post" && category == $category] | order(publishedAt desc) [0...20] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
+      `*[_type == "post" && category == $category] | order(publishedAt desc) [0...50] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
       { category }
     )
   } catch { return [] }
+}
+
+// Conta posts por categoria (para os hubs das editorias)
+export async function getCategoryCounts() {
+  if (!client) return {}
+  try {
+    const result = await client.fetch(
+      `*[_type == "post"]{ category }`
+    )
+    const counts: Record<string, number> = {}
+    for (const r of result) {
+      if (r.category) counts[r.category] = (counts[r.category] || 0) + 1
+    }
+    return counts
+  } catch { return {} }
 }
