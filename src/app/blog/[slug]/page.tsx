@@ -48,7 +48,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   return (
-    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[1fr_240px] lg:gap-10 lg:items-start">
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[1fr_240px] lg:gap-10">
     <article className="max-w-2xl w-full mx-auto min-w-0">
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-400 mb-6">
