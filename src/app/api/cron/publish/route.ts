@@ -135,6 +135,14 @@ REGRAS DO CORPO (body) — CRÍTICO:
 - Cada item do array body é uma string: ou "## Subtítulo" ou um parágrafo simples
 - Links são proibidos dentro do body
 
+INDEPENDÊNCIA EDITORIAL — CRÍTICO quando o conteúdo cita empresas, bancos, corretoras, cartões ou produtos financeiros:
+- Este NÃO é um conteúdo patrocinado. NUNCA escreva como se fosse publicidade ou parceria.
+- PROIBIDO usar linguagem de venda: "abra sua conta agora", "garanta já", "a melhor escolha é", "recomendamos a empresa X", CTAs para produtos específicos, ou tom promocional de uma marca.
+- Mantenha neutralidade jornalística: ao comparar empresas, apresente CRITÉRIOS objetivos (taxas, custos, o que oferece) e cite PRÓS E CONTRAS de cada uma.
+- Deixe claro que qualquer ranking é uma análise editorial independente baseada em informações públicas, não indicação paga.
+- O leitor deve sair informado para decidir sozinho — não empurrado para uma marca.
+- Não invente dados, taxas ou números específicos de empresas. Se não tiver certeza, fale de forma genérica ("costumam cobrar", "varia conforme").
+
 Retorne SOMENTE um JSON válido (sem texto fora do JSON):
 {
   "title": "título chamativo em português, max 70 chars",
@@ -223,9 +231,18 @@ function toBlocks(lines: string[]) {
   }))
 }
 
+const DISCLAIMER_LINES = [
+  '## Transparência',
+  'Este conteúdo é editorial e independente. O Endinheirados não é patrocinado pelas empresas citadas e não recebe comissão por nenhuma indicação aqui. As análises são baseadas em informações públicas e servem apenas como ponto de partida — sempre confirme taxas e condições diretamente com a empresa antes de decidir. Este material é informativo e não constitui recomendação de investimento.',
+]
+
 async function publishToSanity(post: Record<string, unknown>, photo: { url: string; alt: string; credit: string }) {
   const existing = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: post.slug })
   if (existing) throw new Error(`Slug já existe: ${post.slug}`)
+
+  const bodyLines = [...(post.body as string[])]
+  // Posts de fundo de funil citam empresas/produtos: anexa disclaimer de independência
+  if (post.funnel === 'bofu') bodyLines.push(...DISCLAIMER_LINES)
 
   return sanity.create({
     _type: 'post',
@@ -236,7 +253,7 @@ async function publishToSanity(post: Record<string, unknown>, photo: { url: stri
     category: post.category,
     excerpt: (post.excerpt as string).slice(0, 160),
     coverImage: photo.url ? { url: photo.url, alt: photo.alt, credit: photo.credit } : undefined,
-    body: toBlocks(post.body as string[]),
+    body: toBlocks(bodyLines),
     seoKeywords: post.seoKeywords,
     readingTime: post.readingTime,
   })
