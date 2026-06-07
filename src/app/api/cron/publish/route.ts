@@ -294,6 +294,43 @@ async function publishToInstagram(imageUrl: string, caption: string) {
   return pubData.id as string
 }
 
+// --- Entregar carrossel no Telegram (para postagem manual com música) ---
+
+async function sendCarouselToTelegram(slideUrls: string[], caption: string, blogUrl: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) throw new Error('TELEGRAM_BOT_TOKEN/CHAT_ID não configurados')
+
+  const API = `https://api.telegram.org/bot${token}`
+
+  // 1. Envia os slides como álbum (até 10 fotos). Legenda da postagem na 1ª foto.
+  const media = slideUrls.slice(0, 10).map((url, i) => ({
+    type: 'photo',
+    media: url,
+    ...(i === 0 ? { caption: `🎠 Carrossel pronto pra postar (adicione a música no app)\n\n${blogUrl}` } : {}),
+  }))
+  const albumRes = await fetch(`${API}/sendMediaGroup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, media }),
+  })
+  const albumData = await albumRes.json()
+  if (!albumData.ok) throw new Error(`Telegram album: ${JSON.stringify(albumData)}`)
+
+  // 2. Envia a legenda completa em mensagem separada (fácil de copiar no celular)
+  await fetch(`${API}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: `📋 LEGENDA (copie e cole):\n\n${caption}`,
+      disable_web_page_preview: true,
+    }),
+  })
+
+  return albumData.result?.[0]?.message_id ?? true
+}
+
 // --- Publicar carrossel no Instagram ---
 
 async function publishCarousel(slideUrls: string[], caption: string) {
@@ -396,34 +433,41 @@ export async function GET(request: Request) {
     const sanityDoc = await publishToSanity(post, photo)
     console.log(`[cron/publish] Publicado no Sanity: ${sanityDoc._id}`)
 
-    // 5. Publicar no Instagram: carrossel explicativo (capa + slides + CTA)
-    let igPostId: string | null = null
+    // 5. Carrossel: entregar no Telegram p/ postagem manual (com música).
+    //    Fallback: auto-publicar no Instagram se o Telegram não estiver configurado.
+    let delivery: string | null = null
+    let channel: 'telegram' | 'instagram' | null = null
     if (photo.url) {
       const coverTitle = (post.igTitle as string) || (post.title as string)
       const caption = (post.igCaption as string).replace('SLUG', post.slug as string)
+      const blogUrl = `${SITE}/blog/${post.slug}`
       const slides = Array.isArray(post.carousel)
         ? (post.carousel as Array<{ title: string; body: string }>)
             .filter(s => s?.title && s?.body)
             .slice(0, 4)
         : []
+      const slideUrls =
+        slides.length >= 2
+          ? buildSlideUrls(coverTitle, photo.url, slides)
+          : [`${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`]
 
-      if (slides.length >= 2) {
-        // Carrossel: capa + slides de conteúdo + CTA
-        const slideUrls = buildSlideUrls(coverTitle, photo.url, slides)
-        try {
-          igPostId = await publishCarousel(slideUrls, caption)
-          console.log(`[cron/publish] Carrossel publicado: ${igPostId} (${slideUrls.length} slides)`)
-        } catch (e) {
-          // Fallback para imagem única se o carrossel falhar
-          console.error('[cron/publish] Carrossel falhou, usando imagem única:', e instanceof Error ? e.message : e)
-          const single = `${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`
-          igPostId = await publishToInstagram(single, caption)
-        }
+      if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+        // Entrega no Telegram (sustentável, sem PC) para o usuário postar manual com música
+        delivery = String(await sendCarouselToTelegram(slideUrls, caption, blogUrl))
+        channel = 'telegram'
+        console.log(`[cron/publish] Carrossel entregue no Telegram (${slideUrls.length} slides)`)
       } else {
-        // Sem slides suficientes: imagem única
-        const single = `${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`
-        igPostId = await publishToInstagram(single, caption)
-        console.log(`[cron/publish] Imagem única publicada: ${igPostId}`)
+        // Fallback: publica direto no Instagram
+        try {
+          delivery = slideUrls.length >= 3
+            ? await publishCarousel(slideUrls, caption)
+            : await publishToInstagram(slideUrls[0], caption)
+        } catch (e) {
+          console.error('[cron/publish] Carrossel falhou, imagem única:', e instanceof Error ? e.message : e)
+          delivery = await publishToInstagram(slideUrls[0], caption)
+        }
+        channel = 'instagram'
+        console.log(`[cron/publish] Publicado no Instagram: ${delivery}`)
       }
     }
 
@@ -432,7 +476,8 @@ export async function GET(request: Request) {
       title: post.title,
       slug: post.slug,
       sanityId: sanityDoc._id,
-      igPostId,
+      channel,
+      delivery,
       url: `${SITE}/blog/${post.slug}`,
     })
   } catch (err) {
