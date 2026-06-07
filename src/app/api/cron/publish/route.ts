@@ -161,8 +161,20 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
     "Parágrafo puro continuando o conteúdo."
   ],
   "igCaption": "legenda instagram com 3 parágrafos de 4-5 linhas cada, tom informal genZ, sem emojis no corpo, finaliza com: \\n\\n🔗 Acesse o guia completo em endinheirados.cc/blog/SLUG\\n\\n#finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados",
-  "igTitle": "título em CAIXA ALTA para o card do Instagram, max 3 linhas de 25 chars"
-}`
+  "igTitle": "título em CAIXA ALTA para o card do Instagram, max 3 linhas de 25 chars",
+  "carousel": [
+    { "title": "headline curto do slide 2, max 40 chars CAIXA ALTA", "body": "explicação de 1 a 2 frases, linguagem genZ, max 180 chars" },
+    { "title": "slide 3", "body": "..." },
+    { "title": "slide 4", "body": "..." }
+  ]
+}
+
+REGRAS DO CARROSSEL (campo carousel):
+- Gere de 3 a 4 slides de conteúdo (eles virão DEPOIS do slide de capa e ANTES do slide final de CTA, que são gerados automaticamente).
+- Cada slide ensina UMA ideia: um passo, um dado, uma dica prática. Nada de encher linguiça.
+- title: manchete curtíssima e impactante. body: explicação clara e direta, tom de amigo.
+- O carrossel deve fazer a pessoa entender o tema mesmo sem ler o blog — é conteúdo de valor, não teaser vazio.
+- NUNCA soar como publi. Se citar empresa, mantenha neutralidade.`
 
   const msg = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -282,6 +294,80 @@ async function publishToInstagram(imageUrl: string, caption: string) {
   return pubData.id as string
 }
 
+// --- Publicar carrossel no Instagram ---
+
+async function publishCarousel(slideUrls: string[], caption: string) {
+  // 1. Cria um container por slide (is_carousel_item)
+  const childIds: string[] = []
+  for (const url of slideUrls) {
+    const res = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: IG_TOKEN }),
+    })
+    const data = await res.json()
+    if (!data.id) throw new Error(`Erro ao criar slide: ${JSON.stringify(data)}`)
+    childIds.push(data.id)
+  }
+
+  // Aguarda o Instagram processar as imagens
+  await new Promise(r => setTimeout(r, 10000))
+
+  // 2. Cria o container do carrossel
+  const carRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      media_type: 'CAROUSEL',
+      children: childIds.join(','),
+      caption,
+      access_token: IG_TOKEN,
+    }),
+  })
+  const carData = await carRes.json()
+  if (!carData.id) throw new Error(`Erro ao criar carrossel: ${JSON.stringify(carData)}`)
+
+  await new Promise(r => setTimeout(r, 5000))
+
+  // 3. Publica
+  const pubRes = await fetch(`${GRAPH}/${IG_USER_ID}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: carData.id, access_token: IG_TOKEN }),
+  })
+  const pubData = await pubRes.json()
+  if (!pubData.id) throw new Error(`Erro ao publicar carrossel: ${JSON.stringify(pubData)}`)
+  return pubData.id as string
+}
+
+// Monta as URLs dos slides: capa (foto) + conteúdo + CTA
+function buildSlideUrls(
+  coverTitle: string,
+  photoUrl: string,
+  slides: Array<{ title: string; body: string }>,
+) {
+  const enc = encodeURIComponent
+  const total = slides.length + 2 // capa + conteúdo + cta
+  const urls: string[] = []
+
+  // Slide 1 — capa (foto de fundo, mesmo padrão do post simples)
+  urls.push(`${SITE}/api/og?title=${enc(coverTitle)}&photo=${enc(photoUrl)}`)
+
+  // Slides de conteúdo
+  slides.forEach((s, i) => {
+    urls.push(
+      `${SITE}/api/og/slide?title=${enc(s.title)}&body=${enc(s.body)}&index=${i + 2}&total=${total}&kind=content`
+    )
+  })
+
+  // Último slide — CTA
+  urls.push(
+    `${SITE}/api/og/slide?title=${enc('QUER O GUIA COMPLETO?')}&body=${enc('Toca no link da bio e leia o conteúdo completo no nosso site. É de graça!')}&index=${total}&total=${total}&kind=cta`
+  )
+
+  return urls
+}
+
 // --- Handler principal ---
 
 export async function GET(request: Request) {
@@ -310,15 +396,35 @@ export async function GET(request: Request) {
     const sanityDoc = await publishToSanity(post, photo)
     console.log(`[cron/publish] Publicado no Sanity: ${sanityDoc._id}`)
 
-    // 5. Gerar imagem no padrão Endinheirados via /api/og e publicar no Instagram
+    // 5. Publicar no Instagram: carrossel explicativo (capa + slides + CTA)
     let igPostId: string | null = null
     if (photo.url) {
-      const igTitle = encodeURIComponent(post.igTitle as string || post.title as string)
-      const igPhoto = encodeURIComponent(photo.url)
-      const igImageUrl = `${SITE}/api/og?title=${igTitle}&photo=${igPhoto}`
+      const coverTitle = (post.igTitle as string) || (post.title as string)
       const caption = (post.igCaption as string).replace('SLUG', post.slug as string)
-      igPostId = await publishToInstagram(igImageUrl, caption)
-      console.log(`[cron/publish] Publicado no Instagram: ${igPostId}`)
+      const slides = Array.isArray(post.carousel)
+        ? (post.carousel as Array<{ title: string; body: string }>)
+            .filter(s => s?.title && s?.body)
+            .slice(0, 4)
+        : []
+
+      if (slides.length >= 2) {
+        // Carrossel: capa + slides de conteúdo + CTA
+        const slideUrls = buildSlideUrls(coverTitle, photo.url, slides)
+        try {
+          igPostId = await publishCarousel(slideUrls, caption)
+          console.log(`[cron/publish] Carrossel publicado: ${igPostId} (${slideUrls.length} slides)`)
+        } catch (e) {
+          // Fallback para imagem única se o carrossel falhar
+          console.error('[cron/publish] Carrossel falhou, usando imagem única:', e instanceof Error ? e.message : e)
+          const single = `${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`
+          igPostId = await publishToInstagram(single, caption)
+        }
+      } else {
+        // Sem slides suficientes: imagem única
+        const single = `${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`
+        igPostId = await publishToInstagram(single, caption)
+        console.log(`[cron/publish] Imagem única publicada: ${igPostId}`)
+      }
     }
 
     return NextResponse.json({
