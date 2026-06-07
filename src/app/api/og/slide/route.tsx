@@ -1,5 +1,5 @@
 /**
- * Gera um slide de carrossel 1080x1080 no padrão Endinheirados.
+ * Gera um slide de carrossel 1080x1350 (4:5) no padrão Endinheirados.
  * GET /api/og/slide?title=...&body=...&index=2&total=6&kind=content|cta
  */
 import { ImageResponse } from 'next/og'
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       <div
         style={{
           width: 1080,
-          height: 1080,
+          height: 1350,
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     ),
     {
       width: 1080,
-      height: 1080,
+      height: 1350,
       fonts: [
         { name: 'BebasNeue', data: bebasNeue.buffer, style: 'normal', weight: 400 },
         { name: 'Roboto',    data: roboto.buffer,    style: 'normal', weight: 400 },
