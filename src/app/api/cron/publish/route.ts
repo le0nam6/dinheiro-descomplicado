@@ -433,6 +433,20 @@ export async function GET(request: Request) {
     const sanityDoc = await publishToSanity(post, photo)
     console.log(`[cron/publish] Publicado no Sanity: ${sanityDoc._id}`)
 
+    // 4b. Notificar no Telegram que saiu post novo no blog
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      const tipo = schedule.type === 'news' ? '🔥 Notícia quente' : '📚 Conteúdo evergreen'
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text: `📝 Novo post no blog!\n\n${tipo}\n${post.title}\n\n${SITE}/blog/${post.slug}\n\n(carrossel pra postar chega em seguida 👇)`,
+          disable_web_page_preview: false,
+        }),
+      }).catch(() => {})
+    }
+
     // 5. Carrossel: entregar no Telegram p/ postagem manual (com música).
     //    Fallback: auto-publicar no Instagram se o Telegram não estiver configurado.
     let delivery: string | null = null

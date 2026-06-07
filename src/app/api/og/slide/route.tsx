@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         {/* Topo: logo + contador */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoBase64} alt="Endinheirados" style={{ height: 70, width: 210, objectFit: 'contain' }} />
+          <img src={logoBase64} alt="Endinheirados" style={{ height: 160, width: 480, objectFit: 'contain', objectPosition: 'left center' }} />
           {total && (
             <div style={{ display: 'flex', fontFamily: 'Roboto', fontSize: 28, color: '#7CFC00', letterSpacing: '1px' }}>
               {`${index}/${total}`}
