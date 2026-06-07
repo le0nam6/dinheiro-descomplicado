@@ -36,13 +36,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           gtag('js', new Date());
           gtag('config', 'G-C1TGQHVY23');
         `}</Script>
-        {/* Google AdSense — só carrega quando houver Publisher ID real */}
+        {/* Google AdSense — tag <script> literal no <head> (necessário p/ o verificador do AdSense ler no HTML cru) */}
         {process.env.NEXT_PUBLIC_ADSENSE_ID?.startsWith('ca-pub-') && !process.env.NEXT_PUBLIC_ADSENSE_ID.includes('SEU_ID') && (
-          <Script
+          // eslint-disable-next-line @next/next/no-sync-scripts
+          <script
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
             crossOrigin="anonymous"
-            strategy="afterInteractive"
           />
         )}
       </head>
