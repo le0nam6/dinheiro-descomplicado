@@ -5,6 +5,7 @@ import { ArticleCTA } from '@/components/ArticleCTA'
 import { AffiliateBox } from '@/components/AffiliateBox'
 import { TableOfContents } from '@/components/TableOfContents'
 import { ImpartialityMeter } from '@/components/ImpartialityMeter'
+import { NewsTrustBar } from '@/components/NewsTrustBar'
 import { extractHeadings, extractFaqs, slugifyHeading } from '@/lib/postStructure'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -70,9 +71,19 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         {post.readingTime && <><span>·</span><span>{post.readingTime} min</span></>}
       </div>
 
+      {/* Badge de conteúdo patrocinado */}
+      {post.sponsored && (
+        <div className="mb-4 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-full">
+          📣 Conteúdo patrocinado{post.sponsorName ? ` · ${post.sponsorName}` : ''}
+        </div>
+      )}
+
       {/* Título */}
       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">{post.title}</h1>
       <p className="text-xl text-gray-500 mb-6 leading-relaxed">{post.excerpt}</p>
+
+      {/* Barra de confiança (notícias) */}
+      {post.articleType === 'news' && <NewsTrustBar publishedAt={post.publishedAt} updatedAt={post.updatedAt} />}
 
       {/* Imagem */}
       {post.coverImage?.url && (
@@ -202,10 +213,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'Article',
+            '@type': post.articleType === 'news' ? 'NewsArticle' : 'Article',
             headline: post.title,
             description: post.excerpt,
+            image: post.coverImage?.url ? [post.coverImage.url] : undefined,
             datePublished: post.publishedAt,
+            dateModified: post.updatedAt || post.publishedAt,
             author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: 'https://endinheirados.cc/autor' },
             publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/icon.png' } },
           }),

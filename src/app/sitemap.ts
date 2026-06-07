@@ -6,6 +6,8 @@ const BASE_URL = 'https://endinheirados.cc'
 const staticRoutes = [
   { url: BASE_URL, priority: 1.0, changeFrequency: 'daily' as const },
   { url: `${BASE_URL}/blog`, priority: 0.9, changeFrequency: 'daily' as const },
+  { url: `${BASE_URL}/mercado`, priority: 0.9, changeFrequency: 'hourly' as const },
+  { url: `${BASE_URL}/etica`, priority: 0.4, changeFrequency: 'yearly' as const },
   { url: `${BASE_URL}/calculadora`, priority: 0.8, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/sobre`, priority: 0.5, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/contato`, priority: 0.4, changeFrequency: 'monthly' as const },

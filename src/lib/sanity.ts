@@ -3,7 +3,7 @@ import { createClient } from 'next-sanity'
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const isConfigured = projectId && /^[a-z0-9-]+$/.test(projectId)
 
-const client = isConfigured
+export const client = isConfigured
   ? createClient({
       projectId,
       dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
@@ -26,7 +26,7 @@ export async function getPostBySlug(slug: string) {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "post" && slug.current == $slug][0] { title, slug, publishedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime, articleType, sources }`,
+      `*[_type == "post" && slug.current == $slug][0] { title, slug, publishedAt, updatedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime, articleType, sources, sponsored, sponsorName }`,
       { slug }
     )
   } catch { return null }

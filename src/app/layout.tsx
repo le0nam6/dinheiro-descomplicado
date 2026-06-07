@@ -71,6 +71,7 @@ function Header() {
       <nav className="border-t border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-center gap-1 flex-wrap">
           <a href="/blog" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
+          <a href="/mercado" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">📊 Mercado</a>
           <a href="/categoria/emprestimo" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
           <a href="/categoria/investimentos" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
           <a href="/categoria/cartao-de-credito" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
@@ -99,6 +100,8 @@ function Footer() {
           <a href="/sobre" className="hover:underline">Sobre</a>
           {' · '}
           <a href="/contato" className="hover:underline">Contato</a>
+          {' · '}
+          <a href="/etica" className="hover:underline">Política Editorial</a>
           {' · '}
           <a href="/privacidade" className="hover:underline">Política de Privacidade</a>
           {' · '}
