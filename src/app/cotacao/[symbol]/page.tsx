@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { AssetChart } from '@/components/AssetChart'
 
 export const revalidate = 900
 
@@ -39,26 +40,6 @@ async function getHistory(yahoo: string) {
   return { price: meta.regularMarketPrice, prev: meta.previousClose ?? meta.chartPreviousClose, closes }
 }
 
-function Chart({ data }: { data: number[] }) {
-  if (data.length < 2) return null
-  const w = 700, h = 200, pad = 10
-  const min = Math.min(...data), max = Math.max(...data)
-  const range = max - min || 1
-  const pts = data.map((v, i) => {
-    const x = pad + (i / (data.length - 1)) * (w - 2 * pad)
-    const y = h - pad - ((v - min) / range) * (h - 2 * pad)
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
-  const up = data[data.length - 1] >= data[0]
-  const color = up ? '#16a34a' : '#ef4444'
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-48" preserveAspectRatio="none">
-      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
-      <polygon points={`${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`} fill={color} opacity="0.08" />
-    </svg>
-  )
-}
-
 export default async function CotacaoPage({ params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params
   const a = ASSETS[symbol]
@@ -69,10 +50,6 @@ export default async function CotacaoPage({ params }: { params: Promise<{ symbol
   if (!hist) notFound()
 
   const changePct = ((hist.price - hist.prev) / hist.prev) * 100
-  const up = changePct >= 0
-  const prefix = a.brl ? 'R$ ' : a.label.includes('USD') || ['Bitcoin', 'Ethereum', 'S&P', 'Nasdaq', 'Dow'].some(x => a.label.includes(x)) ? 'US$ ' : ''
-  const big = hist.price >= 1000
-  const priceFmt = hist.price.toLocaleString('pt-BR', { minimumFractionDigits: big ? 0 : 2, maximumFractionDigits: big ? 0 : (a.brl ? 4 : 2) })
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -83,20 +60,11 @@ export default async function CotacaoPage({ params }: { params: Promise<{ symbol
       <h1 className="text-3xl font-extrabold text-gray-900 mb-1">{a.label}</h1>
       <p className="text-gray-500 mb-6">{a.desc}</p>
 
-      <div className="border border-gray-200 rounded-2xl p-6 bg-white mb-6">
-        <div className="flex items-end justify-between mb-4">
-          <div>
-            <p className="text-4xl font-extrabold text-gray-900">{prefix}{priceFmt}</p>
-            <p className={`text-lg font-semibold ${up ? 'text-green-600' : 'text-red-500'}`}>
-              {up ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}% hoje
-            </p>
-          </div>
-          <span className="text-xs text-gray-400">Últimos 30 dias</span>
-        </div>
-        <Chart data={hist.closes} />
+      <div className="mb-6">
+        <AssetChart symbol={a.yahoo} brl={a.brl} initial={{ price: hist.price, changePct, closes: hist.closes }} />
       </div>
 
-      <p className="text-xs text-gray-400">Dados: Yahoo Finance · atualizado a cada 15 min · valores informativos, não recomendação.</p>
+      <p className="text-xs text-gray-400">Dados: Yahoo Finance · valores informativos, não constituem recomendação.</p>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org', '@type': 'FinancialProduct', name: a.label, description: a.desc,
