@@ -1,6 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { IconTrendingUp, IconTrendingDown } from '@tabler/icons-react'
+
+const SPEED_PX_PER_SEC = 70 // velocidade constante em qualquer tela
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 
@@ -20,6 +22,8 @@ function fmt(q: Quote) {
 
 export function QuotesTicker() {
   const [quotes, setQuotes] = useState<Quote[]>([])
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [duration, setDuration] = useState(40)
 
   useEffect(() => {
     let alive = true
@@ -29,6 +33,18 @@ export function QuotesTicker() {
     return () => { alive = false; clearInterval(t) }
   }, [])
 
+  // Duração proporcional à largura → mesma velocidade (px/s) no celular e no desktop
+  useEffect(() => {
+    if (!trackRef.current || !quotes.length) return
+    const measure = () => {
+      const oneSet = (trackRef.current?.scrollWidth ?? 0) / 2 // a lista é duplicada
+      if (oneSet > 0) setDuration(oneSet / SPEED_PX_PER_SEC)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [quotes])
+
   if (!quotes.length) return null
 
   // duplica a lista p/ loop contínuo
@@ -36,7 +52,7 @@ export function QuotesTicker() {
 
   return (
     <div className="bg-gray-900 text-white overflow-hidden border-b border-gray-800">
-      <div className="flex whitespace-nowrap animate-[ticker_40s_linear_infinite] py-2">
+      <div ref={trackRef} className="flex whitespace-nowrap py-2" style={{ animation: `ticker ${duration}s linear infinite` }}>
         {items.map((q, i) => {
           const up = q.changePct >= 0
           const slug = SLUG[q.symbol]

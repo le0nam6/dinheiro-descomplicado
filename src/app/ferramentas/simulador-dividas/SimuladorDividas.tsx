@@ -70,18 +70,18 @@ export function SimuladorDividas() {
         </div>
         <div className="space-y-3">
           {dividas.map(d => (
-            <div key={d.id} className="grid grid-cols-[1fr,80px,70px,80px,32px] gap-2 items-center">
-              <input value={d.nome} onChange={e => update(d.id, 'nome', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full" placeholder="Nome" />
-              <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">R$</span>
-                <input type="number" value={d.saldo} onChange={e => update(d.id, 'saldo', e.target.value)} className="text-xs border border-gray-200 rounded-lg pl-6 pr-1 py-1.5 w-full" /></div>
-              <div className="relative"><input type="number" value={d.taxa} onChange={e => update(d.id, 'taxa', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full" />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">%</span></div>
-              <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">R$</span>
-                <input type="number" value={d.parcela} onChange={e => update(d.id, 'parcela', e.target.value)} className="text-xs border border-gray-200 rounded-lg pl-6 pr-1 py-1.5 w-full" /></div>
+            <div key={d.id} className="grid grid-cols-[1fr_64px_52px_64px_24px] gap-1.5 items-center">
+              <input value={d.nome} onChange={e => update(d.id, 'nome', e.target.value)} className="min-w-0 text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-full" placeholder="Nome" />
+              <div className="relative min-w-0"><span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">R$</span>
+                <input type="number" value={d.saldo} onChange={e => update(d.id, 'saldo', e.target.value)} className="min-w-0 text-xs border border-gray-200 rounded-lg pl-5 pr-1 py-1.5 w-full" /></div>
+              <div className="relative min-w-0"><input type="number" value={d.taxa} onChange={e => update(d.id, 'taxa', e.target.value)} className="min-w-0 text-xs border border-gray-200 rounded-lg pl-2 pr-4 py-1.5 w-full" />
+                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">%</span></div>
+              <div className="relative min-w-0"><span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">R$</span>
+                <input type="number" value={d.parcela} onChange={e => update(d.id, 'parcela', e.target.value)} className="min-w-0 text-xs border border-gray-200 rounded-lg pl-5 pr-1 py-1.5 w-full" /></div>
               <button onClick={() => remove(d.id)} className="text-gray-300 hover:text-red-500 text-lg leading-none">×</button>
             </div>
           ))}
-          <div className="grid grid-cols-[1fr,80px,70px,80px,32px] gap-2 text-[10px] text-gray-400 px-1">
+          <div className="grid grid-cols-[1fr_64px_52px_64px_24px] gap-1.5 text-[10px] text-gray-400 px-1">
             <span>Nome</span><span>Saldo</span><span>Taxa/mês</span><span>Parcela</span><span></span>
           </div>
         </div>

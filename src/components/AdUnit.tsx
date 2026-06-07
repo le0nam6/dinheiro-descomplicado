@@ -9,8 +9,11 @@ interface AdUnitProps {
 }
 
 const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID
-// Só ativa se houver um Publisher ID real (não o placeholder)
-const isAdsenseActive = !!ADSENSE_ID && ADSENSE_ID.startsWith('ca-pub-') && !ADSENSE_ID.includes('SEU_ID')
+// Só renderiza os blocos quando os anúncios estão LIBERADOS (aprovados).
+// Enquanto NEXT_PUBLIC_ADS_LIVE !== 'true', não reserva espaço (evita espaços em branco no celular).
+const isAdsenseActive =
+  process.env.NEXT_PUBLIC_ADS_LIVE === 'true' &&
+  !!ADSENSE_ID && ADSENSE_ID.startsWith('ca-pub-') && !ADSENSE_ID.includes('SEU_ID')
 
 export function AdUnit({ slot, format = 'auto', className = '' }: AdUnitProps) {
   useEffect(() => {

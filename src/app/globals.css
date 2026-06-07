@@ -39,3 +39,6 @@ html.dark .prose h1, html.dark .prose h2, html.dark .prose h3, html.dark .prose 
 html.dark .prose p, html.dark .prose li, html.dark .prose td { color: #d1d5db; }
 html.dark .bg-green-50 { background-color: #14241b !important; }
 html.dark .bg-amber-50 { background-color: #2a2113 !important; }
+
+/* Colapsa bloco de anúncio quando o AdSense não preenche (evita espaço vazio) */
+ins.adsbygoogle[data-ad-status="unfilled"] { display: none !important; }
