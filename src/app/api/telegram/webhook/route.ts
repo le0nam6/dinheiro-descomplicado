@@ -155,6 +155,85 @@ export async function POST(request: Request) {
     if (update.message?.text) {
       const text = update.message.text.trim()
       const chatId = update.message.chat.id
+      const cmd = text.toLowerCase().split(/\s+/)[0]
+
+      // /start, /ajuda, /help
+      if (['/start', '/ajuda', '/help'].includes(cmd)) {
+        await tg('sendMessage', { chat_id: chatId, text:
+          `🤖 *Endinheirados Bot*\n\n` +
+          `📊 /status — visão geral do sistema\n` +
+          `📋 /pendentes — posts aguardando aprovação\n` +
+          `📰 /gerar — gera uma notícia agora\n` +
+          `💱 /cotacao <ativo> — cotação atual (ex: /cotacao dolar)\n` +
+          `🔔 /alerta <ativo> <acima|abaixo> <valor> — cria alerta\n` +
+          `🔔 /alertas — lista alertas ativos`,
+          parse_mode: 'Markdown' })
+        return NextResponse.json({ ok: true })
+      }
+
+      // /status — visão geral
+      if (cmd === '/status') {
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+        const [total, news, todayCount, pending, alerts, backlog] = await Promise.all([
+          sanity.fetch('count(*[_type=="post"])'),
+          sanity.fetch('count(*[_type=="post" && articleType=="news"])'),
+          sanity.fetch('count(*[_type=="post" && publishedAt > $d])', { d: todayStart.toISOString() }),
+          sanity.fetch('count(*[_type=="pendingPost" && status=="pending"])'),
+          sanity.fetch('count(*[_type=="priceAlert" && active==true])'),
+          sanity.fetch('count(*[_type=="post" && igPublished != true])'),
+        ])
+        // checa token do IG rápido
+        let igOk = '—'
+        try {
+          const r = await fetch(`https://graph.instagram.com/v21.0/me?fields=id&access_token=${process.env.IG_ACCESS_TOKEN}`).then(r => r.json())
+          igOk = r.id ? '✅ válido' : '⚠️ verificar'
+        } catch { igOk = '⚠️ erro' }
+
+        await tg('sendMessage', { chat_id: chatId, text:
+          `📊 *Status do Endinheirados*\n\n` +
+          `📝 Posts no blog: *${total}* (${news} notícias)\n` +
+          `📅 Publicados hoje: *${todayCount}*\n` +
+          `📋 Aguardando aprovação: *${pending}*\n` +
+          `📲 Backlog p/ Instagram: *${backlog}*\n` +
+          `🔔 Alertas ativos: *${alerts}*\n` +
+          `🔑 Token Instagram: ${igOk}`,
+          parse_mode: 'Markdown' })
+        return NextResponse.json({ ok: true })
+      }
+
+      // /pendentes — lista posts aguardando aprovação
+      if (cmd === '/pendentes') {
+        const list = await sanity.fetch('*[_type=="pendingPost" && status=="pending"]|order(createdAt desc){data}')
+        if (!list.length) { await tg('sendMessage', { chat_id: chatId, text: '✅ Nenhum post aguardando aprovação.' }); return NextResponse.json({ ok: true }) }
+        const titles = list.map((p: { data: string }) => { try { return '• ' + JSON.parse(p.data).post.title } catch { return '• (erro)' } }).join('\n')
+        await tg('sendMessage', { chat_id: chatId, text: `📋 Aguardando aprovação (${list.length}):\n${titles}` })
+        return NextResponse.json({ ok: true })
+      }
+
+      // /gerar — dispara uma notícia agora
+      if (cmd === '/gerar') {
+        await tg('sendMessage', { chat_id: chatId, text: '📰 Gerando notícia… (alguns segundos)' })
+        const origin = new URL(request.url).origin
+        const r = await fetch(`${origin}/api/cron/news`, { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }).then(r => r.json()).catch(() => null)
+        await tg('sendMessage', { chat_id: chatId, text: r?.ok ? `✅ Publicada: ${r.title}\n${SITE}/blog/${r.slug}` : `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
+        return NextResponse.json({ ok: true })
+      }
+
+      // /cotacao <ativo>
+      if (cmd === '/cotacao') {
+        const NAME: Record<string, string> = { dolar: 'USDBRL', dólar: 'USDBRL', euro: 'EURBRL', libra: 'GBPBRL', bitcoin: 'BTCBRL', btc: 'BTCBRL', ethereum: 'ETHBRL', eth: 'ETHBRL', ibovespa: '^BVSP', ibov: '^BVSP', sp500: '^GSPC', nasdaq: '^IXIC', dow: '^DJI' }
+        const arg = text.split(/\s+/)[1]?.toLowerCase()
+        const sym = arg && NAME[arg]
+        if (!sym) { await tg('sendMessage', { chat_id: chatId, text: 'Uso: /cotacao dolar (ou euro, bitcoin, ibovespa, nasdaq…)' }); return NextResponse.json({ ok: true }) }
+        const origin = new URL(request.url).origin
+        const data = await fetch(`${origin}/api/quotes`).then(r => r.json()).catch(() => null)
+        const q = data?.quotes?.find((x: { symbol: string }) => x.symbol === sym)
+        if (!q) { await tg('sendMessage', { chat_id: chatId, text: 'Não consegui a cotação agora.' }); return NextResponse.json({ ok: true }) }
+        const pref = (q.kind === 'moeda' || q.kind === 'cripto') ? 'R$ ' : ''
+        const v = q.price.toLocaleString('pt-BR', { maximumFractionDigits: q.price >= 1000 ? 0 : 2 })
+        await tg('sendMessage', { chat_id: chatId, text: `${q.changePct >= 0 ? '🔺' : '🔻'} *${q.label}*: ${pref}${v} (${q.changePct >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%)`, parse_mode: 'Markdown' })
+        return NextResponse.json({ ok: true })
+      }
 
       // Comando /alerta <ativo> <acima|abaixo> <valor>
       if (/^\/alerta(s)?\b/i.test(text)) {
