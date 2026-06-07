@@ -213,8 +213,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* CTA: Ferramentas + Links internos */}
       <ArticleCTA category={post.category ?? ''} related={related} />
 
-      {/* Comentários (Giscus) */}
-      <Comments />
+      {/* Comentários (próprios, sem login) */}
+      <Comments slug={post.slug.current} />
 
       {/* JSON-LD: Article + Author */}
       <script
