@@ -43,8 +43,8 @@ export async function GET(req: NextRequest) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoBase64} alt="Endinheirados" style={{ height: 70, width: 210, objectFit: 'contain' }} />
           {total && (
-            <div style={{ fontFamily: 'Roboto', fontSize: 28, color: '#7CFC00', letterSpacing: '1px' }}>
-              {index}/{total}
+            <div style={{ display: 'flex', fontFamily: 'Roboto', fontSize: 28, color: '#7CFC00', letterSpacing: '1px' }}>
+              {`${index}/${total}`}
             </div>
           )}
         </div>
