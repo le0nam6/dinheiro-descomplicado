@@ -55,8 +55,11 @@ export async function POST(request: Request) {
       if (action === 'ap') {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Publicando…' })
         const doc = await createSanityPost(d.post, d.photo)
-        const blogUrl = `${SITE}/blog/${d.post.slug}`
-        await deliverCarousel(d.slideUrls, d.caption, blogUrl)
+        const finalSlug = (doc.slug as { current: string }).current
+        const blogUrl = `${SITE}/blog/${finalSlug}`
+        // Se o slug foi renomeado por colisão, corrige o link na legenda
+        const caption = finalSlug === d.post.slug ? d.caption : d.caption.replaceAll(d.post.slug, finalSlug)
+        await deliverCarousel(d.slideUrls, caption, blogUrl)
         await sanity.delete(id)
         await tg('editMessageCaption', {
           chat_id: cq.message.chat.id, message_id: msgId,

@@ -45,10 +45,14 @@ function toBlocks(lines: string[]) {
   }))
 }
 
-/** Cria o post publicado no Sanity. Lança erro se o slug já existir. */
+/** Cria o post publicado no Sanity. Se o slug já existir, gera um sufixo único. */
 export async function createSanityPost(post: GeneratedPost, photo: Photo) {
-  const existing = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: post.slug })
-  if (existing) throw new Error(`Slug já existe: ${post.slug}`)
+  let slug = post.slug
+  for (let n = 2; n <= 20; n++) {
+    const existing = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: slug })
+    if (!existing) break
+    slug = `${post.slug}-${n}`
+  }
 
   const bodyLines = [...post.body]
   if (post.funnel === 'bofu') bodyLines.push(...DISCLAIMER_LINES)
@@ -56,7 +60,7 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
   return sanity.create({
     _type: 'post',
     title: post.title,
-    slug: { _type: 'slug', current: post.slug },
+    slug: { _type: 'slug', current: slug },
     publishedAt: new Date().toISOString(),
     funnel: post.funnel,
     category: post.category,
