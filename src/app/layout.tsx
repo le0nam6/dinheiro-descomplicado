@@ -5,6 +5,7 @@ import { CustomCursor } from '@/components/CustomCursor'
 import { Newsletter } from '@/components/Newsletter'
 import { QuotesTicker } from '@/components/QuotesTicker'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { IconChartLine, IconTool } from '@tabler/icons-react'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -49,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CustomCursor />
         <QuotesTicker />
         <Header />
-        <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
+        <main className="max-w-4xl mx-auto px-4 py-12">{children}</main>
         <Footer />
       </body>
     </html>
@@ -72,14 +73,14 @@ function Header() {
       </div>
       {/* Nav como submenu centralizado */}
       <nav className="border-t border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-center gap-1 flex-wrap">
-          <a href="/blog" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
-          <a href="/mercado" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">📊 Mercado</a>
-          <a href="/categoria/emprestimo" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
-          <a href="/categoria/investimentos" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
-          <a href="/categoria/cartao-de-credito" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
-          <a href="/categoria/educacao-financeira" className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
-          <a href="/ferramentas" className="px-3 py-1.5 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">🧰 Ferramentas</a>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-center gap-2 flex-wrap">
+          <a href="/blog" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
+          <a href="/mercado" className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"><IconChartLine size={16} stroke={1.75} /> Mercado</a>
+          <a href="/categoria/emprestimo" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
+          <a href="/categoria/investimentos" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
+          <a href="/categoria/cartao-de-credito" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
+          <a href="/categoria/educacao-financeira" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
+          <a href="/ferramentas" className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><IconTool size={16} stroke={1.75} /> Ferramentas</a>
           <ThemeToggle />
         </div>
       </nav>

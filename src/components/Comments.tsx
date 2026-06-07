@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
+import { IconMessageCircle } from '@tabler/icons-react'
 
 export function Comments() {
   const ref = useRef<HTMLDivElement>(null)
@@ -30,8 +31,10 @@ export function Comments() {
   }, [])
 
   return (
-    <section className="mt-12 border-t border-gray-200 pt-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">💬 Comentários</h2>
+    <section className="mt-16 border-t border-gray-200 pt-10">
+      <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6">
+        <IconMessageCircle size={22} stroke={1.75} className="text-green-600" /> Comentários
+      </h2>
       <div ref={ref} />
     </section>
   )

@@ -16,6 +16,7 @@
     "@sanity/client": "^7.22.1",
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^5.30.0",
+    "@tabler/icons-react": "^3.44.0",
     "@vercel/og": "^0.11.1",
     "dotenv": "^17.4.2",
     "fontsource-bebas-neue": "^4.0.0",

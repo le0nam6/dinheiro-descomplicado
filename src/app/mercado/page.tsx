@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { client } from '@/lib/sanity'
 import { MarketBoard } from '@/components/MarketBoard'
+import { IconChartAreaLine } from '@tabler/icons-react'
 
 export const revalidate = 300
 
@@ -23,12 +24,14 @@ export default async function MercadoPage() {
   const news = await getLatestNews()
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-1">📊 Mercado ao vivo</h1>
-      <p className="text-gray-500 mb-8">Cotações em tempo real e as últimas do mercado financeiro.</p>
+      <h1 className="flex items-center gap-2.5 text-3xl font-extrabold text-gray-900 mb-2">
+        <IconChartAreaLine size={30} stroke={1.75} className="text-green-600" /> Mercado ao vivo
+      </h1>
+      <p className="text-gray-500 mb-10">Cotações em tempo real e as últimas do mercado financeiro.</p>
 
       <MarketBoard />
 
-      <h2 className="text-2xl font-bold text-gray-900 mt-12 mb-4">Últimas notícias</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mt-16 mb-6">Últimas notícias</h2>
       <div className="grid sm:grid-cols-2 gap-5">
         {news.map((n: { slug: string; title: string; excerpt: string; publishedAt: string; coverImage?: { url: string } }) => (
           <Link key={n.slug} href={`/blog/${n.slug}`} className="group block border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">

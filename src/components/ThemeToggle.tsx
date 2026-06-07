@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { IconSun, IconMoon } from '@tabler/icons-react'
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(false)
@@ -22,10 +23,10 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label="Alternar tema"
-      className="px-2.5 py-1.5 text-sm rounded-lg hover:bg-green-50 hover:dark:bg-gray-800 transition-colors"
+      className="p-2 rounded-lg text-gray-500 hover:text-green-700 hover:bg-green-50 transition-colors"
       title={dark ? 'Modo claro' : 'Modo escuro'}
     >
-      {dark ? '☀️' : '🌙'}
+      {dark ? <IconSun size={18} stroke={1.75} /> : <IconMoon size={18} stroke={1.75} />}
     </button>
   )
 }

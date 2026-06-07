@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { IconCurrencyDollar, IconCoinBitcoin, IconChartLine, IconTrendingUp, IconTrendingDown } from '@tabler/icons-react'
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 
@@ -14,10 +15,10 @@ const SLUG: Record<string, string> = {
   '^BVSP': 'ibovespa', '^GSPC': 'sp500', '^IXIC': 'nasdaq', '^DJI': 'dow',
 }
 
-const GROUPS: { key: string; title: string }[] = [
-  { key: 'moeda', title: '💱 Moedas' },
-  { key: 'cripto', title: '🪙 Criptomoedas' },
-  { key: 'indice', title: '📈 Índices e Bolsas' },
+const GROUPS: { key: string; title: string; Icon: typeof IconChartLine }[] = [
+  { key: 'moeda', title: 'Moedas', Icon: IconCurrencyDollar },
+  { key: 'cripto', title: 'Criptomoedas', Icon: IconCoinBitcoin },
+  { key: 'indice', title: 'Índices e Bolsas', Icon: IconChartLine },
 ]
 
 export function MarketBoard() {
@@ -37,29 +38,32 @@ export function MarketBoard() {
   if (!quotes.length) return <div className="text-gray-400 text-sm py-6">Carregando cotações…</div>
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {GROUPS.map(g => {
         const items = quotes.filter(q => q.kind === g.key)
         if (!items.length) return null
         return (
           <div key={g.key}>
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">{g.title}</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">
+              <g.Icon size={18} stroke={1.75} className="text-green-600" /> {g.title}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {items.map(q => {
                 const up = q.changePct >= 0
                 const slug = SLUG[q.symbol]
                 const card = (
                   <>
-                    <p className="text-sm text-gray-500">{q.label}</p>
-                    <p className="text-xl font-bold text-gray-900">{fmtPrice(q)}</p>
-                    <p className={`text-sm font-semibold ${up ? 'text-green-600' : 'text-red-500'}`}>
-                      {up ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%
+                    <p className="text-sm text-gray-500 mb-1">{q.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmtPrice(q)}</p>
+                    <p className={`flex items-center gap-1 text-sm font-semibold mt-1 tabular-nums ${up ? 'text-green-600' : 'text-red-500'}`}>
+                      {up ? <IconTrendingUp size={15} stroke={2} /> : <IconTrendingDown size={15} stroke={2} />}
+                      {Math.abs(q.changePct).toFixed(2)}%
                     </p>
                   </>
                 )
                 return slug
-                  ? <a key={q.symbol} href={`/cotacao/${slug}`} className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md hover:border-green-300 transition">{card}</a>
-                  : <div key={q.symbol} className="border border-gray-200 rounded-xl p-4 bg-white">{card}</div>
+                  ? <a key={q.symbol} href={`/cotacao/${slug}`} className="border border-gray-200 rounded-2xl p-5 bg-white hover:shadow-md hover:border-green-300 transition">{card}</a>
+                  : <div key={q.symbol} className="border border-gray-200 rounded-2xl p-5 bg-white">{card}</div>
               })}
             </div>
           </div>

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { IconTrendingUp, IconTrendingDown } from '@tabler/icons-react'
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 
@@ -41,16 +42,17 @@ export function QuotesTicker() {
           const slug = SLUG[q.symbol]
           const inner = (
             <>
-              <span className="text-gray-400 font-medium">{q.label}</span>
-              <span className="font-semibold">{fmt(q)}</span>
-              <span className={up ? 'text-green-400' : 'text-red-400'}>
-                {up ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%
+              <span className="text-gray-400 font-medium tracking-wide">{q.label}</span>
+              <span className="font-semibold tabular-nums">{fmt(q)}</span>
+              <span className={`inline-flex items-center gap-0.5 tabular-nums ${up ? 'text-green-400' : 'text-red-400'}`}>
+                {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}
+                {Math.abs(q.changePct).toFixed(2)}%
               </span>
             </>
           )
           return slug
-            ? <a key={i} href={`/cotacao/${slug}`} className="inline-flex items-center gap-1.5 px-4 text-sm shrink-0 hover:bg-gray-800 rounded">{inner}</a>
-            : <span key={i} className="inline-flex items-center gap-1.5 px-4 text-sm shrink-0">{inner}</span>
+            ? <a key={i} href={`/cotacao/${slug}`} className="inline-flex items-center gap-2 px-6 text-sm shrink-0 hover:bg-gray-800 rounded-lg transition-colors">{inner}</a>
+            : <span key={i} className="inline-flex items-center gap-2 px-6 text-sm shrink-0">{inner}</span>
         })}
       </div>
       <style>{`@keyframes ticker { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }`}</style>
