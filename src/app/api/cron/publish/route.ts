@@ -4,24 +4,14 @@
  * Configurado em vercel.json
  */
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@sanity/client'
-import { nanoid } from 'nanoid'
 import { NextResponse } from 'next/server'
+import {
+  sanity, SITE, type GeneratedPost,
+  createSanityPost, buildSlideUrls, deliverCarousel,
+  tgConfigured, tgSendPhoto,
+} from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-const sanity = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  token: process.env.SANITY_API_TOKEN,
-  apiVersion: '2024-01-01',
-  useCdn: false,
-})
-
-const IG_USER_ID = process.env.IG_USER_ID!
-const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
-const GRAPH      = 'https://graph.instagram.com/v21.0'
-const SITE       = 'https://endinheirados.cc'
 
 // --- Calendário de conteúdo ---
 
@@ -227,184 +217,6 @@ async function getPhoto(query: string, articleImageUrl?: string) {
   }
 }
 
-// --- Publicar no Sanity ---
-
-function toBlocks(lines: string[]) {
-  return lines.map(line => ({
-    _type: 'block',
-    _key: nanoid(8),
-    style: line.startsWith('### ') ? 'h3' : line.startsWith('## ') ? 'h2' : 'normal',
-    markDefs: [],
-    children: [{
-      _type: 'span', _key: nanoid(6),
-      text: line.replace(/^#{2,3} /, ''),
-      marks: [],
-    }],
-  }))
-}
-
-const DISCLAIMER_LINES = [
-  '## Transparência',
-  'Este conteúdo é editorial e independente. O Endinheirados não é patrocinado pelas empresas citadas e não recebe comissão por nenhuma indicação aqui. As análises são baseadas em informações públicas e servem apenas como ponto de partida — sempre confirme taxas e condições diretamente com a empresa antes de decidir. Este material é informativo e não constitui recomendação de investimento.',
-]
-
-async function publishToSanity(post: Record<string, unknown>, photo: { url: string; alt: string; credit: string }) {
-  const existing = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: post.slug })
-  if (existing) throw new Error(`Slug já existe: ${post.slug}`)
-
-  const bodyLines = [...(post.body as string[])]
-  // Posts de fundo de funil citam empresas/produtos: anexa disclaimer de independência
-  if (post.funnel === 'bofu') bodyLines.push(...DISCLAIMER_LINES)
-
-  return sanity.create({
-    _type: 'post',
-    title: post.title,
-    slug: { _type: 'slug', current: post.slug },
-    publishedAt: new Date().toISOString(),
-    funnel: post.funnel,
-    category: post.category,
-    excerpt: (post.excerpt as string).slice(0, 160),
-    coverImage: photo.url ? { url: photo.url, alt: photo.alt, credit: photo.credit } : undefined,
-    body: toBlocks(bodyLines),
-    seoKeywords: post.seoKeywords,
-    readingTime: post.readingTime,
-  })
-}
-
-// --- Publicar no Instagram via URL ---
-
-async function publishToInstagram(imageUrl: string, caption: string) {
-  const createRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_url: imageUrl, caption, access_token: IG_TOKEN }),
-  })
-  const createData = await createRes.json()
-  if (!createData.id) throw new Error(`Erro ao criar mídia: ${JSON.stringify(createData)}`)
-
-  await new Promise(r => setTimeout(r, 8000))
-
-  const pubRes = await fetch(`${GRAPH}/${IG_USER_ID}/media_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: createData.id, access_token: IG_TOKEN }),
-  })
-  const pubData = await pubRes.json()
-  if (!pubData.id) throw new Error(`Erro ao publicar: ${JSON.stringify(pubData)}`)
-  return pubData.id as string
-}
-
-// --- Entregar carrossel no Telegram (para postagem manual com música) ---
-
-async function sendCarouselToTelegram(slideUrls: string[], caption: string, blogUrl: string) {
-  const token = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!token || !chatId) throw new Error('TELEGRAM_BOT_TOKEN/CHAT_ID não configurados')
-
-  const API = `https://api.telegram.org/bot${token}`
-
-  // 1. Envia os slides como álbum (até 10 fotos). Legenda da postagem na 1ª foto.
-  const media = slideUrls.slice(0, 10).map((url, i) => ({
-    type: 'photo',
-    media: url,
-    ...(i === 0 ? { caption: `🎠 Carrossel pronto pra postar (adicione a música no app)\n\n${blogUrl}` } : {}),
-  }))
-  const albumRes = await fetch(`${API}/sendMediaGroup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, media }),
-  })
-  const albumData = await albumRes.json()
-  if (!albumData.ok) throw new Error(`Telegram album: ${JSON.stringify(albumData)}`)
-
-  // 2. Envia a legenda completa em mensagem separada (fácil de copiar no celular)
-  await fetch(`${API}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: `📋 LEGENDA (copie e cole):\n\n${caption}`,
-      disable_web_page_preview: true,
-    }),
-  })
-
-  return albumData.result?.[0]?.message_id ?? true
-}
-
-// --- Publicar carrossel no Instagram ---
-
-async function publishCarousel(slideUrls: string[], caption: string) {
-  // 1. Cria um container por slide (is_carousel_item)
-  const childIds: string[] = []
-  for (const url of slideUrls) {
-    const res = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: IG_TOKEN }),
-    })
-    const data = await res.json()
-    if (!data.id) throw new Error(`Erro ao criar slide: ${JSON.stringify(data)}`)
-    childIds.push(data.id)
-  }
-
-  // Aguarda o Instagram processar as imagens
-  await new Promise(r => setTimeout(r, 10000))
-
-  // 2. Cria o container do carrossel
-  const carRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      media_type: 'CAROUSEL',
-      children: childIds.join(','),
-      caption,
-      access_token: IG_TOKEN,
-    }),
-  })
-  const carData = await carRes.json()
-  if (!carData.id) throw new Error(`Erro ao criar carrossel: ${JSON.stringify(carData)}`)
-
-  await new Promise(r => setTimeout(r, 5000))
-
-  // 3. Publica
-  const pubRes = await fetch(`${GRAPH}/${IG_USER_ID}/media_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: carData.id, access_token: IG_TOKEN }),
-  })
-  const pubData = await pubRes.json()
-  if (!pubData.id) throw new Error(`Erro ao publicar carrossel: ${JSON.stringify(pubData)}`)
-  return pubData.id as string
-}
-
-// Monta as URLs dos slides: capa (foto) + conteúdo + CTA
-function buildSlideUrls(
-  coverTitle: string,
-  photoUrl: string,
-  slides: Array<{ title: string; body: string }>,
-) {
-  const enc = encodeURIComponent
-  const total = slides.length + 2 // capa + conteúdo + cta
-  const urls: string[] = []
-
-  // Slide 1 — capa (foto de fundo, CTA "arrasta")
-  urls.push(`${SITE}/api/og?title=${enc(coverTitle)}&photo=${enc(photoUrl)}&cta=${enc('ARRASTA PRO LADO →')}`)
-
-  // Slides de conteúdo
-  slides.forEach((s, i) => {
-    urls.push(
-      `${SITE}/api/og/slide?title=${enc(s.title)}&body=${enc(s.body)}&index=${i + 2}&total=${total}&kind=content`
-    )
-  })
-
-  // Último slide — CTA
-  urls.push(
-    `${SITE}/api/og/slide?title=${enc('QUER O GUIA COMPLETO?')}&body=${enc('Toca no link da bio e leia o conteúdo completo no nosso site. É de graça!')}&index=${total}&total=${total}&kind=cta`
-  )
-
-  return urls
-}
-
 // --- Handler principal ---
 
 export async function GET(request: Request) {
@@ -429,71 +241,49 @@ export async function GET(request: Request) {
     const articleImageUrl = schedule.type === 'news' ? (post.articleImageUrl as string | undefined) : undefined
     const photo = await getPhoto(post.coverQuery || 'personal finance money', articleImageUrl)
 
-    // 4. Publicar no Sanity
-    const sanityDoc = await publishToSanity(post, photo)
-    console.log(`[cron/publish] Publicado no Sanity: ${sanityDoc._id}`)
+    // 4. Modo aprovação: cria rascunho pendente e manda os botões no Telegram.
+    //    O blog e o carrossel só saem depois do seu OK.
+    const coverTitle = (post.igTitle as string) || (post.title as string)
+    const caption = (post.igCaption as string).replace('SLUG', post.slug as string)
+    const slides = Array.isArray(post.carousel)
+      ? (post.carousel as Array<{ title: string; body: string }>).filter(s => s?.title && s?.body).slice(0, 4)
+      : []
+    const slideUrls =
+      slides.length >= 2
+        ? buildSlideUrls(coverTitle, photo.url, slides)
+        : [`${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}&cta=${encodeURIComponent('LEIA A LEGENDA')}`]
 
-    // 4b. Notificar no Telegram que saiu post novo no blog
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-      const tipo = schedule.type === 'news' ? '🔥 Notícia quente' : '📚 Conteúdo evergreen'
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text: `📝 Novo post no blog!\n\n${tipo}\n${post.title}\n\n${SITE}/blog/${post.slug}\n\n(carrossel pra postar chega em seguida 👇)`,
-          disable_web_page_preview: false,
-        }),
-      }).catch(() => {})
+    if (!tgConfigured()) {
+      // Sem Telegram: fallback publica direto (comportamento antigo)
+      const doc = await createSanityPost(post as unknown as GeneratedPost, photo)
+      await deliverCarousel(slideUrls, caption, `${SITE}/blog/${post.slug}`)
+      return NextResponse.json({ ok: true, mode: 'auto', sanityId: doc._id, slug: post.slug })
     }
 
-    // 5. Carrossel: entregar no Telegram p/ postagem manual (com música).
-    //    Fallback: auto-publicar no Instagram se o Telegram não estiver configurado.
-    let delivery: string | null = null
-    let channel: 'telegram' | 'instagram' | null = null
-    if (photo.url) {
-      const coverTitle = (post.igTitle as string) || (post.title as string)
-      const caption = (post.igCaption as string).replace('SLUG', post.slug as string)
-      const blogUrl = `${SITE}/blog/${post.slug}`
-      const slides = Array.isArray(post.carousel)
-        ? (post.carousel as Array<{ title: string; body: string }>)
-            .filter(s => s?.title && s?.body)
-            .slice(0, 4)
-        : []
-      const slideUrls =
-        slides.length >= 2
-          ? buildSlideUrls(coverTitle, photo.url, slides)
-          : [`${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}`]
-
-      if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-        // Entrega no Telegram (sustentável, sem PC) para o usuário postar manual com música
-        delivery = String(await sendCarouselToTelegram(slideUrls, caption, blogUrl))
-        channel = 'telegram'
-        console.log(`[cron/publish] Carrossel entregue no Telegram (${slideUrls.length} slides)`)
-      } else {
-        // Fallback: publica direto no Instagram
-        try {
-          delivery = slideUrls.length >= 3
-            ? await publishCarousel(slideUrls, caption)
-            : await publishToInstagram(slideUrls[0], caption)
-        } catch (e) {
-          console.error('[cron/publish] Carrossel falhou, imagem única:', e instanceof Error ? e.message : e)
-          delivery = await publishToInstagram(slideUrls[0], caption)
-        }
-        channel = 'instagram'
-        console.log(`[cron/publish] Publicado no Instagram: ${delivery}`)
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      title: post.title,
-      slug: post.slug,
-      sanityId: sanityDoc._id,
-      channel,
-      delivery,
-      url: `${SITE}/blog/${post.slug}`,
+    // Guarda o rascunho pendente
+    const pending = await sanity.create({
+      _type: 'pendingPost',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      data: JSON.stringify({ post, photo, slideUrls, caption }),
     })
+    const id = pending._id
+
+    const tipo = schedule.type === 'news' ? '🔥 Notícia quente' : `📚 Evergreen (${schedule.funnel.toUpperCase()})`
+    await tgSendPhoto(
+      slideUrls[0],
+      `🆕 Post pronto pra revisão\n\n${tipo}\n📌 ${post.title}\n\n${(post.excerpt as string)}\n\nAprovar publica no blog + manda o carrossel aqui.`,
+      {
+        inline_keyboard: [[
+          { text: '✅ Aprovar', callback_data: `ap:${id}` },
+          { text: '❌ Rejeitar', callback_data: `rj:${id}` },
+        ], [
+          { text: '✏️ Editar título', callback_data: `ed:${id}` },
+        ]],
+      }
+    )
+
+    return NextResponse.json({ ok: true, mode: 'approval', pendingId: id, slug: post.slug })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[cron/publish] Erro:', message)
