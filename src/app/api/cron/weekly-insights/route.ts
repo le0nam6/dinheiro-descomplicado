@@ -5,6 +5,7 @@
  */
 import { NextResponse } from 'next/server'
 import { sanity, tgConfigured, tgAlert } from '@/lib/publish-core'
+import { ga4Configured, getGA4Summary } from '@/lib/ga4'
 
 const IG_USER_ID = process.env.IG_USER_ID!
 const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
@@ -81,13 +82,33 @@ export async function GET(request: Request) {
     const worst = bySaved[bySaved.length - 1]
 
     const fmt = (r: typeof rows[0]) => `• ${r.title}\n   👁 ${r.reach}  💾 ${r.saved}  ❤️ ${r.likes}`
+
+    // Bloco do GA4 (tráfego do blog), se configurado
+    let ga4Block = ''
+    if (ga4Configured()) {
+      try {
+        const g = await getGA4Summary()
+        const topPages = g.topPages.map(p => `   ${p.path} — ${p.views}`).join('\n')
+        const topSources = g.sources.slice(0, 4).map(s => `   ${s.source}: ${s.sessions}`).join('\n')
+        ga4Block =
+          `\n\n🌐 BLOG (Google Analytics)\n` +
+          `👥 ${g.users} visitantes · 🔁 ${g.sessions} sessões · 📄 ${g.pageViews} páginas\n` +
+          `📲 Vindos do Instagram: ${g.instagramSessions} sessões\n\n` +
+          `📄 Páginas mais vistas:\n${topPages}\n\n` +
+          `🚪 De onde vem o tráfego:\n${topSources}`
+      } catch (e) {
+        ga4Block = `\n\n🌐 Blog: erro ao puxar GA4 (${e instanceof Error ? e.message.slice(0, 80) : 'desconhecido'})`
+      }
+    }
+
     const text =
       `📊 RESUMO DA SEMANA (Instagram)\n\n` +
       `📝 ${blogCount} posts no blog · 📸 ${rows.length} no Instagram\n` +
       `👁 Alcance total: ${totalReach}\n💾 Salvamentos: ${totalSaved}\n❤️ Curtidas: ${totalLikes}\n\n` +
       `🏆 TOP 3 (por salvamentos — melhor sinal pra finanças):\n${top.map(fmt).join('\n')}\n\n` +
-      `📉 Menos engajou:\n${fmt(worst)}\n\n` +
-      `💡 Salvamento alto = conteúdo útil. Vale fazer mais sobre os temas do top 3.`
+      `📉 Menos engajou:\n${fmt(worst)}` +
+      ga4Block +
+      `\n\n💡 Salvamento alto = conteúdo útil. Vale fazer mais sobre os temas do top 3.`
 
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
