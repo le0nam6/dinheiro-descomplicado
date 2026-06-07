@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-html { color-scheme: only light; }
+html { color-scheme: only light; scroll-behavior: smooth; }
 body { background-color: #ffffff; color: #171717; }
 
 .prose h1 { @apply text-3xl font-extrabold mt-2 mb-4 text-gray-900; }

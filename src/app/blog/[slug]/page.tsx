@@ -248,10 +248,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       )}
     </article>
 
-    {/* Índice navegável (sticky, só em telas grandes e guias longos) */}
+    {/* Índice navegável (sticky centralizado, só em telas grandes e guias longos) */}
     <aside className="hidden lg:block">
-      <div className="sticky top-24">
-        <TableOfContents headings={headings} />
+      <div className="sticky top-0 h-screen flex items-center">
+        <div className="max-h-[70vh] overflow-y-auto w-full pr-1">
+          <TableOfContents headings={headings} />
+        </div>
       </div>
     </aside>
     </div>
