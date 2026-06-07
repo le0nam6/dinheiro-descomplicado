@@ -350,8 +350,8 @@ function buildSlideUrls(
   const total = slides.length + 2 // capa + conteúdo + cta
   const urls: string[] = []
 
-  // Slide 1 — capa (foto de fundo, mesmo padrão do post simples)
-  urls.push(`${SITE}/api/og?title=${enc(coverTitle)}&photo=${enc(photoUrl)}`)
+  // Slide 1 — capa (foto de fundo, CTA "arrasta")
+  urls.push(`${SITE}/api/og?title=${enc(coverTitle)}&photo=${enc(photoUrl)}&cta=${enc('ARRASTA PRO LADO →')}`)
 
   // Slides de conteúdo
   slides.forEach((s, i) => {

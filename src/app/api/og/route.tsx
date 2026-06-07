@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const title    = searchParams.get('title') || 'ENDINHEIRADOS'
   const photoUrl = searchParams.get('photo') || ''
+  const cta      = searchParams.get('cta') || 'LEIA A LEGENDA'
 
   return new ImageResponse(
     (
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
               textTransform: 'uppercase',
             }}
           >
-            LEIA A LEGENDA
+            {cta}
           </div>
         </div>
       </div>
