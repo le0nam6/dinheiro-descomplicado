@@ -37,6 +37,13 @@ export const postSchema = defineType({
     defineField({ name: 'readingTime', title: 'Tempo de leitura (min)', type: 'number' }),
     defineField({ name: 'igPublished', title: 'Publicado no Instagram', type: 'boolean' }),
     defineField({ name: 'igPostId', title: 'ID do post no Instagram', type: 'string' }),
+    defineField({ name: 'articleType', title: 'Tipo de artigo', type: 'string', options: { list: ['evergreen', 'news'] }, initialValue: 'evergreen' }),
+    defineField({ name: 'sources', title: 'Fontes (notícias)', type: 'array', of: [
+      { type: 'object', name: 'source', fields: [
+        { name: 'name', title: 'Veículo', type: 'string' },
+        { name: 'url', title: 'URL', type: 'url' },
+      ], preview: { select: { title: 'name', subtitle: 'url' } } },
+    ] }),
   ],
   preview: {
     select: { title: 'title', subtitle: 'funnel', media: 'coverImage' },

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import { CustomCursor } from '@/components/CustomCursor'
 import { Newsletter } from '@/components/Newsletter'
+import { QuotesTicker } from '@/components/QuotesTicker'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={inter.className}>
         <CustomCursor />
+        <QuotesTicker />
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
         <Footer />

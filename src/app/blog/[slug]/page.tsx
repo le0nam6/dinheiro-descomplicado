@@ -4,6 +4,7 @@ import { AdUnit } from '@/components/AdUnit'
 import { ArticleCTA } from '@/components/ArticleCTA'
 import { AffiliateBox } from '@/components/AffiliateBox'
 import { TableOfContents } from '@/components/TableOfContents'
+import { ImpartialityMeter } from '@/components/ImpartialityMeter'
 import { extractHeadings, extractFaqs, slugifyHeading } from '@/lib/postStructure'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -169,6 +170,25 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           },
         }} />}
       </div>
+
+      {/* Fontes (apenas notícias) */}
+      {post.articleType === 'news' && post.sources?.length > 0 && (
+        <section className="mt-10 border-t border-gray-200 pt-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-3">Fontes</h2>
+          <ul className="space-y-2">
+            {post.sources.map((s: { name: string; url: string }, i: number) => (
+              <li key={i} className="text-sm">
+                <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="text-green-700 hover:underline break-all">
+                  {s.name || s.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Termômetro de imparcialidade (apenas notícias) */}
+      {post.articleType === 'news' && <ImpartialityMeter slug={post.slug.current} />}
 
       {/* Ofertas de afiliado (MoFu/BoFu) */}
       {(post.funnel === 'bofu' || post.funnel === 'mofu') && <AffiliateBox category={post.category ?? ''} />}

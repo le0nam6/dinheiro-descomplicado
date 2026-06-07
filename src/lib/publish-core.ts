@@ -27,6 +27,8 @@ export type GeneratedPost = {
   igTitle?: string
   carousel?: Array<{ title: string; body: string }>
   coverQuery?: string
+  articleType?: 'evergreen' | 'news'
+  sources?: Array<{ name: string; url: string }>
 }
 
 export type Photo = { url: string; alt: string; credit: string }
@@ -100,6 +102,8 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
     body,
     seoKeywords: post.seoKeywords,
     readingTime: post.readingTime,
+    articleType: post.articleType || 'evergreen',
+    ...(post.sources?.length ? { sources: post.sources.map(s => ({ _type: 'source', _key: nanoid(6), name: s.name, url: s.url })) } : {}),
   })
 }
 

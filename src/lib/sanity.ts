@@ -26,7 +26,7 @@ export async function getPostBySlug(slug: string) {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "post" && slug.current == $slug][0] { title, slug, publishedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime }`,
+      `*[_type == "post" && slug.current == $slug][0] { title, slug, publishedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime, articleType, sources }`,
       { slug }
     )
   } catch { return null }

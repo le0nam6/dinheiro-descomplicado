@@ -3,6 +3,7 @@
  * e mensagens de edição. Controla o fluxo de aprovação dos posts.
  */
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       const [action, id] = (cq.data as string).split(':')
       const msgId = cq.message?.message_id
 
-      const pending = await sanity.fetch('*[_id==$id][0]{_id, data, status}', { id })
+      const pending = await sanity.fetch('*[_id==$id][0]{_id, data, status, publishedId, publishedSlug}', { id })
       if (!pending) {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Esse rascunho não existe mais.' })
         return NextResponse.json({ ok: true })
@@ -74,12 +75,32 @@ export async function POST(request: Request) {
         // Se o slug foi renomeado por colisão, corrige o link na legenda
         const caption = finalSlug === d.post.slug ? d.caption : d.caption.replaceAll(d.post.slug, finalSlug)
         await deliverCarousel(d.slideUrls, caption, blogUrl)
-        await sanity.delete(id)
+        // Mantém o rascunho como "published" p/ permitir trocar a foto depois
+        await sanity.patch(id).set({ status: 'published', publishedId: doc._id, publishedSlug: finalSlug, data: JSON.stringify(d) }).commit()
         await tg('editMessageCaption', {
           chat_id: cq.message.chat.id, message_id: msgId,
           caption: `✅ PUBLICADO\n\n${d.post.title}\n${blogUrl}`,
+          reply_markup: { inline_keyboard: [[{ text: '🖼 Trocar foto e refazer carrossel', callback_data: `np:${id}` }]] },
         })
         return NextResponse.json({ ok: true, published: doc._id })
+      }
+
+      if (action === 'np') {
+        // Trocar foto DEPOIS de publicado: nova foto → atualiza post no blog → refaz carrossel
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando outra foto…' })
+        const newPhoto = await fetchPhoto(d.post.coverQuery || 'finance', d.photo.url)
+        d.photo = newPhoto
+        d.slideUrls = buildSlides(d.post, newPhoto)
+        const postId = pending.publishedId as string
+        const slug = pending.publishedSlug as string
+        if (postId) {
+          await sanity.patch(postId).set({ coverImage: { url: newPhoto.url, alt: newPhoto.alt, credit: newPhoto.credit } }).commit()
+          try { revalidatePath(`/blog/${slug}`) } catch { /* ISR */ }
+        }
+        await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()
+        await deliverCarousel(d.slideUrls, d.caption.replaceAll(d.post.slug, slug || d.post.slug), `${SITE}/blog/${slug}`)
+        await tg('sendMessage', { chat_id: cq.message.chat.id, text: `🖼 Foto trocada no blog e carrossel refeito acima. Se ainda não ficou bom, toca de novo em "Trocar foto".` })
+        return NextResponse.json({ ok: true, rephoto: postId })
       }
 
       if (action === 'rj') {
