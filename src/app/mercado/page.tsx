@@ -9,6 +9,7 @@ export const revalidate = 300
 export const metadata: Metadata = {
   title: 'Mercado ao Vivo · Cotações e Notícias · Endinheirados',
   description: 'Cotações ao vivo de dólar, euro, bitcoin, Ibovespa, S&P 500, Nasdaq e Dow Jones, além das últimas notícias do mercado financeiro.',
+  alternates: { canonical: '/mercado' },
 }
 
 async function getLatestNews() {

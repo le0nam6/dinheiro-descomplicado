@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ symbol: s
   const { symbol } = await params
   const a = ASSETS[symbol]
   if (!a) return {}
-  return { title: `${a.label} hoje · Cotação ao vivo · Endinheirados`, description: a.desc }
+  return { title: `${a.label} hoje · Cotação ao vivo · Endinheirados`, description: a.desc, alternates: { canonical: `/cotacao/${symbol}` } }
 }
 
 async function getHistory(yahoo: string) {

@@ -31,9 +31,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: post.title,
     description: post.excerpt,
     keywords: post.seoKeywords?.join(', '),
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
+      type: 'article',
+      url: `/blog/${slug}`,
       title: post.title,
       description: post.excerpt,
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt || post.publishedAt,
       images: post.coverImage?.url ? [{ url: post.coverImage.url }] : [],
     },
   }

@@ -31,5 +31,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }))
 
-  return [...staticRoutes, ...postRoutes]
+  const now = new Date()
+  return [...staticRoutes.map(r => ({ ...r, lastModified: now })), ...postRoutes]
 }
