@@ -4,6 +4,7 @@
  */
 import { createClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
+import { tgAlert } from '@/lib/publish-core'
 
 const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
@@ -190,6 +191,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[ig-backlog] Erro:', message)
+    await tgAlert('Cron backlog (9h)', err)
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

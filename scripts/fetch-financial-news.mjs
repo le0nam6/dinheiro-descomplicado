@@ -27,7 +27,11 @@ function parseRSS(xml) {
     const description = get('description').replace(/<[^>]+>/g, '').slice(0, 200)
     const link        = get('link')
     const pubDate     = get('pubDate')
-    if (title && link) items.push({ title, description, url: link, publishedAt: pubDate })
+    // Tenta extrair imagem do artigo (media:content, enclosure ou og:image no HTML)
+    const mediaMatch  = block.match(/<media:content[^>]+url=["']([^"']+)["']/) ||
+                        block.match(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp))["']/)
+    const imageUrl    = mediaMatch?.[1] || null
+    if (title && link) items.push({ title, description, url: link, publishedAt: pubDate, imageUrl })
   }
   return items
 }

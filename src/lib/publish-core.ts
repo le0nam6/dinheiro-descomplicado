@@ -26,6 +26,7 @@ export type GeneratedPost = {
   igCaption: string
   igTitle?: string
   carousel?: Array<{ title: string; body: string }>
+  coverQuery?: string
 }
 
 export type Photo = { url: string; alt: string; credit: string }
@@ -35,12 +36,20 @@ const DISCLAIMER_LINES = [
   'Este conteúdo é editorial e independente. O Endinheirados não é patrocinado pelas empresas citadas e não recebe comissão por nenhuma indicação aqui. As análises são baseadas em informações públicas e servem apenas como ponto de partida — sempre confirme taxas e condições diretamente com a empresa antes de decidir. Este material é informativo e não constitui recomendação de investimento.',
 ]
 
-function toBlocks(lines: string[]) {
+type Block = {
+  _type: string
+  _key: string
+  style?: string
+  markDefs: Array<Record<string, unknown>>
+  children: Array<Record<string, unknown>>
+}
+
+function toBlocks(lines: string[]): Block[] {
   return lines.map(line => ({
     _type: 'block',
     _key: nanoid(8),
     style: line.startsWith('### ') ? 'h3' : line.startsWith('## ') ? 'h2' : 'normal',
-    markDefs: [],
+    markDefs: [] as Array<Record<string, unknown>>,
     children: [{ _type: 'span', _key: nanoid(6), text: line.replace(/^#{2,3} /, ''), marks: [] }],
   }))
 }
@@ -57,6 +66,28 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
   const bodyLines = [...post.body]
   if (post.funnel === 'bofu') bodyLines.push(...DISCLAIMER_LINES)
 
+  const body = toBlocks(bodyLines)
+
+  // Linkagem interna (SEO): "Leia também" com 2-3 posts relacionados
+  const related: Array<{ title: string; slug: string }> = await sanity.fetch(
+    `*[_type=="post" && category==$cat && slug.current!=$slug]|order(publishedAt desc)[0...3]{title,"slug":slug.current}`,
+    { cat: post.category, slug }
+  )
+  if (related.length) {
+    body.push({
+      _type: 'block', _key: nanoid(8), style: 'h2', markDefs: [],
+      children: [{ _type: 'span', _key: nanoid(6), text: 'Leia também', marks: [] }],
+    })
+    for (const r of related) {
+      const linkKey = nanoid(6)
+      body.push({
+        _type: 'block', _key: nanoid(8), style: 'normal',
+        markDefs: [{ _type: 'link', _key: linkKey, href: `${SITE}/blog/${r.slug}` }],
+        children: [{ _type: 'span', _key: nanoid(6), text: r.title, marks: [linkKey] }],
+      })
+    }
+  }
+
   return sanity.create({
     _type: 'post',
     title: post.title,
@@ -66,10 +97,47 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
     category: post.category,
     excerpt: post.excerpt.slice(0, 160),
     coverImage: photo.url ? { url: photo.url, alt: photo.alt, credit: photo.credit } : undefined,
-    body: toBlocks(bodyLines),
+    body,
     seoKeywords: post.seoKeywords,
     readingTime: post.readingTime,
   })
+}
+
+// --- Alertas de falha no Telegram (#1) ---
+export async function tgAlert(context: string, error: unknown) {
+  if (!tgConfigured()) return
+  const msg = error instanceof Error ? error.message : String(error)
+  await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text: `❌ FALHA: ${context}\n\n${msg.slice(0, 500)}`,
+    }),
+  }).catch(() => {})
+}
+
+// --- Memória de temas: títulos recentes para evitar repetição (#2) ---
+export async function getRecentTitles(limit = 15): Promise<string[]> {
+  return sanity.fetch(`*[_type=="post"]|order(publishedAt desc)[0...${limit}].title`)
+}
+
+// --- Busca de foto reutilizável: Pexels → Unsplash (#4 trocar foto) ---
+export async function fetchPhoto(query: string, excludeUrl?: string): Promise<Photo> {
+  if (process.env.PEXELS_API_KEY) {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=8&orientation=square`,
+      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+    ).then(r => r.json()).catch(() => null)
+    const photos = (res?.photos ?? []) as Array<{ src: { large2x: string; large: string }; alt?: string; photographer?: string }>
+    const pick = photos.find(p => (p.src.large2x || p.src.large) !== excludeUrl) || photos[0]
+    if (pick) return { url: pick.src.large2x || pick.src.large, alt: pick.alt || query, credit: `Foto: ${pick.photographer} via Pexels` }
+  }
+  const u = await fetch(
+    `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
+    { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
+  ).then(r => r.json()).catch(() => null)
+  return { url: u?.urls?.regular ?? '', alt: u?.alt_description ?? query, credit: `Foto: ${u?.user?.name ?? 'Unsplash'} via Unsplash` }
 }
 
 /** Monta as URLs dos slides do carrossel: capa (foto) + conteúdo + CTA. */

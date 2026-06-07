@@ -5,8 +5,22 @@
 import { NextResponse } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
-  createSanityPost, buildSlideUrls, deliverCarousel,
+  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
 } from '@/lib/publish-core'
+
+// Teclado de aprovação reutilizável
+function approvalKeyboard(id: string) {
+  return {
+    inline_keyboard: [[
+      { text: '✅ Aprovar', callback_data: `ap:${id}` },
+      { text: '❌ Rejeitar', callback_data: `rj:${id}` },
+    ], [
+      { text: '✏️ Título', callback_data: `ed:${id}` },
+      { text: '📝 Legenda', callback_data: `ec:${id}` },
+      { text: '🖼 Foto', callback_data: `ph:${id}` },
+    ]],
+  }
+}
 
 const TOKEN = () => process.env.TELEGRAM_BOT_TOKEN
 const API = () => `https://api.telegram.org/bot${TOKEN()}`
@@ -83,42 +97,68 @@ export async function POST(request: Request) {
         await sanity.patch(id).set({ status: 'editing' }).commit()
         await tg('sendMessage', {
           chat_id: cq.message.chat.id,
-          text: `✏️ Manda o novo título pra:\n"${d.post.title}"\n\n(responda esta mensagem com o texto)`,
+          text: `✏️ Manda o novo TÍTULO pra:\n"${d.post.title}"\n\n(responda esta mensagem com o texto)`,
           reply_markup: { force_reply: true },
         })
         return NextResponse.json({ ok: true, editing: id })
       }
+
+      if (action === 'ec') {
+        await tg('answerCallbackQuery', { callback_query_id: cq.id })
+        await sanity.patch(id).set({ status: 'editing-caption' }).commit()
+        await tg('sendMessage', {
+          chat_id: cq.message.chat.id,
+          text: `📝 Manda a nova LEGENDA completa do Instagram\n\n(responda esta mensagem com o texto)`,
+          reply_markup: { force_reply: true },
+        })
+        return NextResponse.json({ ok: true, editingCaption: id })
+      }
+
+      if (action === 'ph') {
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando outra foto…' })
+        const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', d.photo.url)
+        d.photo = newPhoto
+        d.slideUrls = buildSlides(d.post, newPhoto)
+        await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()
+        await tg('sendPhoto', {
+          chat_id: cq.message.chat.id,
+          photo: d.slideUrls[0],
+          caption: `🖼 Foto trocada\n\n📌 ${d.post.title}`,
+          reply_markup: approvalKeyboard(id),
+        })
+        return NextResponse.json({ ok: true, photoSwapped: id })
+      }
     }
 
-    // === Mensagem de texto (edição de título) ===
+    // === Mensagem de texto (edição de título ou legenda) ===
     if (update.message?.text) {
       const text = update.message.text.trim()
       if (text.startsWith('/')) return NextResponse.json({ ok: true }) // ignora comandos
 
       const editing = await sanity.fetch(
-        '*[_type=="pendingPost" && status=="editing"]|order(createdAt desc)[0]{_id, data}'
+        '*[_type=="pendingPost" && status in ["editing","editing-caption"]]|order(createdAt desc)[0]{_id, data, status}'
       )
       if (!editing) return NextResponse.json({ ok: true })
 
       const d: PendingData = JSON.parse(editing.data)
-      d.post.title = text
-      d.post.igTitle = text.toUpperCase()
-      d.slideUrls = buildSlides(d.post, d.photo)
+      let label: string
+      if (editing.status === 'editing-caption') {
+        d.caption = text
+        label = '📝 Legenda atualizada'
+      } else {
+        d.post.title = text
+        d.post.igTitle = text.toUpperCase()
+        d.slideUrls = buildSlides(d.post, d.photo)
+        label = '✏️ Título atualizado'
+      }
 
       await sanity.patch(editing._id).set({ status: 'pending', data: JSON.stringify(d) }).commit()
 
       await tg('sendPhoto', {
         chat_id: update.message.chat.id,
         photo: d.slideUrls[0],
-        caption: `🆕 Título atualizado\n\n📌 ${d.post.title}\n\n${d.post.excerpt}`,
-        reply_markup: {
-          inline_keyboard: [[
-            { text: '✅ Aprovar', callback_data: `ap:${editing._id}` },
-            { text: '❌ Rejeitar', callback_data: `rj:${editing._id}` },
-          ], [
-            { text: '✏️ Editar título', callback_data: `ed:${editing._id}` },
-          ]],
-        },
+        caption: `🆕 ${label}\n\n📌 ${d.post.title}`,
+        reply_markup: approvalKeyboard(editing._id),
       })
       return NextResponse.json({ ok: true, edited: editing._id })
     }

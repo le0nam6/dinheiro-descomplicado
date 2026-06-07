@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
   createSanityPost, buildSlideUrls, deliverCarousel,
-  tgConfigured, tgSendPhoto,
+  tgConfigured, tgSendPhoto, tgAlert, getRecentTitles,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -81,7 +81,7 @@ async function fetchNews(): Promise<string> {
 
 // --- Gerar post com Claude ---
 
-async function generatePost(schedule: ReturnType<typeof getSchedule>, news: string) {
+async function generatePost(schedule: ReturnType<typeof getSchedule>, news: string, recentTitles: string[]) {
   const { type, funnel } = schedule
 
   const funnelGuide = {
@@ -89,6 +89,10 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
     mofu: 'meio de funil (consideration): comparações, como-fazer, aprofundamento prático',
     bofu: 'fundo de funil (decision): recomendações específicas, ranking, melhores opções do momento',
   }[funnel]
+
+  const avoid = recentTitles.length
+    ? `\n\nNÃO REPITA estes temas já publicados recentemente (escolha um ângulo ou assunto diferente):\n${recentTitles.map(t => `- ${t}`).join('\n')}`
+    : ''
 
   // Para notícias, inclui imageUrl do artigo original se disponível
   let articleImageUrl: string | undefined
@@ -105,6 +109,7 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   } else {
     context = `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
   }
+  context += avoid
 
   const prompt = `${context}
 
@@ -233,8 +238,9 @@ export async function GET(request: Request) {
     // 1. Buscar notícias se necessário
     const news = schedule.type === 'news' ? await fetchNews() : ''
 
-    // 2. Gerar conteúdo com Claude
-    const post = await generatePost(schedule, news)
+    // 2. Gerar conteúdo com Claude (evitando repetir temas recentes)
+    const recentTitles = await getRecentTitles(15)
+    const post = await generatePost(schedule, news, recentTitles)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
     // 3. Foto: tenta imagem do artigo original → Pexels → Unsplash
@@ -260,12 +266,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: true, mode: 'auto', sanityId: doc._id, slug: post.slug })
     }
 
-    // Guarda o rascunho pendente
+    // Guarda o rascunho pendente (inclui coverQuery p/ "trocar foto")
+    const coverQuery = (post.coverQuery as string) || 'personal finance money'
     const pending = await sanity.create({
       _type: 'pendingPost',
       status: 'pending',
       createdAt: new Date().toISOString(),
-      data: JSON.stringify({ post, photo, slideUrls, caption }),
+      data: JSON.stringify({ post: { ...post, coverQuery }, photo, slideUrls, caption }),
     })
     const id = pending._id
 
@@ -278,7 +285,9 @@ export async function GET(request: Request) {
           { text: '✅ Aprovar', callback_data: `ap:${id}` },
           { text: '❌ Rejeitar', callback_data: `rj:${id}` },
         ], [
-          { text: '✏️ Editar título', callback_data: `ed:${id}` },
+          { text: '✏️ Título', callback_data: `ed:${id}` },
+          { text: '📝 Legenda', callback_data: `ec:${id}` },
+          { text: '🖼 Foto', callback_data: `ph:${id}` },
         ]],
       }
     )
@@ -287,6 +296,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[cron/publish] Erro:', message)
+    await tgAlert(`Cron publish (${new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })})`, err)
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }
