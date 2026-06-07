@@ -10,6 +10,6 @@
     { "path": "/api/cron/publish",    "schedule": "0 21 * * *" },
     { "path": "/api/cron/refresh-token", "schedule": "0 12 1 * *" },
     { "path": "/api/cron/weekly-insights", "schedule": "0 10 * * 1" },
-    { "path": "/api/cron/news", "schedule": "0 */2 * * *" }
+    { "path": "/api/cron/news", "schedule": "0 8 * * *" }
   ]
 }
