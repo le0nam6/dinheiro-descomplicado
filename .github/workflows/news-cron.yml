@@ -1,0 +1,21 @@
+name: Notícias a cada 2h
+
+# Dispara a vertical jornalística a cada 2 horas (limite do Vercel Hobby é 1x/dia,
+# então o agendamento sub-diário roda aqui no GitHub Actions — grátis, sem PC).
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  publish-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/news
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://endinheirados.cc/api/cron/news")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"
