@@ -132,13 +132,40 @@ export async function GET(request: Request) {
     if (!photoUrl) throw new Error('Unsplash não retornou foto')
 
     const caption = await buildCaption(post)
+    const blogUrl = `${SITE}/blog/${post.slug}`
 
     // Gera imagem no padrão Endinheirados via /api/og
-    const igTitle = encodeURIComponent(post.title.toUpperCase())
-    const igPhoto = encodeURIComponent(photoUrl)
-    const igImageUrl = `${SITE}/api/og?title=${igTitle}&photo=${igPhoto}`
+    const igImageUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title.toUpperCase())}&photo=${encodeURIComponent(photoUrl)}`
 
-    // Criar container de mídia
+    const token = process.env.TELEGRAM_BOT_TOKEN
+    const chatId = process.env.TELEGRAM_CHAT_ID
+    if (token && chatId) {
+      // Entrega no Telegram para postagem manual (com música)
+      const TG = `https://api.telegram.org/bot${token}`
+      const photoRes = await fetch(`${TG}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          photo: igImageUrl,
+          caption: `📲 Post do backlog pronto pra postar (adicione a música no app)\n\n${blogUrl}`,
+        }),
+      })
+      const photoData = await photoRes.json()
+      if (!photoData.ok) throw new Error(`Telegram sendPhoto: ${JSON.stringify(photoData)}`)
+
+      await fetch(`${TG}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: `📋 LEGENDA (copie e cole):\n\n${caption}`, disable_web_page_preview: true }),
+      })
+
+      await markIgPublished(post.slug, `tg:${photoData.result?.message_id ?? 'sent'}`)
+
+      return NextResponse.json({ ok: true, channel: 'telegram', title: post.title, slug: post.slug, url: blogUrl })
+    }
+
+    // Fallback: publica direto no Instagram
     const createRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,13 +186,7 @@ export async function GET(request: Request) {
 
     await markIgPublished(post.slug, pubData.id)
 
-    return NextResponse.json({
-      ok: true,
-      title: post.title,
-      slug: post.slug,
-      igPostId: pubData.id,
-      url: `${SITE}/blog/${post.slug}`,
-    })
+    return NextResponse.json({ ok: true, channel: 'instagram', title: post.title, slug: post.slug, igPostId: pubData.id, url: blogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[ig-backlog] Erro:', message)
