@@ -9,6 +9,11 @@ function fmtPrice(q: Quote) {
   return (q.kind === 'moeda' || q.kind === 'cripto') ? `R$ ${v}` : v
 }
 
+const SLUG: Record<string, string> = {
+  USDBRL: 'dolar', EURBRL: 'euro', GBPBRL: 'libra', BTCBRL: 'bitcoin', ETHBRL: 'ethereum',
+  '^BVSP': 'ibovespa', '^GSPC': 'sp500', '^IXIC': 'nasdaq', '^DJI': 'dow',
+}
+
 const GROUPS: { key: string; title: string }[] = [
   { key: 'moeda', title: '💱 Moedas' },
   { key: 'cripto', title: '🪙 Criptomoedas' },
@@ -42,15 +47,19 @@ export function MarketBoard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {items.map(q => {
                 const up = q.changePct >= 0
-                return (
-                  <div key={q.symbol} className="border border-gray-200 rounded-xl p-4 bg-white">
+                const slug = SLUG[q.symbol]
+                const card = (
+                  <>
                     <p className="text-sm text-gray-500">{q.label}</p>
                     <p className="text-xl font-bold text-gray-900">{fmtPrice(q)}</p>
                     <p className={`text-sm font-semibold ${up ? 'text-green-600' : 'text-red-500'}`}>
                       {up ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%
                     </p>
-                  </div>
+                  </>
                 )
+                return slug
+                  ? <a key={q.symbol} href={`/cotacao/${slug}`} className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md hover:border-green-300 transition">{card}</a>
+                  : <div key={q.symbol} className="border border-gray-200 rounded-xl p-4 bg-white">{card}</div>
               })}
             </div>
           </div>

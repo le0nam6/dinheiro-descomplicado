@@ -151,10 +151,44 @@ export async function POST(request: Request) {
       }
     }
 
-    // === Mensagem de texto (edição de título ou legenda) ===
+    // === Mensagem de texto (comandos ou edição) ===
     if (update.message?.text) {
       const text = update.message.text.trim()
-      if (text.startsWith('/')) return NextResponse.json({ ok: true }) // ignora comandos
+      const chatId = update.message.chat.id
+
+      // Comando /alerta <ativo> <acima|abaixo> <valor>
+      if (/^\/alerta(s)?\b/i.test(text)) {
+        const SYM: Record<string, string> = {
+          dolar: 'USDBRL', dólar: 'USDBRL', euro: 'EURBRL', libra: 'GBPBRL',
+          bitcoin: 'BTCBRL', btc: 'BTCBRL', ethereum: 'ETHBRL', eth: 'ETHBRL',
+          ibovespa: '^BVSP', ibov: '^BVSP', sp500: '^GSPC', nasdaq: '^IXIC', dow: '^DJI',
+        }
+        if (/^\/alertas\b/i.test(text)) {
+          const list = await sanity.fetch('*[_type=="priceAlert" && active==true]{symbol,condition,value}')
+          const txt = list.length
+            ? list.map((a: { symbol: string; condition: string; value: number }) => `• ${a.symbol} ${a.condition === 'above' ? '>' : '<'} ${a.value}`).join('\n')
+            : 'Nenhum alerta ativo.'
+          await tg('sendMessage', { chat_id: chatId, text: `🔔 Alertas ativos:\n${txt}` })
+          return NextResponse.json({ ok: true })
+        }
+        const m = text.match(/^\/alerta\s+(\S+)\s+(acima|above|abaixo|below|>|<)\s+([\d.,]+)/i)
+        if (!m) {
+          await tg('sendMessage', { chat_id: chatId, text: 'Uso: /alerta dolar acima 5.50\nAtivos: dolar, euro, libra, bitcoin, ethereum, ibovespa, sp500, nasdaq, dow\nVer ativos: /alertas' })
+          return NextResponse.json({ ok: true })
+        }
+        const sym = SYM[m[1].toLowerCase()]
+        if (!sym) {
+          await tg('sendMessage', { chat_id: chatId, text: `Ativo "${m[1]}" não reconhecido. Use: dolar, euro, libra, bitcoin, ethereum, ibovespa, sp500, nasdaq, dow.` })
+          return NextResponse.json({ ok: true })
+        }
+        const condition = /acima|above|>/i.test(m[2]) ? 'above' : 'below'
+        const value = parseFloat(m[3].replace(/\./g, '').replace(',', '.'))
+        await sanity.create({ _type: 'priceAlert', symbol: sym, condition, value, active: true })
+        await tg('sendMessage', { chat_id: chatId, text: `✅ Alerta criado: ${sym} ${condition === 'above' ? 'acima de' : 'abaixo de'} ${value}\n\nVou te avisar aqui quando bater.` })
+        return NextResponse.json({ ok: true })
+      }
+
+      if (text.startsWith('/')) return NextResponse.json({ ok: true }) // outros comandos ignorados
 
       const editing = await sanity.fetch(
         '*[_type=="pendingPost" && status in ["editing","editing-caption"]]|order(createdAt desc)[0]{_id, data, status}'

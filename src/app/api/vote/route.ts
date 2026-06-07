@@ -30,17 +30,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'slug e vote válidos obrigatórios' }, { status: 400 })
   }
   const id = docId(slug)
-  await sanity
-    .patch(id)
-    .setIfMissing({ _type: 'postVotes', slug, imparcial: 0, tendencioso: 0, neutro: 0 })
-    .inc({ [vote]: 1 })
-    .commit({ autoGenerateArrayKeys: true })
-    .catch(async (e) => {
-      // doc não existe ainda → cria e tenta de novo
-      if (String(e).includes('does not exist')) {
-        await sanity.createIfNotExists({ _id: id, _type: 'postVotes', slug, imparcial: 0, tendencioso: 0, neutro: 0 })
-        await sanity.patch(id).inc({ [vote]: 1 }).commit()
-      } else throw e
-    })
+  try {
+    // Garante que o doc existe (com zeros) e então incrementa o voto
+    await sanity.createIfNotExists({ _id: id, _type: 'postVotes', slug, imparcial: 0, tendencioso: 0, neutro: 0 })
+    await sanity.patch(id).inc({ [vote]: 1 }).commit()
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
   return NextResponse.json({ ok: true, ...(await totals(slug)) })
 }

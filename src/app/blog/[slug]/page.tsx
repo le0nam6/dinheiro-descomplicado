@@ -6,6 +6,7 @@ import { AffiliateBox } from '@/components/AffiliateBox'
 import { TableOfContents } from '@/components/TableOfContents'
 import { ImpartialityMeter } from '@/components/ImpartialityMeter'
 import { NewsTrustBar } from '@/components/NewsTrustBar'
+import { Comments } from '@/components/Comments'
 import { extractHeadings, extractFaqs, slugifyHeading } from '@/lib/postStructure'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -206,6 +207,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* CTA: Ferramentas + Links internos */}
       <ArticleCTA category={post.category ?? ''} related={related} />
+
+      {/* Comentários (Giscus) */}
+      <Comments />
 
       {/* JSON-LD: Article + Author */}
       <script

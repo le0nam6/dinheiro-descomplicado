@@ -3,6 +3,11 @@ import { useEffect, useState } from 'react'
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 
+const SLUG: Record<string, string> = {
+  USDBRL: 'dolar', EURBRL: 'euro', GBPBRL: 'libra', BTCBRL: 'bitcoin', ETHBRL: 'ethereum',
+  '^BVSP': 'ibovespa', '^GSPC': 'sp500', '^IXIC': 'nasdaq', '^DJI': 'dow',
+}
+
 function fmt(q: Quote) {
   const isBig = q.price >= 1000
   const price = q.kind === 'indice' || isBig
@@ -33,15 +38,19 @@ export function QuotesTicker() {
       <div className="flex whitespace-nowrap animate-[ticker_40s_linear_infinite] py-2">
         {items.map((q, i) => {
           const up = q.changePct >= 0
-          return (
-            <span key={i} className="inline-flex items-center gap-1.5 px-4 text-sm shrink-0">
+          const slug = SLUG[q.symbol]
+          const inner = (
+            <>
               <span className="text-gray-400 font-medium">{q.label}</span>
               <span className="font-semibold">{fmt(q)}</span>
               <span className={up ? 'text-green-400' : 'text-red-400'}>
                 {up ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%
               </span>
-            </span>
+            </>
           )
+          return slug
+            ? <a key={i} href={`/cotacao/${slug}`} className="inline-flex items-center gap-1.5 px-4 text-sm shrink-0 hover:bg-gray-800 rounded">{inner}</a>
+            : <span key={i} className="inline-flex items-center gap-1.5 px-4 text-sm shrink-0">{inner}</span>
         })}
       </div>
       <style>{`@keyframes ticker { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }`}</style>

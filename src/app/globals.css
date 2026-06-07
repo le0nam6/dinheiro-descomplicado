@@ -15,3 +15,27 @@ body { background-color: #ffffff; color: #171717; }
 .prose table { @apply w-full border-collapse text-sm mb-6; }
 .prose th { @apply bg-green-50 font-semibold text-left px-3 py-2 border border-gray-200; }
 .prose td { @apply px-3 py-2 border border-gray-200; }
+
+/* ===== Modo escuro (classe .dark no <html>) ===== */
+html.dark { color-scheme: dark; }
+html.dark body { background-color: #0b0f0e; color: #e5e7eb; }
+html.dark .bg-white { background-color: #14191b !important; }
+html.dark .bg-gray-50 { background-color: #11171a !important; }
+html.dark .bg-gray-100 { background-color: #1b2225 !important; }
+html.dark .bg-gradient-to-br.from-gray-50,
+html.dark .from-gray-50 { background-image: none !important; background-color: #14191b !important; }
+html.dark .text-gray-900 { color: #f3f4f6 !important; }
+html.dark .text-gray-800 { color: #e5e7eb !important; }
+html.dark .text-gray-700 { color: #d1d5db !important; }
+html.dark .text-gray-600 { color: #c3cad3 !important; }
+html.dark .text-gray-500 { color: #9aa6b2 !important; }
+html.dark .text-gray-400 { color: #7d8896 !important; }
+html.dark .border-gray-100 { border-color: #232b2e !important; }
+html.dark .border-gray-200 { border-color: #2a3338 !important; }
+html.dark .border-gray-300 { border-color: #323d42 !important; }
+html.dark .shadow-sm, html.dark .shadow-md { box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+html.dark .prose { color: #d1d5db; }
+html.dark .prose h1, html.dark .prose h2, html.dark .prose h3, html.dark .prose strong { color: #f3f4f6; }
+html.dark .prose p, html.dark .prose li, html.dark .prose td { color: #d1d5db; }
+html.dark .bg-green-50 { background-color: #14241b !important; }
+html.dark .bg-amber-50 { background-color: #2a2113 !important; }
