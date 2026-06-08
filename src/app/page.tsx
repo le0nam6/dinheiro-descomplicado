@@ -1,5 +1,6 @@
-import { getPosts } from '@/lib/sanity'
+import { getPosts, getLatestEdition } from '@/lib/sanity'
 import { AdUnit } from '@/components/AdUnit'
+import { IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
 
 export const revalidate = 60
@@ -28,14 +29,40 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function editionLabel(date: string) {
+  return new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+}
+
 export default async function Home() {
-  const allPosts: Post[] = await getPosts(20)
+  const [allPosts, edition] = await Promise.all([getPosts(20) as Promise<Post[]>, getLatestEdition()])
   const featured = allPosts[0] ?? null
   const popular = allPosts.slice(1, 5)
   const recent = allPosts.slice(5)
 
   return (
     <div className="max-w-5xl mx-auto">
+
+      {/* ── A EDIÇÃO DO DIA (destaque) ──────────────────────────────────── */}
+      {edition && (
+        <Link href={`/edicao/${edition.slug.current}`} className="group block mb-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 to-green-900 text-white p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide bg-white/15 px-2.5 py-1 rounded-full mb-3">
+                  🗞️ A Edição · {editionLabel(edition.date)}
+                </p>
+                <h2 className="text-xl sm:text-2xl font-extrabold leading-tight">{edition.title}</h2>
+                <p className="text-green-50 text-sm mt-1.5">O mercado do dia em poucos minutos — Brasil, mundo e o que mexe no seu bolso.</p>
+                {edition.intro && <p className="text-green-100/90 text-sm mt-2 line-clamp-2 max-w-2xl">{edition.intro}</p>}
+                <span className="inline-flex items-center gap-1.5 mt-4 bg-white text-green-800 font-bold text-sm px-4 py-2 rounded-full group-hover:bg-green-50 transition-colors">
+                  Ler a edição de hoje <IconArrowRight size={16} stroke={2.25} className="group-hover:translate-x-1 transition-transform" />
+                </span>
+              </div>
+              <span className="hidden sm:block text-6xl shrink-0 select-none opacity-90">🗞️</span>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* ── HERO CANVAS ─────────────────────────────────────────────────── */}
       {featured ? (
