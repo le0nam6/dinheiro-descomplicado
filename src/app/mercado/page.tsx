@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { client } from '@/lib/sanity'
+import { client, getLatestEdition } from '@/lib/sanity'
 import { MarketBoard } from '@/components/MarketBoard'
-import { IconChartAreaLine } from '@tabler/icons-react'
+import { IconChartAreaLine, IconArrowRight } from '@tabler/icons-react'
 
 export const revalidate = 300
 
@@ -22,7 +22,7 @@ async function getLatestNews() {
 }
 
 export default async function MercadoPage() {
-  const news = await getLatestNews()
+  const [news, edition] = await Promise.all([getLatestNews(), getLatestEdition()])
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="flex items-center gap-2.5 text-3xl font-extrabold text-gray-900 mb-2">
@@ -30,9 +30,26 @@ export default async function MercadoPage() {
       </h1>
       <p className="text-gray-500 mb-10">Cotações em tempo real e as últimas do mercado financeiro.</p>
 
+      {/* A Edição — compilado diário do mercado */}
+      {edition && (
+        <Link href={`/edicao/${edition.slug.current}`} className="group block mb-10">
+          <div className="border-2 border-green-600 rounded-2xl p-5 sm:p-6 bg-green-50/50 hover:bg-green-50 transition-colors">
+            <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1.5">🗞️ A Edição de hoje · o mercado do dia em poucos minutos</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 group-hover:text-green-800 transition-colors">{edition.title}</h2>
+            {edition.intro && <p className="text-gray-700 mt-2 leading-relaxed line-clamp-2">{edition.intro}</p>}
+            <p className="inline-flex items-center gap-1.5 text-green-700 font-semibold text-sm mt-3">
+              Ler a edição <IconArrowRight size={16} stroke={2} className="group-hover:translate-x-1 transition-transform" />
+            </p>
+          </div>
+        </Link>
+      )}
+
       <MarketBoard />
 
-      <h2 className="text-2xl font-bold text-gray-900 mt-16 mb-6">Últimas notícias</h2>
+      <div className="flex items-end justify-between mt-16 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Últimas notícias</h2>
+        {edition && <Link href="/edicao" className="text-sm font-medium text-green-700 hover:underline shrink-0">Edições anteriores →</Link>}
+      </div>
       <div className="grid sm:grid-cols-2 gap-5">
         {news.map((n: { slug: string; title: string; excerpt: string; publishedAt: string; coverImage?: { url: string } }) => (
           <Link key={n.slug} href={`/blog/${n.slug}`} className="group block border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
