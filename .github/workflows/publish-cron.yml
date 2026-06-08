@@ -1,0 +1,28 @@
+name: Publicar post no blog (9/12/15/18h BRT)
+
+# Dispara a geração de post do blog chamando /api/cron/publish, que:
+#  - gera o conteúdo com Claude (notícia às 9h e 15h; evergreen às 12h e 18h)
+#  - cria um rascunho PENDENTE e te manda no Telegram com botões Aprovar/Rejeitar
+# Horários em UTC (Brasília = UTC-3): 12→9h, 15→12h, 18→15h, 21→18h BRT.
+# Agendamos minuto 5 pra reduzir o atraso típico do cron do GitHub Actions.
+on:
+  schedule:
+    - cron: '5 12,15,18,21 * * *'
+  workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
+
+concurrency:
+  group: publish-blog
+  cancel-in-progress: false
+
+jobs:
+  publish-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/publish
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://endinheirados.cc/api/cron/publish")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"
