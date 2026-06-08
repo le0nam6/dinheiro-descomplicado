@@ -74,6 +74,7 @@ function Header() {
       {/* Nav como submenu centralizado */}
       <nav className="border-t border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-center gap-2 flex-wrap">
+          <a href="/edicao" className="px-3.5 py-2 text-sm font-semibold text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">🗞️ A Edição</a>
           <a href="/blog" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
           <a href="/mercado" className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"><IconChartLine size={16} stroke={1.75} /> Mercado</a>
           <a href="/categoria/emprestimo" className="px-3.5 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>

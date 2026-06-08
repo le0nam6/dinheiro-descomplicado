@@ -1,0 +1,27 @@
+name: Edição diária (6h BRT)
+
+# Publica A EDIÇÃO todo dia de manhã. 6h em Brasília = 09:00 UTC.
+# Agendamos um pouco antes (08:40 UTC) porque o cron do GitHub Actions pode
+# atrasar alguns minutos sob carga — assim a edição tende a sair POR VOLTA das 6h.
+# A rota é idempotente (não duplica edição do mesmo dia), então é seguro re-disparar.
+on:
+  schedule:
+    - cron: '40 8 * * *'
+  workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
+
+concurrency:
+  group: edition-daily
+  cancel-in-progress: false
+
+jobs:
+  publish-edition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/edition
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://endinheirados.cc/api/cron/edition")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"

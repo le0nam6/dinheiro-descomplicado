@@ -51,6 +51,34 @@ export async function getRelatedPosts(slug: string, category: string, limit = 4)
   } catch { return [] }
 }
 
+// --- Edições diárias (digest "The News") ---
+export async function getEditions(limit = 30) {
+  if (!client) return []
+  try {
+    return await client.fetch(
+      `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, title, intro, readingTime, "storyCount": count(stories) }`,
+      { limit }
+    )
+  } catch { return [] }
+}
+
+export async function getLatestEdition() {
+  if (!client) return null
+  try {
+    return await client.fetch(`*[_type == "edition"] | order(date desc)[0]{ date, slug, title, intro }`)
+  } catch { return null }
+}
+
+export async function getEditionByDate(date: string) {
+  if (!client) return null
+  try {
+    return await client.fetch(
+      `*[_type == "edition" && slug.current == $date][0] { date, slug, title, intro, publishedAt, readingTime, stories, marketSnapshot }`,
+      { date }
+    )
+  } catch { return null }
+}
+
 export async function getPostsByCategory(category: string) {
   if (!client) return []
   try {

@@ -1,4 +1,4 @@
-import { getPosts } from '@/lib/sanity'
+import { getPosts, getEditions } from '@/lib/sanity'
 import type { MetadataRoute } from 'next'
 
 const BASE_URL = 'https://endinheirados.cc'
@@ -6,6 +6,7 @@ const BASE_URL = 'https://endinheirados.cc'
 const staticRoutes = [
   { url: BASE_URL, priority: 1.0, changeFrequency: 'daily' as const },
   { url: `${BASE_URL}/blog`, priority: 0.9, changeFrequency: 'daily' as const },
+  { url: `${BASE_URL}/edicao`, priority: 0.9, changeFrequency: 'daily' as const },
   { url: `${BASE_URL}/mercado`, priority: 0.9, changeFrequency: 'hourly' as const },
   { url: `${BASE_URL}/etica`, priority: 0.4, changeFrequency: 'yearly' as const },
   { url: `${BASE_URL}/calculadora`, priority: 0.8, changeFrequency: 'monthly' as const },
@@ -22,7 +23,7 @@ const staticRoutes = [
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const posts = await getPosts(500)
+  const [posts, editions] = await Promise.all([getPosts(500), getEditions(120)])
 
   const postRoutes = posts.map((post: { slug: { current: string }; publishedAt: string }) => ({
     url: `${BASE_URL}/blog/${post.slug.current}`,
@@ -31,6 +32,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }))
 
+  const editionRoutes = editions.map((e: { slug: { current: string }; date: string }) => ({
+    url: `${BASE_URL}/edicao/${e.slug.current}`,
+    lastModified: new Date(e.date + 'T12:00:00'),
+    priority: 0.7,
+    changeFrequency: 'monthly' as const,
+  }))
+
   const now = new Date()
-  return [...staticRoutes.map(r => ({ ...r, lastModified: now })), ...postRoutes]
+  return [...staticRoutes.map(r => ({ ...r, lastModified: now })), ...editionRoutes, ...postRoutes]
 }
