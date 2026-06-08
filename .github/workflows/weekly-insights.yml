@@ -1,0 +1,25 @@
+name: Resumo semanal de insights (segunda)
+
+# Toda segunda-feira envia o resumo semanal de insights no Telegram.
+# Horário UTC: 10 = 7h BRT.
+on:
+  schedule:
+    - cron: '0 10 * * 1'
+  workflow_dispatch: {}
+
+concurrency:
+  group: weekly-insights
+  cancel-in-progress: false
+
+jobs:
+  weekly-insights:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/weekly-insights
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://endinheirados.cc/api/cron/weekly-insights")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"

@@ -1,0 +1,27 @@
+name: Instagram do blog (9h e 18h BRT)
+
+# Pega o próximo post do backlog, gera a arte no padrão Endinheirados (/api/og)
+# e ENTREGA no Telegram (imagem + legenda prontas pra postar com música).
+# Substitui as rotinas remotas: post-instagram-blog, post-instagram-blog-18h e
+# ig-detecta-post-novo. Horários UTC (BRT-3): 12→9h, 21→18h.
+on:
+  schedule:
+    - cron: '5 12,21 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ig-backlog
+  cancel-in-progress: false
+
+jobs:
+  ig-backlog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/ig-backlog
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://endinheirados.cc/api/cron/ig-backlog")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"

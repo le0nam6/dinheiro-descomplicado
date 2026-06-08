@@ -1,11 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "crons": [
-    { "path": "/api/cron/ig-backlog", "schedule": "0 9 * * *" },
-    { "path": "/api/cron/refresh-token", "schedule": "0 12 1 * *" },
-    { "path": "/api/cron/weekly-insights", "schedule": "0 10 * * 1" },
-    { "path": "/api/cron/news", "schedule": "0 8 * * *" }
-  ]
+  "outputDirectory": ".next"
 }
