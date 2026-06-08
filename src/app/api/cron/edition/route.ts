@@ -117,6 +117,12 @@ function brtDate(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 }
 
+// Título da edição com a data real (nunca confiar na data inventada pelo modelo)
+function editionTitle(dateISO: string): string {
+  const d = new Date(dateISO + 'T12:00:00')
+  return `Edição de ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })}`
+}
+
 export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -153,7 +159,7 @@ export async function GET(request: Request) {
       _type: 'edition',
       date,
       slug: { _type: 'slug', current: date },
-      title: curation.title || `Edição de ${date}`,
+      title: editionTitle(date),
       publishedAt: new Date().toISOString(),
       intro: curation.intro || '',
       readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
