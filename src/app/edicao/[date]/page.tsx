@@ -8,7 +8,8 @@ import type { Metadata } from 'next'
 export const revalidate = 1800
 
 type Source = { name: string; url: string }
-type Story = { _key: string; emoji?: string; tag?: string; headline: string; hook?: string; what?: string; why?: string; sources?: Source[] }
+type StoryImage = { url: string; alt?: string; credit?: string }
+type Story = { _key: string; emoji?: string; tag?: string; headline: string; hook?: string; what?: string; why?: string; image?: StoryImage; sources?: Source[] }
 type Quote = { _key: string; label: string; value: string; changePct: number }
 
 function slugifyHeadline(s: string) {
@@ -52,7 +53,15 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
       <header className="mb-8">
         <Link href="/edicao" className="text-sm text-green-700 font-medium hover:underline">← Todas as edições</Link>
         <p className="mt-4 text-sm font-semibold text-green-700 uppercase tracking-wide">🗞️ A Edição · {formatDate(date)}</p>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mt-2 leading-tight">{ed.title}</h1>
+
+        {/* Punchline — tapa inicial */}
+        {ed.punchline && (
+          <p className="mt-3 text-xl md:text-2xl font-extrabold text-gray-900 leading-snug border-l-4 border-green-500 pl-4">
+            {ed.punchline}
+          </p>
+        )}
+
+        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mt-5 leading-tight">{ed.title}</h1>
         {ed.intro && <p className="text-lg text-gray-600 mt-4 leading-relaxed">{ed.intro}</p>}
         <div className="flex items-center gap-2 mt-4 text-sm text-gray-400">
           <IconClock size={16} stroke={1.75} />
@@ -113,15 +122,30 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
                 <p className="text-[17px] text-gray-500 mb-4 leading-relaxed">{s.hook}</p>
               )}
 
+              {/* Foto — só em algumas matérias, quebra o ritmo visual */}
+              {s.image?.url && (
+                <figure className="mb-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.image.url} alt={s.image.alt || s.headline} className="w-full rounded-xl object-cover max-h-72" loading="lazy" />
+                  {s.image.credit && <figcaption className="text-[11px] text-gray-400 mt-1.5">{s.image.credit}</figcaption>}
+                </figure>
+              )}
+
               {/* Corpo da matéria — sem rótulos, texto flui naturalmente */}
               {s.what && (
                 <p className="text-gray-800 text-[17px] leading-relaxed mb-4">{s.what}</p>
               )}
 
+              {/* "Por que importa": com foto vira texto corrido; sem foto, bloco com borda.
+                  Variar o tratamento evita o "padrãozinho" de citação em toda matéria. */}
               {s.why && (
-                <div className="mb-4 border-l-4 border-green-500 pl-4">
-                  <p className="text-gray-700 text-[16px] leading-relaxed">{s.why}</p>
-                </div>
+                s.image?.url ? (
+                  <p className="text-gray-600 text-[16px] leading-relaxed mb-4 italic">{s.why}</p>
+                ) : (
+                  <div className="mb-4 border-l-4 border-green-500 pl-4">
+                    <p className="text-gray-700 text-[16px] leading-relaxed">{s.why}</p>
+                  </div>
+                )
               )}
 
               {/* Fontes + compartilhar */}
@@ -144,6 +168,50 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
           )
         })}
       </div>
+
+      {/* ── Blocos extras: palavra do dia, curiosidade, aniversários, recomendação/reflexão ── */}
+      {(ed.wordOfDay?.word || ed.curiosity || ed.birthdays || ed.recommendation || ed.reflection) && (
+        <div className="mt-12 space-y-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Para fechar com estilo</p>
+
+          {ed.wordOfDay?.word && (
+            <div className="rounded-2xl border border-gray-200 p-5">
+              <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">📚 Palavra do dia</p>
+              <p className="text-lg font-extrabold text-gray-900">{ed.wordOfDay.word}</p>
+              {ed.wordOfDay.meaning && <p className="text-gray-600 text-[15px] mt-1 leading-relaxed">{ed.wordOfDay.meaning}</p>}
+              {ed.wordOfDay.application && <p className="text-gray-700 text-[15px] mt-2 leading-relaxed">{ed.wordOfDay.application}</p>}
+            </div>
+          )}
+
+          {ed.curiosity && (
+            <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
+              <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">💡 Curiosidade do dia</p>
+              <p className="text-gray-800 text-[15px] leading-relaxed">{ed.curiosity}</p>
+            </div>
+          )}
+
+          {ed.birthdays && (
+            <div className="rounded-2xl border border-gray-200 p-5">
+              <p className="text-xs font-bold text-pink-600 uppercase tracking-wide mb-2">🎂 Aniversariam hoje</p>
+              <p className="text-gray-800 text-[15px] leading-relaxed">{ed.birthdays}</p>
+            </div>
+          )}
+
+          {ed.recommendation && (
+            <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-5">
+              <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-2">🍿 Recomendação de sexta</p>
+              <p className="text-gray-800 text-[15px] leading-relaxed">{ed.recommendation}</p>
+            </div>
+          )}
+
+          {ed.reflection && (
+            <div className="rounded-2xl bg-gray-900 text-white p-5">
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-2">🌅 Reflexão de domingo</p>
+              <p className="text-gray-100 text-[15px] leading-relaxed">{ed.reflection}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Fecho da edição */}
       {ed.closing && (

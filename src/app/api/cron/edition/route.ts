@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
-import { sanity, SITE, tgAlert, tgConfigured } from '@/lib/publish-core'
+import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -58,19 +58,31 @@ type Story = {
   hook: string
   what: string
   why: string
+  imageQuery?: string
   sourceIndexes: number[]
 }
+type WordOfDay = { word: string; meaning: string; application: string }
 type Curation = {
   title: string
+  punchline: string
   intro: string
   closing: string
   readingTime: number
   stories: Story[]
+  wordOfDay?: WordOfDay
+  curiosity?: string
+  birthdays?: string
+  recommendation?: string
+  reflection?: string
 }
 
-async function curate(news: NewsItem[], previousHeadlines: string[]): Promise<{ curation: Curation; news: NewsItem[] }> {
+async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string): Promise<{ curation: Curation; news: NewsItem[] }> {
   const pool = news.slice(0, 45)
+  const isFriday = weekday === 'sexta-feira'
+  const isSunday = weekday === 'domingo'
   const prompt = `Você é o editor-chefe do "Endinheirados" (endinheirados.cc). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
+
+HOJE É ${weekday.toUpperCase()}, ${todayLabel}.
 
 REFERÊNCIA DE TOM: newsletter "The News" — direto, inteligente, escaneável, leve mas preciso. Parece uma mensagem de um amigo que entende muito de finanças: explica sem condescendência, tem personalidade, não é chato. A pessoa deve sair MAIS INTELIGENTE em poucos minutos.
 
@@ -85,6 +97,16 @@ REGRAS EDITORIAIS:
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
 - IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
 - Português BR claro. Sem markdown, sem asteriscos.
+
+PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
+1 frase curta (no máximo 12 palavras), impactante, que dá o tom do dia e chama a atenção na hora.
+- É motivacional e informal, no espírito de um conselho de mesa de bar, de um tapa na cara amigável, ou de uma palavra de apoio — MAS NUNCA cite esses termos ("conselho", "tapa", "bar", "apoio") na frase.
+- Geralmente conecta com a notícia mais impactante da edição OU com a curiosidade do dia.
+- Tom de quem fala olhando no olho, sem rodeio. Exemplos de ESPÍRITO (não copie, crie a do dia):
+  → "Quem não controla o próprio dinheiro vira reativo ao dinheiro dos outros."
+  → "O mercado não espera você entender — então bora entender rápido."
+  → "Juro alto não pede licença pra entrar na sua conta."
+- NÃO é a manchete. NÃO é genérica. Tem que ter verdade e peso.
 
 ESTRUTURA DA ABERTURA ("intro"):
 Escreva 2 a 3 frases que abram o dia com personalidade — como um bom-dia inteligente, não um resumo burocrático.
@@ -119,15 +141,34 @@ Campos:
 
 4. "tag" e "emoji" — editoria curta (ex.: "Juros", "Câmbio", "Bolsa", "Política", "Global", "Cripto", "Economia") e 1 emoji representativo.
 
+5. "imageQuery" — termo de busca EM INGLÊS para uma foto que ilustre a matéria (ex.: "oil tanker strait", "brazil central bank building", "stock market traders"). Use APENAS em ALGUMAS matérias (as mais visuais/concretas) — deixe vazio ("") na maioria. A graça é variar: foto numa, texto puro na outra. NUNCA coloque foto em todas.
+
+CONTEXTO CRUZADO (só se precisar): se uma matéria fica mais clara lembrando algo de OUTRA matéria da mesma edição, costure uma frase curta de retomada ("como vimos nos juros acima, ..."). Use isso com PARCIMÔNIA — só quando ajuda de verdade o entendimento. Não force.
+
 FECHO DA EDIÇÃO ("closing"):
 1 frase final que amarra o dia — pode ser uma reflexão, uma projeção para o próximo passo, ou uma observação que conecta as histórias do dia. NUNCA é "Até amanhã", "Boa semana" ou clichê.
 Exemplos de estilo:
 → "Enquanto os mercados digerem tudo isso, o brasileiro segue fazendo conta no celular."
 → "O que acontece nos próximos dias vai definir se foi um susto ou o começo de algo maior."
 
+BLOCOS EXTRAS (deixam a edição mais viva — preencha todos os pedidos abaixo):
+REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem negrito/itálico markdown, sem marcadores de lista (nada de "•", "-", "1️⃣"), sem numeração emoji. Frases corridas normais.
+
+"wordOfDay" — PALAVRA DO DIA: um termo de finanças/economia útil e não óbvio.
+  - "word": o termo (ex.: "Hedge", "Drawdown", "Carry trade", "Spread bancário").
+  - "meaning": o que significa, em linguagem simples (1-2 frases).
+  - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
+
+"curiosity" — CURIOSIDADE DO DIA: 2-3 frases sobre uma curiosidade real e interessante de economia, dinheiro, mercado ou história financeira. Algo que faça o leitor pensar "não sabia disso". Pode conectar com a data de hoje se houver algo relevante.
+
+"birthdays" — ANIVERSARIANTES FAMOSOS DE HOJE (${todayLabel}): EM UMA ÚNICA FRASE corrida, separados por vírgula, sem marcadores e sem negrito: cite de 1 a 3 personalidades famosas e CONFIRMADAS que nasceram nesta data (dia e mês), com profissão entre parênteses. Formato EXATO: "Fulano (ator), Beltrano (empresário), Ciclano (cantora)". Só inclua nomes de que você tem CERTEZA — se não tiver confiança, deixe "" (string vazia). Nunca invente datas.
+${isFriday ? '\n"recommendation" — É SEXTA: recomende UMA série OU UM livro (pode ter relação leve com dinheiro, ambição, negócios, ou só ser muito bom). 2-3 frases dizendo o que é e por que vale.' : ''}
+${isSunday ? '\n"reflection" — É DOMINGO: escreva uma reflexão curta (2-3 frases) sobre dinheiro, tempo, escolhas ou propósito. Tom de quem pensa alto num domingo à tarde, sem ser piegas nem clichê de autoajuda.' : ''}
+
 Retorne SOMENTE JSON válido:
 {
   "title": "Edição de DD de mês de AAAA",
+  "punchline": "frase curta motivacional-informal (máx 12 palavras)",
   "intro": "abertura com personalidade (2-3 frases)",
   "closing": "fecho da edição (1 frase)",
   "readingTime": 4,
@@ -139,19 +180,43 @@ Retorne SOMENTE JSON válido:
       "hook": "frase de abertura que fisga (ou \"\" se a matéria for seca)",
       "what": "o relato factual (comprimento variável)",
       "why": "impacto no bolso (ou \"\" quando já está óbvio no what)",
+      "imageQuery": "termo em inglês p/ foto (ou \"\" na maioria)",
       "sourceIndexes": [1, 4]
     }
-  ]
+  ],
+  "wordOfDay": { "word": "...", "meaning": "...", "application": "três frases." },
+  "curiosity": "...",
+  "birthdays": "Nome (profissão), Nome (profissão)"${isFriday ? ',\n  "recommendation": "..."' : ''}${isSunday ? ',\n  "reflection": "..."' : ''}
 }
-LEMBRE: deixe hook vazio em algumas e why vazio em 1-2 matérias — a variação é o que diferencia a edição de um molde repetido.
+LEMBRE: deixe hook vazio em algumas, why vazio em 1-2, e imageQuery vazio na maioria — a variação é o que diferencia a edição de um molde repetido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 6000,
+    model: 'claude-sonnet-4-6', max_tokens: 8000,
     messages: [{ role: 'user', content: prompt }],
   })
   const text = (msg.content[0] as { text: string }).text.trim()
   const curation = JSON.parse(text.replace(/^```json\n?|\n?```$/g, '')) as Curation
+
+  // Rede de segurança: remove markdown/marcadores que o modelo às vezes insere
+  // nos campos de texto puro (asteriscos, bullets, numeração emoji).
+  const clean = (s?: string) => (s || '')
+    .replace(/\*\*|__|`/g, '')
+    .replace(/^[\s>]*[•\-*]\s+/gm, '')
+    .replace(/\d️⃣\s*/g, '')
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  curation.punchline = clean(curation.punchline)
+  curation.curiosity = clean(curation.curiosity)
+  curation.birthdays = clean(curation.birthdays)
+  curation.recommendation = clean(curation.recommendation)
+  curation.reflection = clean(curation.reflection)
+  if (curation.wordOfDay) {
+    curation.wordOfDay.word = clean(curation.wordOfDay.word)
+    curation.wordOfDay.meaning = clean(curation.wordOfDay.meaning)
+    curation.wordOfDay.application = clean(curation.wordOfDay.application)
+  }
   return { curation, news: pool }
 }
 
@@ -174,6 +239,18 @@ function brtDate(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 }
 
+// Dia da semana em pt-BR (ex.: "terça-feira") no fuso de Brasília
+function brtWeekday(dateISO: string): string {
+  const d = new Date(dateISO + 'T12:00:00')
+  return d.toLocaleDateString('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' })
+}
+
+// Rótulo "DD de mês" para a curiosidade/aniversariantes
+function brtDayLabel(dateISO: string): string {
+  const d = new Date(dateISO + 'T12:00:00')
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo' })
+}
+
 function editionTitle(dateISO: string): string {
   const d = new Date(dateISO + 'T12:00:00')
   return `Edição de ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })}`
@@ -194,34 +271,56 @@ export async function GET(request: Request) {
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
     const [{ curation, news: pool }, marketSnapshot] = await Promise.all([
-      curate(news, prev || []),
+      curate(news, prev || [], brtWeekday(date), brtDayLabel(date)),
       fetchMarketSnapshot(),
     ])
 
-    const stories = (curation.stories || []).map(s => {
+    // Busca fotos só para as matérias com imageQuery (parágrafo visual), em paralelo.
+    // Evita fotos repetidas reusando o conjunto já escolhido.
+    const usedPhotoUrls = new Set<string>()
+    const stories = await Promise.all((curation.stories || []).map(async s => {
       const idxs = Array.isArray(s.sourceIndexes) ? s.sourceIndexes : []
       const sources = idxs.map(i => pool[i - 1]).filter(Boolean).map(n => ({
         _type: 'source', _key: nanoid(6), name: n.source, url: n.url,
       }))
+      let image: { _type: string; url: string; alt: string; credit: string } | undefined
+      const q = (s.imageQuery || '').trim()
+      if (q) {
+        try {
+          const photo = await fetchPhoto(q)
+          if (photo.url && !usedPhotoUrls.has(photo.url)) {
+            usedPhotoUrls.add(photo.url)
+            image = { _type: 'image', url: photo.url, alt: photo.alt, credit: photo.credit }
+          }
+        } catch { /* sem foto, segue sem */ }
+      }
       return {
         _type: 'story', _key: nanoid(8),
         emoji: s.emoji || '•', tag: s.tag || '', headline: s.headline,
         hook: s.hook || '',
         what: s.what, why: s.why, sources,
+        ...(image ? { image } : {}),
       }
-    })
+    }))
 
+    const wod = curation.wordOfDay
     await sanity.create({
       _type: 'edition',
       date,
       slug: { _type: 'slug', current: date },
       title: editionTitle(date),
       publishedAt: new Date().toISOString(),
+      punchline: curation.punchline || '',
       intro: curation.intro || '',
       closing: curation.closing || '',
       readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
       stories,
       marketSnapshot: marketSnapshot.map(m => ({ _type: 'quote', _key: nanoid(6), ...m })),
+      ...(wod?.word ? { wordOfDay: { _type: 'wordOfDay', word: wod.word, meaning: wod.meaning || '', application: wod.application || '' } } : {}),
+      ...(curation.curiosity ? { curiosity: curation.curiosity } : {}),
+      ...(curation.birthdays ? { birthdays: curation.birthdays } : {}),
+      ...(curation.recommendation ? { recommendation: curation.recommendation } : {}),
+      ...(curation.reflection ? { reflection: curation.reflection } : {}),
     })
 
     // Invalida cache imediatamente para a home mostrar a nova edição
