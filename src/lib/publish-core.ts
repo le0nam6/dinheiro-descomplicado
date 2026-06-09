@@ -42,18 +42,45 @@ type Block = {
   _type: string
   _key: string
   style?: string
+  listItem?: string
+  level?: number
   markDefs: Array<Record<string, unknown>>
   children: Array<Record<string, unknown>>
 }
 
 function toBlocks(lines: string[]): Block[] {
-  return lines.map(line => ({
-    _type: 'block',
-    _key: nanoid(8),
-    style: line.startsWith('### ') ? 'h3' : line.startsWith('## ') ? 'h2' : 'normal',
-    markDefs: [] as Array<Record<string, unknown>>,
-    children: [{ _type: 'span', _key: nanoid(6), text: line.replace(/^#{2,3} /, ''), marks: [] }],
-  }))
+  return lines.map(line => {
+    const trimmed = line.trim()
+    // Lista com marcador (- item ou * item)
+    if (/^[-*]\s+/.test(trimmed)) {
+      return {
+        _type: 'block', _key: nanoid(8), style: 'normal', listItem: 'bullet', level: 1,
+        markDefs: [], children: [{ _type: 'span', _key: nanoid(6), text: trimmed.replace(/^[-*]\s+/, ''), marks: [] }],
+      } as Block
+    }
+    // Lista numerada (1. item)
+    if (/^\d+\.\s+/.test(trimmed)) {
+      return {
+        _type: 'block', _key: nanoid(8), style: 'normal', listItem: 'number', level: 1,
+        markDefs: [], children: [{ _type: 'span', _key: nanoid(6), text: trimmed.replace(/^\d+\.\s+/, ''), marks: [] }],
+      } as Block
+    }
+    // Citação
+    if (trimmed.startsWith('> ')) {
+      return {
+        _type: 'block', _key: nanoid(8), style: 'blockquote',
+        markDefs: [], children: [{ _type: 'span', _key: nanoid(6), text: trimmed.slice(2), marks: [] }],
+      }
+    }
+    // Cabeçalhos e parágrafo normal
+    return {
+      _type: 'block',
+      _key: nanoid(8),
+      style: line.startsWith('### ') ? 'h3' : line.startsWith('## ') ? 'h2' : 'normal',
+      markDefs: [] as Array<Record<string, unknown>>,
+      children: [{ _type: 'span', _key: nanoid(6), text: line.replace(/^#{2,3} /, ''), marks: [] }],
+    }
+  })
 }
 
 /** Cria o post publicado no Sanity. Se o slug já existir, gera um sufixo único. */

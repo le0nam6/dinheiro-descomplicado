@@ -13,7 +13,8 @@ export const editionSchema = defineType({
     defineField({ name: 'slug', title: 'Slug', type: 'slug', options: { source: 'date' }, validation: r => r.required() }),
     defineField({ name: 'title', title: 'Título', type: 'string', validation: r => r.required() }),
     defineField({ name: 'publishedAt', title: 'Publicado em', type: 'datetime', validation: r => r.required() }),
-    defineField({ name: 'intro', title: 'Abertura', type: 'text', rows: 3 }),
+    defineField({ name: 'intro', title: 'Abertura', type: 'text', rows: 4, description: 'Frase de abertura com personalidade — o "bom dia" que prende o leitor.' }),
+    defineField({ name: 'closing', title: 'Fecho', type: 'text', rows: 2, description: 'Frase final que amarra a edição.' }),
     defineField({ name: 'readingTime', title: 'Tempo de leitura (min)', type: 'number' }),
     defineField({
       name: 'stories', title: 'Matérias', type: 'array', of: [
@@ -23,6 +24,7 @@ export const editionSchema = defineType({
             { name: 'emoji', title: 'Emoji', type: 'string' },
             { name: 'tag', title: 'Editoria', type: 'string' },
             { name: 'headline', title: 'Manchete', type: 'string' },
+            { name: 'hook', title: 'Gancho', type: 'string', description: 'Frase de abertura que fisgue o leitor antes dos fatos.' },
             { name: 'what', title: 'O que aconteceu', type: 'text', rows: 4 },
             { name: 'why', title: 'Por que importa', type: 'text', rows: 4 },
             { name: 'sources', title: 'Fontes', type: 'array', of: [

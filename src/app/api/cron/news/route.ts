@@ -50,46 +50,65 @@ async function fetchNews(): Promise<NewsItem[]> {
 }
 
 async function generate(news: NewsItem[], recent: string[]): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
-  // 1-3 fontes mais relevantes pra basear a matéria
   const top = news.slice(0, 12)
   const prompt = `Você é repórter de finanças do portal Endinheirados (endinheirados.cc). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
 
-MANCHETES DISPONÍVEIS (fonte | título | resumo | url):
-${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description} | ${n.url}`).join('\n')}
+MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
+${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
 
 NÃO repita temas já publicados:
 ${recent.map(t => `- ${t}`).join('\n')}
 
-IMPARCIALIDADE É MANDATÓRIA (princípio inegociável):
+IMPARCIALIDADE É MANDATÓRIA:
 - Reporte os FATOS. Sem opinião, sem adjetivos torcedores, sem especulação apresentada como certeza.
-- Se há lados/visões divergentes, apresente os dois de forma equilibrada.
+- Se há lados/visões divergentes, apresente ambos de forma equilibrada.
 - Atribua afirmações às fontes ("segundo o Banco Central", "de acordo com a InfoMoney").
 - Sem alarmismo, sem clickbait. Título descritivo e honesto.
-- Não invente números, datas ou falas. Use só o que está nas manchetes; se faltar dado, fale de forma genérica.
-- Explique o impacto para o brasileiro comum de forma didática e NEUTRA.
+- Não invente números, datas ou falas. Se faltar dado, fale de forma genérica.
+- Explique o impacto para o brasileiro comum de forma didática e neutra.
 
-ESTILO: português BR claro e acessível (pode ser levemente informal, mas é jornalismo — priorize precisão sobre gíria).
+ÂNGULO DA MATÉRIA — ESCOLHA UM e siga a estrutura dele (NÃO use sempre o mesmo padrão "subtítulo + 1 parágrafo"):
+- BREAKING: lead com o fato; depois contexto, reações, desdobramentos. Seções: o fato → o contexto → quem é afetado → o que vem agora.
+- EXPLICADOR (PERGUNTA-RESPOSTA): organize o corpo em perguntas que o leitor faria como subtítulos ("## Por que isso aconteceu?", "## Quem ganha e quem perde?", "## O que muda na prática?"). Ótimo para temas complexos.
+- EM NÚMEROS: abra com o dado central. Use uma seção de contexto histórico ("não acontecia isso desde...") e compare com períodos anteriores.
+- ANÁLISE: vá fundo. Examine causa, efeito em cadeia, cenários possíveis, o que especialistas (citados nas fontes) dizem. A mais longa das estruturas.
+- PERFIL/BASTIDORES: quando a notícia é sobre uma empresa ou pessoa, conte a trajetória, o contexto do setor, o que esse movimento sinaliza.
+NÃO escolha sempre o mesmo. Varie de matéria para matéria.
 
-REGRAS DO body: sem markdown inline (nada de asteriscos), subtítulos começam com "## ". Texto puro.
+O LEAD (primeiro parágrafo) precisa funcionar sozinho — pirâmide invertida, o mais importante primeiro, sem warmup ("nesta matéria você vai ver" é proibido).
 
-Escolha as 1 a 3 manchetes que tratam do MESMO fato para basear a matéria. Retorne SOMENTE JSON:
+PROFUNDIDADE — esta é uma matéria de verdade, não uma nota:
+- O corpo deve ter de 8 a 14 parágrafos (não conte os subtítulos). Notícia rasa de 3 parágrafos é REJEITADA.
+- Vá ALÉM da manchete: traga contexto que o leitor não tem (histórico, comparação com casos parecidos, o que está por trás, o que pode acontecer depois).
+- Se a fonte traz dados, explore-os. Se traz uma decisão, explique o porquê e as consequências em cadeia.
+- Inclua uma seção que conecta a notícia ao bolso do brasileiro comum — mas SEM o rótulo mecânico "por que importa".
+- Quando fizer sentido, use uma seção em formato de lista (cada item começa com "- ") para enumerar pontos, etapas ou critérios. Isso quebra o ritmo visual.
+
+RITMO E ESTRUTURA do corpo (body):
+- Varie MUITO o comprimento dos parágrafos: alguns de 1 linha para ênfase, outros de 5-6 linhas para desenvolver. Nunca todos iguais.
+- 3 a 5 subtítulos de seção, começando EXATAMENTE com "## ". Os subtítulos devem ser específicos e instigantes, não genéricos ("## O impacto nos juros" é melhor que "## Análise").
+- ZERO markdown inline: sem asteriscos, sem underline, sem backticks. Texto puro.
+
+ESTILO: português BR claro e acessível — pode ser levemente informal, mas é jornalismo. Precisão primeiro.
+
+Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válido:
 {
   "title": "título jornalístico, descritivo, max 75 chars",
   "slug": "slug-sem-acento",
   "excerpt": "resumo factual até 155 chars",
   "category": "investimentos",
   "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],
-  "readingTime": 3,
-  "coverQuery": "termo em inglês p/ foto no Pexels, específico ao tema real da notícia",
-  "body": ["## Subtítulo","parágrafo factual","..."],
+  "readingTime": 6,
+  "coverQuery": "termo em inglês específico ao tema real da notícia, para busca no Pexels",
+  "body": ["lead direto e completo, sem subtítulo antes.", "## Subtítulo específico e instigante", "parágrafo desenvolvido.", "parágrafo curto de ênfase.", "## Outra seção", "- item de lista um", "- item de lista dois", "parágrafo que amarra.", "## O que isso muda no seu bolso", "parágrafo de impacto sem rótulo mecânico.", "parágrafo de fechamento com o que observar a seguir."],
   "igCaption": "legenda instagram informativa e neutra, 3 parágrafos, termina com \\n\\n🔗 Leia no site: endinheirados.cc/blog/SLUG\\n\\n#mercadofinanceiro #economia #noticias #investimentos #endinheirados",
   "igTitle": "título CAIXA ALTA p/ card, max 3 linhas",
   "sourceIndexes": [1, 2]
 }
-sourceIndexes = números das manchetes (da lista acima) que você usou como fonte.`
+sourceIndexes = índices das manchetes da lista usadas como fonte.`
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 4096,
+    model: 'claude-sonnet-4-6', max_tokens: 8000,
     messages: [{ role: 'user', content: prompt }],
   })
   const text = (msg.content[0] as { text: string }).text.trim()
@@ -110,7 +129,6 @@ export async function GET(request: Request) {
     const recent = await getRecentTitles(20)
     const post = await generate(news, recent)
 
-    // foto: imagem da própria notícia → Pexels → Unsplash
     const articleImg = post.newsSources[0]?.imageUrl
     const photo: Photo = articleImg
       ? { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
@@ -126,7 +144,7 @@ export async function GET(request: Request) {
     if (tgConfigured()) {
       await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📰 Notícia publicada\n\n${post.title}\n${blogUrl}\n\nFontes: ${post.newsSources.map(s => s.source).join(', ')}` }),
+        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📰 Notícia publicada\n\n${post.title}\n${blogUrl}\n\nFontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}` }),
       }).catch(() => {})
     }
 

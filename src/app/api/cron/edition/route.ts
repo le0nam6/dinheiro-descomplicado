@@ -7,6 +7,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgAlert, tgConfigured } from '@/lib/publish-core'
 
@@ -27,7 +28,7 @@ const FEEDS = [
 type NewsItem = { source: string; title: string; description: string; url: string }
 
 async function fetchNews(): Promise<NewsItem[]> {
-  const cutoff = Date.now() - 30 * 60 * 60 * 1000 // últimas ~30h
+  const cutoff = Date.now() - 30 * 60 * 60 * 1000
   const items: NewsItem[] = []
   await Promise.allSettled(FEEDS.map(async ({ source, url }) => {
     try {
@@ -50,14 +51,28 @@ async function fetchNews(): Promise<NewsItem[]> {
   return items
 }
 
-type Story = { emoji: string; tag: string; headline: string; what: string; why: string; sourceIndexes: number[] }
-type Curation = { title: string; intro: string; readingTime: number; stories: Story[] }
+type Story = {
+  emoji: string
+  tag: string
+  headline: string
+  hook: string
+  what: string
+  why: string
+  sourceIndexes: number[]
+}
+type Curation = {
+  title: string
+  intro: string
+  closing: string
+  readingTime: number
+  stories: Story[]
+}
 
 async function curate(news: NewsItem[], previousHeadlines: string[]): Promise<{ curation: Curation; news: NewsItem[] }> {
   const pool = news.slice(0, 45)
   const prompt = `Você é o editor-chefe do "Endinheirados" (endinheirados.cc). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
 
-Inspiração de estrutura e tom: newsletter "The News" — direto, inteligente, escaneável, leve mas preciso. A pessoa deve sair MAIS INTELIGENTE da edição em poucos minutos.
+REFERÊNCIA DE TOM: newsletter "The News" — direto, inteligente, escaneável, leve mas preciso. Parece uma mensagem de um amigo que entende muito de finanças: explica sem condescendência, tem personalidade, não é chato. A pessoa deve sair MAIS INTELIGENTE em poucos minutos.
 
 MANCHETES REAIS DAS ÚLTIMAS HORAS (índice | fonte | título | resumo):
 ${pool.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
@@ -65,27 +80,70 @@ ${pool.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).jo
 NÃO repita o que saiu na edição de ontem:
 ${previousHeadlines.length ? previousHeadlines.map(h => `- ${h}`).join('\n') : '(primeira edição)'}
 
-REGRAS:
+REGRAS EDITORIAIS:
 - Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
 - IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
-- Para cada matéria escreva DOIS blocos curtos:
-  - "what" (O que aconteceu): 2 a 4 frases factuais, com contexto.
-  - "why" (Por que importa): 2 a 3 frases explicando o impacto prático no dinheiro do leitor, de forma didática e neutra.
-- "tag" = editoria curta (ex.: "Juros", "Câmbio", "Bolsa", "Política", "Global", "Cripto", "Economia").
-- "emoji" = 1 emoji que represente a matéria.
-- "intro" = 1 ou 2 frases de abertura amigáveis resumindo o dia (sem clichê).
 - Português BR claro. Sem markdown, sem asteriscos.
 
-Retorne SOMENTE JSON:
+ESTRUTURA DA ABERTURA ("intro"):
+Escreva 2 a 3 frases que abram o dia com personalidade — como um bom-dia inteligente, não um resumo burocrático.
+- NUNCA comece com "Hoje", "Nesta edição", "Bom dia" ou clichê de newsletter.
+- Pode ser uma observação irônica, uma provocação, uma analogia com o cotidiano.
+- Deve criar curiosidade para ler as matérias — mas sem revelar tudo.
+- Exemplos de estilo (adapte ao dia real, não copie):
+  → "O dólar perto de R$6 já aparece no menu do restaurante. Enquanto isso, o Banco Central continua sinalizando cautela. Bora entender o que tá rolando."
+  → "A Selic subiu, o câmbio anda nervoso, e o brasileiro ainda tenta decidir se compra ou aluga. Dia típico — mas com novidades que importam."
+  → "Tem gente comemorando, tem gente preocupada, e o mercado financeiro continua fazendo o que sabe: reagir antes de todo mundo entender o porquê."
+
+ESTRUTURA DE CADA MATÉRIA — VARIE, não use sempre o mesmo molde:
+O leitor NÃO pode sentir que todas as matérias têm a mesma forma. Algumas são curtas e diretas, outras têm o impacto tecido na narrativa, outras separam fato e consequência. Escolha por matéria.
+
+Campos:
+
+1. "hook" — 1 frase de abertura que fisga antes dos fatos. Não é a manchete — é o ângulo humano, a ironia, ou o número mais impactante. NEM TODA matéria precisa de hook: deixe vazio ("") nas mais secas/técnicas, para criar contraste de ritmo. Exemplos:
+   → "Essa decisão vai aparecer na sua conta de luz em breve."
+   → "Seis meses atrás, ninguém apostaria nisso."
+
+2. "what" — o relato factual. Varie o formato e o COMPRIMENTO conforme o tipo de notícia:
+   - Sequência de eventos: narre em ordem cronológica
+   - Decisão/política: contextualize o que foi decidido e quem decidiu
+   - Dado numérico central: abra com o número
+   - Tendência: compare com o período anterior
+   - Algumas matérias devem ser curtas (1-2 frases secas). Outras mais desenvolvidas (até 5 frases). NÃO padronize em "2-4 frases" sempre.
+
+3. "why" — o impacto prático no bolso do leitor. REGRA CRÍTICA: NÃO É OBRIGATÓRIO.
+   - Para a maioria, escreva 1-2 frases de impacto neutro e didático (use analogia do cotidiano quando ajudar).
+   - Para matérias onde o impacto JÁ ESTÁ ÓBVIO no "what", ou que são meramente informativas, deixe "why" VAZIO ("") — isso evita a sensação de fórmula repetida.
+   - Mire em deixar 1 ou 2 das matérias sem "why". O contraste é o que faz a edição não parecer um molde.
+
+4. "tag" e "emoji" — editoria curta (ex.: "Juros", "Câmbio", "Bolsa", "Política", "Global", "Cripto", "Economia") e 1 emoji representativo.
+
+FECHO DA EDIÇÃO ("closing"):
+1 frase final que amarra o dia — pode ser uma reflexão, uma projeção para o próximo passo, ou uma observação que conecta as histórias do dia. NUNCA é "Até amanhã", "Boa semana" ou clichê.
+Exemplos de estilo:
+→ "Enquanto os mercados digerem tudo isso, o brasileiro segue fazendo conta no celular."
+→ "O que acontece nos próximos dias vai definir se foi um susto ou o começo de algo maior."
+
+Retorne SOMENTE JSON válido:
 {
   "title": "Edição de DD de mês de AAAA",
-  "intro": "abertura curta",
+  "intro": "abertura com personalidade (2-3 frases)",
+  "closing": "fecho da edição (1 frase)",
   "readingTime": 4,
   "stories": [
-    { "emoji": "📈", "tag": "Juros", "headline": "manchete curta e descritiva", "what": "...", "why": "...", "sourceIndexes": [1, 4] }
+    {
+      "emoji": "📈",
+      "tag": "Juros",
+      "headline": "manchete curta e descritiva",
+      "hook": "frase de abertura que fisga (ou \"\" se a matéria for seca)",
+      "what": "o relato factual (comprimento variável)",
+      "why": "impacto no bolso (ou \"\" quando já está óbvio no what)",
+      "sourceIndexes": [1, 4]
+    }
   ]
 }
+LEMBRE: deixe hook vazio em algumas e why vazio em 1-2 matérias — a variação é o que diferencia a edição de um molde repetido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
 
   const msg = await anthropic.messages.create({
@@ -112,12 +170,10 @@ async function fetchMarketSnapshot(): Promise<Array<{ label: string; value: stri
   } catch { return [] }
 }
 
-// Data no fuso de Brasília (YYYY-MM-DD)
 function brtDate(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 }
 
-// Título da edição com a data real (nunca confiar na data inventada pelo modelo)
 function editionTitle(dateISO: string): string {
   const d = new Date(dateISO + 'T12:00:00')
   return `Edição de ${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })}`
@@ -130,7 +186,6 @@ export async function GET(request: Request) {
   try {
     const date = brtDate()
 
-    // idempotência: se já existe edição de hoje, não duplica
     const existing = await sanity.fetch('*[_type=="edition" && slug.current==$d][0]._id', { d: date })
     if (existing) return NextResponse.json({ ok: true, message: 'Edição de hoje já publicada', date })
 
@@ -151,6 +206,7 @@ export async function GET(request: Request) {
       return {
         _type: 'story', _key: nanoid(8),
         emoji: s.emoji || '•', tag: s.tag || '', headline: s.headline,
+        hook: s.hook || '',
         what: s.what, why: s.why, sources,
       }
     })
@@ -162,10 +218,16 @@ export async function GET(request: Request) {
       title: editionTitle(date),
       publishedAt: new Date().toISOString(),
       intro: curation.intro || '',
+      closing: curation.closing || '',
       readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
       stories,
       marketSnapshot: marketSnapshot.map(m => ({ _type: 'quote', _key: nanoid(6), ...m })),
     })
+
+    // Invalida cache imediatamente para a home mostrar a nova edição
+    revalidateTag('edition', 'max')
+    revalidatePath('/', 'page')
+    revalidatePath('/edicao', 'page')
 
     const url = `${SITE}/edicao/${date}`
     if (tgConfigured()) {

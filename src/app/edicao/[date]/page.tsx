@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
 export const revalidate = 1800
 
 type Source = { name: string; url: string }
-type Story = { _key: string; emoji?: string; tag?: string; headline: string; what?: string; why?: string; sources?: Source[] }
+type Story = { _key: string; emoji?: string; tag?: string; headline: string; hook?: string; what?: string; why?: string; sources?: Source[] }
 type Quote = { _key: string; label: string; value: string; changePct: number }
 
 function slugifyHeadline(s: string) {
@@ -106,19 +106,21 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
                 <span className="text-2xl">{s.emoji || '•'}</span>
                 {s.tag && <span className="text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-wide">{s.tag}</span>}
               </div>
-              <h2 className="text-2xl font-extrabold text-gray-900 leading-snug mb-4">{s.headline}</h2>
+              <h2 className="text-2xl font-extrabold text-gray-900 leading-snug mb-3">{s.headline}</h2>
 
+              {/* Hook — frase de abertura sem rótulo */}
+              {s.hook && (
+                <p className="text-[17px] text-gray-500 mb-4 leading-relaxed">{s.hook}</p>
+              )}
+
+              {/* Corpo da matéria — sem rótulos, texto flui naturalmente */}
               {s.what && (
-                <div className="mb-4">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">O que aconteceu</p>
-                  <p className="text-gray-700 text-[17px] leading-relaxed">{s.what}</p>
-                </div>
+                <p className="text-gray-800 text-[17px] leading-relaxed mb-4">{s.what}</p>
               )}
 
               {s.why && (
-                <div className="mb-4 border-l-4 border-green-500 bg-green-50 rounded-r-xl px-4 py-3">
-                  <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">Por que importa</p>
-                  <p className="text-gray-800 text-[16px] leading-relaxed">{s.why}</p>
+                <div className="mb-4 border-l-4 border-green-500 pl-4">
+                  <p className="text-gray-700 text-[16px] leading-relaxed">{s.why}</p>
                 </div>
               )}
 
@@ -143,8 +145,15 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
         })}
       </div>
 
+      {/* Fecho da edição */}
+      {ed.closing && (
+        <div className="mt-10 mb-2 text-center">
+          <p className="text-gray-500 text-[15px] italic">{ed.closing}</p>
+        </div>
+      )}
+
       {/* CTA newsletter */}
-      <div className="mt-12 bg-gradient-to-br from-green-700 to-green-900 text-white rounded-2xl p-6 text-center">
+      <div className="mt-8 bg-gradient-to-br from-green-700 to-green-900 text-white rounded-2xl p-6 text-center">
         <p className="font-bold text-lg mb-1">Gostou da Edição?</p>
         <p className="text-green-100 text-sm mb-4">Em breve ela chega no seu e-mail toda manhã. Cadastre-se e seja avisado.</p>
         <Link href="/#newsletter" className="inline-flex items-center gap-1.5 bg-white text-green-800 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-green-50 transition-colors">
