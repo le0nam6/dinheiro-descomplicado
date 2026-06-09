@@ -25,7 +25,7 @@ const FEEDS = [
   { source: 'Investing.com Mundo', url: 'https://br.investing.com/rss/news_25.rss' },
 ]
 
-type NewsItem = { source: string; title: string; description: string; url: string }
+type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
 
 async function fetchNews(): Promise<NewsItem[]> {
   const cutoff = Date.now() - 30 * 60 * 60 * 1000
@@ -44,7 +44,13 @@ async function fetchNews(): Promise<NewsItem[]> {
         const title = get('title'), link = get('link'), pub = get('pubDate')
         if (!title || !link) continue
         if (pub && new Date(pub).getTime() < cutoff) continue
-        items.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 260), url: link })
+        // Imagem da própria matéria (media:content, media:thumbnail, enclosure ou <img> no description)
+        const img =
+          b.match(/<media:content[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i) ||
+          b.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
+          b.match(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i) ||
+          b.match(/<img[^>]+src=["']([^"']+)["']/i)
+        items.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 260), url: link, imageUrl: img?.[1] })
       }
     } catch { /* feed off */ }
   }))
@@ -143,7 +149,7 @@ Campos:
 
 4. "tag" e "emoji" — editoria curta (ex.: "Juros", "Câmbio", "Bolsa", "Política", "Global", "Cripto", "Economia") e 1 emoji representativo.
 
-5. "imageQuery" — termo de busca EM INGLÊS para uma foto que ilustre a matéria (ex.: "oil tanker strait", "brazil central bank building", "stock market traders"). Use APENAS em ALGUMAS matérias (as mais visuais/concretas) — deixe vazio ("") na maioria. A graça é variar: foto numa, texto puro na outra. NUNCA coloque foto em todas.
+5. "imageQuery" — SEMPRE preencha: termo de busca EM INGLÊS para uma foto que ilustre a matéria (ex.: "oil tanker strait", "brazil central bank building", "stock market traders"). É o plano B caso a foto da própria matéria não esteja disponível — então descreva de forma concreta e específica ao tema. Toda matéria terá imagem.
 
 CONTEXTO CRUZADO (só se precisar): se uma matéria fica mais clara lembrando algo de OUTRA matéria da mesma edição, costure uma frase curta de retomada ("como vimos nos juros acima, ..."). Use isso com PARCIMÔNIA — só quando ajuda de verdade o entendimento. Não force.
 
@@ -180,14 +186,14 @@ Retorne SOMENTE JSON válido:
       "hook": "frase de abertura que fisga (ou \"\" se a matéria for seca)",
       "what": "o relato factual (comprimento variável)",
       "why": "impacto no bolso (ou \"\" quando já está óbvio no what)",
-      "imageQuery": "termo em inglês p/ foto (ou \"\" na maioria)",
+      "imageQuery": "termo em inglês p/ foto, específico ao tema (sempre preencher)",
       "sourceIndexes": [1, 4]
     }
   ],
   "wordOfDay": { "word": "...", "meaning": "...", "application": "três frases." },
   "curiosity": "..."${isFriday ? ',\n  "recommendation": "..."' : ''}${isSunday ? ',\n  "reflection": "..."' : ''}
 }
-LEMBRE: deixe hook vazio em algumas, why vazio em 1-2, e imageQuery vazio na maioria — a variação é o que diferencia a edição de um molde repetido.
+LEMBRE: deixe hook vazio em algumas e why vazio em 1-2 — a variação no texto é o que diferencia a edição de um molde repetido. imageQuery sempre preenchido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
 
   const msg = await anthropic.messages.create({
@@ -231,6 +237,56 @@ async function fetchMarketSnapshot(): Promise<Array<{ label: string; value: stri
         changePct: q.changePct,
       }))
   } catch { return [] }
+}
+
+// Imagem da página da matéria (og:image / twitter:image) quando o RSS não traz foto
+async function ogImage(pageUrl: string): Promise<string | undefined> {
+  try {
+    const html = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }).then(r => r.text())
+    const head = html.slice(0, 60000) // og tags ficam no <head>
+    const m =
+      head.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i) ||
+      head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      head.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+    const url = m?.[1]
+    if (url && /^https?:\/\//.test(url)) return url
+  } catch { /* página off / timeout */ }
+  return undefined
+}
+
+// Resolve a imagem de uma matéria na ordem: foto do RSS → og:image da página →
+// Pexels/Unsplash (segundo plano). Evita repetir imagens já usadas.
+async function resolveStoryImage(
+  sources: NewsItem[],
+  imageQuery: string,
+  fallbackQuery: string,
+  used: Set<string>,
+): Promise<{ _type: string; url: string; alt: string; credit: string } | undefined> {
+  // 1) Foto da própria matéria (RSS)
+  for (const src of sources) {
+    if (src.imageUrl && !used.has(src.imageUrl)) {
+      used.add(src.imageUrl)
+      return { _type: 'image', url: src.imageUrl, alt: src.title, credit: `Foto: ${src.source}` }
+    }
+  }
+  // 2) og:image da página da matéria
+  for (const src of sources) {
+    const og = await ogImage(src.url)
+    if (og && !used.has(og)) {
+      used.add(og)
+      return { _type: 'image', url: og, alt: src.title, credit: `Foto: ${src.source}` }
+    }
+  }
+  // 3) Banco de imagens (Pexels → Unsplash)
+  const q = (imageQuery || fallbackQuery || 'finance money').trim()
+  try {
+    const photo = await fetchPhoto(q)
+    if (photo.url && !used.has(photo.url)) {
+      used.add(photo.url)
+      return { _type: 'image', url: photo.url, alt: photo.alt, credit: photo.credit }
+    }
+  } catch { /* sem foto */ }
+  return undefined
 }
 
 function brtDate(): string {
@@ -279,33 +335,24 @@ export async function GET(request: Request) {
       fetchMarketSnapshot(),
     ])
 
-    // Busca fotos só para as matérias com imageQuery (parágrafo visual), em paralelo.
-    // Evita fotos repetidas reusando o conjunto já escolhido.
+    // Imagem em TODAS as matérias. Prioridade: foto da própria matéria (RSS) →
+    // og:image da página → Pexels/Unsplash. Sequencial p/ não repetir imagem.
     const usedPhotoUrls = new Set<string>()
-    const stories = await Promise.all((curation.stories || []).map(async s => {
+    const stories: Array<Record<string, unknown>> = []
+    for (const s of curation.stories || []) {
       const idxs = Array.isArray(s.sourceIndexes) ? s.sourceIndexes : []
-      const sources = idxs.map(i => pool[i - 1]).filter(Boolean).map(n => ({
-        _type: 'source', _key: nanoid(6), name: n.source, url: n.url,
-      }))
-      let image: { _type: string; url: string; alt: string; credit: string } | undefined
-      const q = (s.imageQuery || '').trim()
-      if (q) {
-        try {
-          const photo = await fetchPhoto(q)
-          if (photo.url && !usedPhotoUrls.has(photo.url)) {
-            usedPhotoUrls.add(photo.url)
-            image = { _type: 'image', url: photo.url, alt: photo.alt, credit: photo.credit }
-          }
-        } catch { /* sem foto, segue sem */ }
-      }
-      return {
+      const srcItems = idxs.map(i => pool[i - 1]).filter(Boolean)
+      const sources = srcItems.map(n => ({ _type: 'source', _key: nanoid(6), name: n.source, url: n.url }))
+      const fallbackQuery = `${s.tag || ''} finance brazil`.trim()
+      const image = await resolveStoryImage(srcItems, s.imageQuery || '', fallbackQuery, usedPhotoUrls)
+      stories.push({
         _type: 'story', _key: nanoid(8),
         emoji: s.emoji || '•', tag: s.tag || '', headline: s.headline,
         hook: s.hook || '',
         what: s.what, why: s.why, sources,
         ...(image ? { image } : {}),
-      }
-    }))
+      })
+    }
 
     const wod = curation.wordOfDay
     const slugValue = preview ? previewSlug : date

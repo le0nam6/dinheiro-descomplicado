@@ -124,7 +124,7 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
                 <p className="text-[17px] text-gray-500 mb-4 leading-relaxed">{s.hook}</p>
               )}
 
-              {/* Foto — só em algumas matérias, quebra o ritmo visual */}
+              {/* Foto da matéria */}
               {s.image?.url && (
                 <figure className="mb-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -138,16 +138,9 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
                 <p className="text-gray-800 text-[17px] leading-relaxed mb-4">{s.what}</p>
               )}
 
-              {/* "Por que importa": com foto vira texto corrido; sem foto, bloco com borda.
-                  Variar o tratamento evita o "padrãozinho" de citação em toda matéria. */}
+              {/* "Por que importa": texto corrido (sem bloco de citação repetido em toda matéria) */}
               {s.why && (
-                s.image?.url ? (
-                  <p className="text-gray-600 text-[16px] leading-relaxed mb-4 italic">{s.why}</p>
-                ) : (
-                  <div className="mb-4 border-l-4 border-green-500 pl-4">
-                    <p className="text-gray-700 text-[16px] leading-relaxed">{s.why}</p>
-                  </div>
-                )
+                <p className="text-gray-600 text-[16px] leading-relaxed mb-4 italic">{s.why}</p>
               )}
 
               {/* Fontes + compartilhar */}
