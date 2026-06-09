@@ -91,7 +91,7 @@ function Header() {
 function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-gray-50 mt-16">
-      <div className="max-w-2xl mx-auto px-4 pt-10 pb-2 text-center">
+      <div id="newsletter" className="max-w-2xl mx-auto px-4 pt-10 pb-2 text-center scroll-mt-24">
         <p className="text-lg font-bold text-gray-900 mb-1">Fique por dentro do seu dinheiro 💰</p>
         <p className="text-sm text-gray-500 mb-4">Receba as melhores dicas de finanças e oportunidades direto no seu e-mail, sem enrolação.</p>
         <Newsletter />

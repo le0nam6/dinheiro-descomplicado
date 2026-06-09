@@ -224,9 +224,9 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
       <div className="mt-8 bg-gradient-to-br from-green-700 to-green-900 text-white rounded-2xl p-6 text-center">
         <p className="font-bold text-lg mb-1">Gostou da Edição?</p>
         <p className="text-green-100 text-sm mb-4">Em breve ela chega no seu e-mail toda manhã. Cadastre-se e seja avisado.</p>
-        <Link href="/#newsletter" className="inline-flex items-center gap-1.5 bg-white text-green-800 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-green-50 transition-colors">
+        <a href="#newsletter" className="inline-flex items-center gap-1.5 bg-white text-green-800 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-green-50 transition-colors">
           Quero receber <IconArrowRight size={16} stroke={2} />
-        </Link>
+        </a>
       </div>
 
       {/* JSON-LD */}
