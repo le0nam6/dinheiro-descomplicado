@@ -46,13 +46,15 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
   const stories: Story[] = ed.stories || []
   const snapshot: Quote[] = ed.marketSnapshot || []
   const pageUrl = `https://endinheirados.cc/edicao/${date}`
+  // Usa a data real do documento (o slug pode ser um rascunho, não uma data)
+  const displayDate = ed.date || date
 
   return (
     <article className="max-w-2xl mx-auto">
       {/* Cabeçalho */}
       <header className="mb-8">
         <Link href="/edicao" className="text-sm text-green-700 font-medium hover:underline">← Todas as edições</Link>
-        <p className="mt-4 text-sm font-semibold text-green-700 uppercase tracking-wide">🗞️ A Edição · {formatDate(date)}</p>
+        <p className="mt-4 text-sm font-semibold text-green-700 uppercase tracking-wide">🗞️ A Edição · {formatDate(displayDate)}</p>
 
         {/* Punchline — tapa inicial */}
         {ed.punchline && (

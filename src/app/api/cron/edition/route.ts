@@ -98,14 +98,17 @@ REGRAS EDITORIAIS:
 - Português BR claro. Sem markdown, sem asteriscos.
 
 PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
-1 frase curta (no máximo 12 palavras), impactante, que dá o tom do dia e chama a atenção na hora.
+1 frase curta (no máximo 12 palavras), impactante, que qualquer pessoa entenda NA HORA.
+- É UNIVERSAL e AUTOSSUFICIENTE: faz sentido completo sozinha, sem precisar ter lido nenhuma matéria, sem depender de contexto do dia. Alguém que NUNCA vai abrir a edição tem que entender e sentir.
 - É motivacional e informal, no espírito de um conselho de mesa de bar, de um tapa na cara amigável, ou de uma palavra de apoio — MAS NUNCA cite esses termos ("conselho", "tapa", "bar", "apoio") na frase.
-- Geralmente conecta com a notícia mais impactante da edição OU com a curiosidade do dia.
-- Tom de quem fala olhando no olho, sem rodeio. Exemplos de ESPÍRITO (não copie, crie a do dia):
-  → "Quem não controla o próprio dinheiro vira reativo ao dinheiro dos outros."
-  → "O mercado não espera você entender — então bora entender rápido."
-  → "Juro alto não pede licença pra entrar na sua conta."
-- NÃO é a manchete. NÃO é genérica. Tem que ter verdade e peso.
+- PROIBIDO: citar notícia específica, empresa, número, evento, ano ou jargão (ex.: "carry trade", "Selic", "Ibovespa"). Nada que exija explicação.
+- Tema: dinheiro, disciplina, escolhas, tempo, liberdade financeira — verdades atemporais sobre a vida e o bolso.
+- Tom de quem fala olhando no olho, sem rodeio. Exemplos de ESPÍRITO (não copie, crie uma nova):
+  → "Quem não cuida do próprio dinheiro acaba trabalhando pelo dos outros."
+  → "Dinheiro guardado é liberdade comprada antecipada."
+  → "O boleto não tem dó de quem não se planejou."
+  → "Quem controla o pouco hoje, comanda o muito amanhã."
+- NÃO é a manchete. NÃO é genérica/clichê vazio. Tem que ter verdade e peso, e ser entendida por todo mundo.
 
 ESTRUTURA DA ABERTURA ("intro"):
 Escreva 2 a 3 frases que abram o dia com personalidade — como um bom-dia inteligente, não um resumo burocrático.
@@ -165,7 +168,7 @@ ${isSunday ? '\n"reflection" — É DOMINGO: escreva uma reflexão curta (2-3 fr
 Retorne SOMENTE JSON válido:
 {
   "title": "Edição de DD de mês de AAAA",
-  "punchline": "frase curta motivacional-informal (máx 12 palavras)",
+  "punchline": "frase curta universal sobre dinheiro/vida, entendida por qualquer um, sem citar notícia/empresa/ano (máx 12 palavras)",
   "intro": "abertura com personalidade (2-3 frases)",
   "closing": "fecho da edição (1 frase)",
   "readingTime": 4,
@@ -257,9 +260,15 @@ export async function GET(request: Request) {
   }
   try {
     const date = brtDate()
+    // Modo rascunho: gera uma edição de teste com slug próprio, sem tocar na
+    // edição publicada do dia, sem Telegram e sem invalidar a home.
+    const preview = new URL(request.url).searchParams.get('preview') === '1'
+    const previewSlug = `rascunho-${Date.now().toString(36).slice(-5)}`
 
-    const existing = await sanity.fetch('*[_type=="edition" && slug.current==$d][0]._id', { d: date })
-    if (existing) return NextResponse.json({ ok: true, message: 'Edição de hoje já publicada', date })
+    if (!preview) {
+      const existing = await sanity.fetch('*[_type=="edition" && slug.current==$d][0]._id', { d: date })
+      if (existing) return NextResponse.json({ ok: true, message: 'Edição de hoje já publicada', date })
+    }
 
     const news = await fetchNews()
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
@@ -299,11 +308,12 @@ export async function GET(request: Request) {
     }))
 
     const wod = curation.wordOfDay
+    const slugValue = preview ? previewSlug : date
     await sanity.create({
       _type: 'edition',
       date,
-      slug: { _type: 'slug', current: date },
-      title: editionTitle(date),
+      slug: { _type: 'slug', current: slugValue },
+      title: preview ? `[RASCUNHO] ${editionTitle(date)}` : editionTitle(date),
       publishedAt: new Date().toISOString(),
       punchline: curation.punchline || '',
       intro: curation.intro || '',
@@ -317,23 +327,25 @@ export async function GET(request: Request) {
       ...(curation.reflection ? { reflection: curation.reflection } : {}),
     })
 
-    // Invalida cache imediatamente para a home mostrar a nova edição
-    revalidateTag('edition', 'max')
-    revalidatePath('/', 'page')
-    revalidatePath('/edicao', 'page')
+    const url = `${SITE}/edicao/${slugValue}`
 
-    const url = `${SITE}/edicao/${date}`
-    if (tgConfigured()) {
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text: `🗞️ Edição publicada (${stories.length} matérias)\n\n${curation.title}\n${url}`,
-        }),
-      }).catch(() => {})
+    // No modo rascunho não mexe em cache nem avisa o Telegram
+    if (!preview) {
+      revalidateTag('edition', 'max')
+      revalidatePath('/', 'page')
+      revalidatePath('/edicao', 'page')
+      if (tgConfigured()) {
+        await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text: `🗞️ Edição publicada (${stories.length} matérias)\n\n${curation.title}\n${url}`,
+          }),
+        }).catch(() => {})
+      }
     }
 
-    return NextResponse.json({ ok: true, date, stories: stories.length, url })
+    return NextResponse.json({ ok: true, preview, date, stories: stories.length, url })
   } catch (err) {
     await tgAlert('Cron edição diária (6h)', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
