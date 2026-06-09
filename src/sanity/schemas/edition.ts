@@ -52,7 +52,6 @@ export const editionSchema = defineType({
       ],
     }),
     defineField({ name: 'curiosity', title: 'Curiosidade do dia', type: 'text', rows: 3 }),
-    defineField({ name: 'birthdays', title: 'Aniversariantes famosos de hoje', type: 'text', rows: 2 }),
     defineField({ name: 'recommendation', title: 'Recomendação (sexta)', type: 'text', rows: 3, description: 'Série ou livro — só nas sextas.' }),
     defineField({ name: 'reflection', title: 'Reflexão (domingo)', type: 'text', rows: 3, description: 'Reflexão do dia — só aos domingos.' }),
     defineField({

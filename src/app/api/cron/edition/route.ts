@@ -71,7 +71,6 @@ type Curation = {
   stories: Story[]
   wordOfDay?: WordOfDay
   curiosity?: string
-  birthdays?: string
   recommendation?: string
   reflection?: string
 }
@@ -160,8 +159,6 @@ REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem ne
   - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
 
 "curiosity" — CURIOSIDADE DO DIA: 2-3 frases sobre uma curiosidade real e interessante de economia, dinheiro, mercado ou história financeira. Algo que faça o leitor pensar "não sabia disso". Pode conectar com a data de hoje se houver algo relevante.
-
-"birthdays" — ANIVERSARIANTES FAMOSOS DE HOJE (${todayLabel}): EM UMA ÚNICA FRASE corrida, separados por vírgula, sem marcadores e sem negrito: cite de 1 a 3 personalidades famosas e CONFIRMADAS que nasceram nesta data (dia e mês), com profissão entre parênteses. Formato EXATO: "Fulano (ator), Beltrano (empresário), Ciclano (cantora)". Só inclua nomes de que você tem CERTEZA — se não tiver confiança, deixe "" (string vazia). Nunca invente datas.
 ${isFriday ? '\n"recommendation" — É SEXTA: recomende UMA série OU UM livro (pode ter relação leve com dinheiro, ambição, negócios, ou só ser muito bom). 2-3 frases dizendo o que é e por que vale.' : ''}
 ${isSunday ? '\n"reflection" — É DOMINGO: escreva uma reflexão curta (2-3 frases) sobre dinheiro, tempo, escolhas ou propósito. Tom de quem pensa alto num domingo à tarde, sem ser piegas nem clichê de autoajuda.' : ''}
 
@@ -185,8 +182,7 @@ Retorne SOMENTE JSON válido:
     }
   ],
   "wordOfDay": { "word": "...", "meaning": "...", "application": "três frases." },
-  "curiosity": "...",
-  "birthdays": "Nome (profissão), Nome (profissão)"${isFriday ? ',\n  "recommendation": "..."' : ''}${isSunday ? ',\n  "reflection": "..."' : ''}
+  "curiosity": "..."${isFriday ? ',\n  "recommendation": "..."' : ''}${isSunday ? ',\n  "reflection": "..."' : ''}
 }
 LEMBRE: deixe hook vazio em algumas, why vazio em 1-2, e imageQuery vazio na maioria — a variação é o que diferencia a edição de um molde repetido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
@@ -209,7 +205,6 @@ sourceIndexes = números das manchetes (da lista) usadas como fonte de cada mat�
     .trim()
   curation.punchline = clean(curation.punchline)
   curation.curiosity = clean(curation.curiosity)
-  curation.birthdays = clean(curation.birthdays)
   curation.recommendation = clean(curation.recommendation)
   curation.reflection = clean(curation.reflection)
   if (curation.wordOfDay) {
@@ -245,7 +240,7 @@ function brtWeekday(dateISO: string): string {
   return d.toLocaleDateString('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' })
 }
 
-// Rótulo "DD de mês" para a curiosidade/aniversariantes
+// Rótulo "DD de mês" para a curiosidade do dia
 function brtDayLabel(dateISO: string): string {
   const d = new Date(dateISO + 'T12:00:00')
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo' })
@@ -318,7 +313,6 @@ export async function GET(request: Request) {
       marketSnapshot: marketSnapshot.map(m => ({ _type: 'quote', _key: nanoid(6), ...m })),
       ...(wod?.word ? { wordOfDay: { _type: 'wordOfDay', word: wod.word, meaning: wod.meaning || '', application: wod.application || '' } } : {}),
       ...(curation.curiosity ? { curiosity: curation.curiosity } : {}),
-      ...(curation.birthdays ? { birthdays: curation.birthdays } : {}),
       ...(curation.recommendation ? { recommendation: curation.recommendation } : {}),
       ...(curation.reflection ? { reflection: curation.reflection } : {}),
     })

@@ -170,7 +170,7 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
       </div>
 
       {/* ── Blocos extras: palavra do dia, curiosidade, aniversários, recomendação/reflexão ── */}
-      {(ed.wordOfDay?.word || ed.curiosity || ed.birthdays || ed.recommendation || ed.reflection) && (
+      {(ed.wordOfDay?.word || ed.curiosity || ed.recommendation || ed.reflection) && (
         <div className="mt-12 space-y-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Para fechar com estilo</p>
 
@@ -187,13 +187,6 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
             <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5">
               <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">💡 Curiosidade do dia</p>
               <p className="text-gray-800 text-[15px] leading-relaxed">{ed.curiosity}</p>
-            </div>
-          )}
-
-          {ed.birthdays && (
-            <div className="rounded-2xl border border-gray-200 p-5">
-              <p className="text-xs font-bold text-pink-600 uppercase tracking-wide mb-2">🎂 Aniversariam hoje</p>
-              <p className="text-gray-800 text-[15px] leading-relaxed">{ed.birthdays}</p>
             </div>
           )}
 
