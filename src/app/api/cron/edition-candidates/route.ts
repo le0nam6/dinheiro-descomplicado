@@ -58,10 +58,15 @@ export async function GET(request: Request) {
   }
   try {
     const date = targetEditionDate()
+    const force = new URL(request.url).searchParams.get('force') === '1'
 
-    // idempotência: se já existe seleção em andamento/pronta para essa data, não duplica
-    const existing = await sanity.fetch('*[_type=="pendingEdition" && date==$d && status in ["selecting","selected"]][0]._id', { d: date })
-    if (existing) return NextResponse.json({ ok: true, message: 'Já existe seleção para essa data', date })
+    // idempotência: se já existe seleção em andamento/pronta para essa data, não duplica.
+    // Com ?force=1, apaga as anteriores e recria (útil pra re-disparar/testar).
+    const existingIds: string[] = await sanity.fetch('*[_type=="pendingEdition" && date==$d && status in ["selecting","selected"]]._id', { d: date })
+    if (existingIds?.length) {
+      if (!force) return NextResponse.json({ ok: true, message: 'Já existe seleção para essa data', date })
+      for (const eid of existingIds) { try { await sanity.delete(eid) } catch { /* ignore */ } }
+    }
 
     const news = await fetchNews()
     if (news.length < 6) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
