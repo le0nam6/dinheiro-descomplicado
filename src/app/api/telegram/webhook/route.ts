@@ -8,7 +8,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
 } from '@/lib/publish-core'
-import { type Candidate, candidatesKeyboard } from '@/lib/editionCuration'
+import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
 
 // Teclado de aprovação reutilizável
 function approvalKeyboard(id: string) {
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       // --- Curadoria da edição: toggle de manchete ---
       if (action === 'et') {
         const idx = parseInt(parts[2], 10)
-        const pe = await sanity.fetch('*[_id==$id][0]{_id, candidates, status}', { id })
+        const pe = await sanity.fetch('*[_id==$id][0]{_id, candidates, status, date}', { id })
         if (!pe || pe.status !== 'selecting') {
           await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Seleção encerrada.' })
           return NextResponse.json({ ok: true })
@@ -74,8 +74,10 @@ export async function POST(request: Request) {
         const c = candidates.find(x => x.idx === idx)
         if (c) c.selected = !c.selected
         await sanity.patch(id).set({ candidates }).commit()
-        await tg('editMessageReplyMarkup', {
+        await tg('editMessageText', {
           chat_id: cq.message.chat.id, message_id: msgId,
+          text: candidatesMessage(pe.date, candidates),
+          disable_web_page_preview: true,
           reply_markup: candidatesKeyboard(id, candidates),
         })
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: c?.selected ? '✅ Entrou' : '⬜ Saiu' })

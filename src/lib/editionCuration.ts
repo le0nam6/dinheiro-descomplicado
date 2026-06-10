@@ -18,15 +18,34 @@ export function fmtCandidateDate(pub: string): string {
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 }
 
-// Teclado de seleção: 1 botão por candidata (toggle) + botão final "Montar edição"
-export function candidatesKeyboard(id: string, candidates: Candidate[]) {
-  const rows = candidates.map(c => {
+// Texto da mensagem: lista numerada e LEGÍVEL (a manchete inteira aparece aqui,
+// porque o botão do Telegram corta o texto). O estado ✅/⬜ vai junto de cada item.
+export function candidatesMessage(date: string, candidates: Candidate[]): string {
+  const dd = date.split('-').reverse().join('/')
+  const n = candidates.filter(c => c.selected).length
+  const header =
+    `🗳️ CURADORIA DA EDIÇÃO DE ${dd}\n\n` +
+    `Marque as manchetes que devem entrar tocando no número correspondente abaixo. ` +
+    `Quando terminar, toque em "Montar edição". Se não escolher nada, a edição sai automática às 6h.\n\n` +
+    `Selecionadas: ${n}\n\n`
+  const lines = candidates.map(c => {
     const mark = c.selected ? '✅' : '⬜'
     const date = fmtCandidateDate(c.pubDate)
-    const label = `${mark} ${c.source}${date ? ' · ' + date : ''} — ${c.title}`.slice(0, 64)
-    return [{ text: label, callback_data: `et:${id}:${c.idx}` }]
-  })
+    return `${mark} ${c.idx + 1}. ${c.title}\n     ↳ ${c.source}${date ? ' · ' + date : ''}`
+  }).join('\n\n')
+  return header + lines
+}
+
+// Teclado COMPACTO: botões só com o número (+ ✅ quando marcado), 5 por linha,
+// e o botão final "Montar edição". O conteúdo legível está no texto da mensagem.
+export function candidatesKeyboard(id: string, candidates: Candidate[]) {
+  const btns = candidates.map(c => ({
+    text: `${c.idx + 1}${c.selected ? ' ✅' : ''}`,
+    callback_data: `et:${id}:${c.idx}`,
+  }))
+  const rows: Array<Array<{ text: string; callback_data: string }>> = []
+  for (let i = 0; i < btns.length; i += 5) rows.push(btns.slice(i, i + 5))
   const n = candidates.filter(c => c.selected).length
-  rows.push([{ text: `🗞️ Montar edição (${n} escolhidas)`, callback_data: `eb:${id}` }])
+  rows.push([{ text: `🗞️ Montar edição (${n})`, callback_data: `eb:${id}` }])
   return { inline_keyboard: rows }
 }

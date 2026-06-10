@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, tgConfigured, tgAlert } from '@/lib/publish-core'
-import { type Candidate, candidatesKeyboard } from '@/lib/editionCuration'
+import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -79,12 +79,13 @@ export async function GET(request: Request) {
       _type: 'pendingEdition', date, status: 'selecting', candidates, createdAt: new Date().toISOString(),
     })
 
-    const intro = `🗳️ *Curadoria da Edição de ${date.split('-').reverse().join('/')}*\n\nMarque as manchetes que devem entrar (toque pra ✅/⬜). Quando terminar, toque em *Montar edição*.\nSe você não escolher nada, a edição sai automática às 6h.`
     const sent = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID, text: intro, parse_mode: 'Markdown',
+        chat_id: process.env.TELEGRAM_CHAT_ID,
+        text: candidatesMessage(date, candidates),
         reply_markup: candidatesKeyboard(doc._id, candidates),
+        disable_web_page_preview: true,
       }),
     }).then(r => r.json())
 
