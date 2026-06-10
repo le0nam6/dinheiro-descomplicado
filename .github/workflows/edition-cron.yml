@@ -1,13 +1,17 @@
 name: Edição diária (6h BRT)
 
 # Publica A EDIÇÃO todo dia de manhã. 6h em Brasília = 09:00 UTC.
-# Agendamos um pouco antes (08:40 UTC) porque o cron do GitHub Actions pode
-# atrasar alguns minutos sob carga — assim a edição tende a sair POR VOLTA das 6h.
-# A rota é idempotente (não duplica edição do mesmo dia), então é seguro re-disparar.
+# O cron do GitHub Actions é "best-effort": runs agendados podem ATRASAR ou ser
+# DESCARTADOS sob carga. Por isso agendamos VÁRIAS tentativas ao longo da manhã.
+# A rota é idempotente (não duplica a edição do dia), então re-disparar é seguro:
+# a primeira tentativa que pegar cria a edição; as seguintes só confirmam.
 on:
   schedule:
-    - cron: '40 8 * * *'
-  workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
+    - cron: '40 8 * * *'    # ~05h40 BRT
+    - cron: '20 9 * * *'    # retry ~06h20 BRT
+    - cron: '10 10 * * *'   # retry ~07h10 BRT
+    - cron: '0 12 * * *'    # watchdog ~09h BRT (última rede de segurança)
+  workflow_dispatch: {}     # permite rodar manualmente pelo painel do GitHub
 
 concurrency:
   group: edition-daily
@@ -18,10 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Chamar /api/cron/edition
+        id: call
         run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 300 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://endinheirados.cc/api/cron/edition")
           echo "HTTP $code"
           cat /tmp/out.json
+          echo "BODY=$(cat /tmp/out.json)" >> "$GITHUB_ENV"
           test "$code" = "200"
+
+      - name: Avisar no Telegram se falhar
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=🚨 FALHA no cron da EDIÇÃO diária
+          Resposta: ${BODY}
+          Logs: https://github.com/le0nam6/dinheiro-descomplicado/actions/runs/${{ github.run_id }}"

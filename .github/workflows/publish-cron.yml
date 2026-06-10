@@ -19,10 +19,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Chamar /api/cron/publish
+        id: call
         run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 300 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://endinheirados.cc/api/cron/publish")
           echo "HTTP $code"
           cat /tmp/out.json
+          echo "BODY=$(cat /tmp/out.json)" >> "$GITHUB_ENV"
           test "$code" = "200"
+
+      - name: Avisar no Telegram se falhar
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=🚨 FALHA no cron de PUBLICAÇÃO do blog
+          Resposta: ${BODY}
+          Logs: https://github.com/le0nam6/dinheiro-descomplicado/actions/runs/${{ github.run_id }}"
