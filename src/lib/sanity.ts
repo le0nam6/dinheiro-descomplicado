@@ -16,7 +16,7 @@ export async function getPosts(limit = 10) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "post"] | order(publishedAt desc) [0...$limit] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
+      `*[_type == "post" && publishedAt <= now()] | order(publishedAt desc) [0...$limit] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
       { limit },
       { next: { revalidate: 300, tags: ['post'] } }
     )
@@ -38,14 +38,14 @@ export async function getRelatedPosts(slug: string, category: string, limit = 4)
   if (!client) return []
   try {
     const sameCategory = await client.fetch(
-      `*[_type == "post" && category == $category && slug.current != $slug] | order(publishedAt desc) [0...$limit] { title, slug, category }`,
+      `*[_type == "post" && publishedAt <= now() && category == $category && slug.current != $slug] | order(publishedAt desc) [0...$limit] { title, slug, category }`,
       { category, slug, limit },
       { next: { revalidate: 600, tags: ['post'] } }
     )
     if (sameCategory.length >= limit) return sameCategory
     const fillIds = sameCategory.map((p: { slug: { current: string } }) => p.slug.current)
     const extra = await client.fetch(
-      `*[_type == "post" && slug.current != $slug && !(slug.current in $exclude)] | order(publishedAt desc) [0...$n] { title, slug, category }`,
+      `*[_type == "post" && publishedAt <= now() && slug.current != $slug && !(slug.current in $exclude)] | order(publishedAt desc) [0...$n] { title, slug, category }`,
       { slug, exclude: fillIds, n: limit - sameCategory.length },
       { next: { revalidate: 600, tags: ['post'] } }
     )
@@ -91,7 +91,7 @@ export async function getPostsByCategory(category: string) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "post" && category == $category] | order(publishedAt desc) [0...50] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
+      `*[_type == "post" && publishedAt <= now() && category == $category] | order(publishedAt desc) [0...50] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
       { category },
       { next: { revalidate: 600, tags: ['post'] } }
     )
@@ -102,7 +102,7 @@ export async function getCategoryCounts() {
   if (!client) return {}
   try {
     const result = await client.fetch(
-      `*[_type == "post"]{ category }`,
+      `*[_type == "post" && publishedAt <= now()]{ category }`,
       {},
       { next: { revalidate: 1800, tags: ['post'] } }
     )

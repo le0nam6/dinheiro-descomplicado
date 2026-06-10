@@ -15,7 +15,7 @@ export async function GET() {
   if (client) {
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
     posts = await client.fetch(
-      `*[_type=="post" && articleType=="news" && publishedAt > $since]|order(publishedAt desc){title, slug, publishedAt}`,
+      `*[_type=="post" && articleType=="news" && publishedAt > $since && publishedAt <= now()]|order(publishedAt desc){title, slug, publishedAt}`,
       { since }
     ).catch(() => [])
   }

@@ -33,7 +33,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!await checkAuth()) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   if (!client) return NextResponse.json({ error: 'Sanity não configurado' }, { status: 500 })
   const { id } = await params
-  const post = await client.fetch(`*[_type=="post" && _id==$id][0]{ _id, title, slug, category, funnel, excerpt, seoKeywords, body, coverImage }`, { id })
+  const post = await client.fetch(`*[_type=="post" && _id==$id][0]{ _id, title, slug, category, funnel, excerpt, seoKeywords, body, coverImage, publishedAt }`, { id })
   if (!post) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
   return NextResponse.json({ post: { ...post, bodyMarkdown: blocksToMarkdown(post.body) } })
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!await checkAuth()) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  if (!client) return NextResponse.json({ error: 'Sanity não configurado' }, { status: 500 })
+  const { id } = await params
+  try {
+    await client.delete(id)
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Erro ao excluir' }, { status: 500 })
+  }
 }
