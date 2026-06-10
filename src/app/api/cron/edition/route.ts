@@ -101,6 +101,7 @@ REGRAS EDITORIAIS:
 - Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
 - IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
+- DATAS E ANOS — REGRA CRÍTICA: NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/resumo da fonte. Hoje é ${todayLabel} de 2026. É PROIBIDO escrever coisas como "ainda em 2025", "até 2026", "no ano que vem" se isso não veio da fonte — isso inventa fato e fica datado/errado. Na dúvida, seja atemporal: "recentemente", "nos próximos meses", "em breve".
 - Português BR claro. Sem markdown, sem asteriscos.
 
 PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:

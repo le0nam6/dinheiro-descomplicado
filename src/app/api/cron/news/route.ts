@@ -65,6 +65,7 @@ IMPARCIALIDADE É MANDATÓRIA:
 - Atribua afirmações às fontes ("segundo o Banco Central", "de acordo com a InfoMoney").
 - Sem alarmismo, sem clickbait. Título descritivo e honesto.
 - Não invente números, datas ou falas. Se faltar dado, fale de forma genérica.
+- DATAS E ANOS — REGRA CRÍTICA: NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/fonte. É PROIBIDO escrever "em 2025", "ainda em 2025", "até 2026" se isso não veio da fonte. Na dúvida, seja atemporal ("recentemente", "nos próximos meses").
 - Explique o impacto para o brasileiro comum de forma didática e neutra.
 
 ÂNGULO DA MATÉRIA — ESCOLHA UM e siga a estrutura dele (NÃO use sempre o mesmo padrão "subtítulo + 1 parágrafo"):

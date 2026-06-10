@@ -7,10 +7,10 @@ name: Edição diária (6h BRT)
 # a primeira tentativa que pegar cria a edição; as seguintes só confirmam.
 on:
   schedule:
-    - cron: '40 8 * * *'    # ~05h40 BRT
-    - cron: '20 9 * * *'    # retry ~06h20 BRT
-    - cron: '10 10 * * *'   # retry ~07h10 BRT
-    - cron: '0 12 * * *'    # watchdog ~09h BRT (última rede de segurança)
+    - cron: '0 7 * * *'     # 1ª tentativa ~04h BRT
+    - cron: '0 8 * * *'     # retry ~05h BRT
+    - cron: '40 8 * * *'    # retry ~05h40 BRT
+    - cron: '0 11 * * *'    # watchdog ~08h BRT (última rede de segurança)
   workflow_dispatch: {}     # permite rodar manualmente pelo painel do GitHub
 
 concurrency:
