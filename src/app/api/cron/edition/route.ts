@@ -81,8 +81,9 @@ type Curation = {
   reflection?: string
 }
 
-async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string): Promise<{ curation: Curation; news: NewsItem[] }> {
-  const pool = news.slice(0, 45)
+async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false): Promise<{ curation: Curation; news: NewsItem[] }> {
+  // No modo curado (forced), o editor já escolheu — usa TODAS as manchetes recebidas.
+  const pool = forced ? news : news.slice(0, 45)
   const isFriday = weekday === 'sexta-feira'
   const isSunday = weekday === 'domingo'
   const prompt = `Você é o editor-chefe do "Endinheirados" (endinheirados.cc). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
@@ -98,7 +99,9 @@ NÃO repita o que saiu na edição de ontem:
 ${previousHeadlines.length ? previousHeadlines.map(h => `- ${h}`).join('\n') : '(primeira edição)'}
 
 REGRAS EDITORIAIS:
-- Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.
+${forced
+  ? '- As manchetes acima foram ESCOLHIDAS A DEDO pelo editor-chefe. Use TODAS elas — não descarte por relevância. Apenas AGRUPE as que tratam do mesmo fato numa única matéria.'
+  : '- Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.'}
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
 - IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
 - DATAS E ANOS — REGRA CRÍTICA: NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/resumo da fonte. Hoje é ${todayLabel} de 2026. É PROIBIDO escrever coisas como "ainda em 2025", "até 2026", "no ano que vem" se isso não veio da fonte — isso inventa fato e fica datado/errado. Na dúvida, seja atemporal: "recentemente", "nos próximos meses", "em breve".
@@ -327,14 +330,28 @@ export async function GET(request: Request) {
       if (existing) return NextResponse.json({ ok: true, message: 'Edição de hoje já publicada', date })
     }
 
-    const news = await fetchNews()
+    // Curadoria humana (noite anterior): se o editor escolheu manchetes via
+    // Telegram, usa SÓ essas. Senão, segue a curadoria automática.
+    const curated = preview ? null : await sanity.fetch(
+      '*[_type=="pendingEdition" && date==$d && status=="selected"]|order(createdAt desc)[0]{_id, candidates}', { d: date }
+    )
+    const forcedNews: NewsItem[] = curated
+      ? (curated.candidates || []).filter((c: { selected: boolean }) => c.selected).map((c: { source: string; title: string; description: string; url: string }) => ({
+          source: c.source, title: c.title, description: c.description, url: c.url,
+        }))
+      : []
+    const useCurated = forcedNews.length > 0
+
+    const news = useCurated ? forcedNews : await fetchNews()
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
     const [{ curation, news: pool }, marketSnapshot] = await Promise.all([
-      curate(news, prev || [], brtWeekday(date), brtDayLabel(date)),
+      curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated),
       fetchMarketSnapshot(),
     ])
+    // marca a seleção como usada (não bloqueia em caso de falha de permissão)
+    if (useCurated && curated?._id) { try { await sanity.patch(curated._id).set({ status: 'used' }).commit() } catch { /* ignore */ } }
 
     // Imagem em TODAS as matérias. Prioridade: foto da própria matéria (RSS) →
     // og:image da página → Pexels/Unsplash. Sequencial p/ não repetir imagem.

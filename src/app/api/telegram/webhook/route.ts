@@ -8,6 +8,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
 } from '@/lib/publish-core'
+import { type Candidate, candidatesKeyboard } from '@/lib/editionCuration'
 
 // Teclado de aprovação reutilizável
 function approvalKeyboard(id: string) {
@@ -57,8 +58,50 @@ export async function POST(request: Request) {
     // === Clique em botão ===
     if (update.callback_query) {
       const cq = update.callback_query
-      const [action, id] = (cq.data as string).split(':')
+      const parts = (cq.data as string).split(':')
+      const [action, id] = parts
       const msgId = cq.message?.message_id
+
+      // --- Curadoria da edição: toggle de manchete ---
+      if (action === 'et') {
+        const idx = parseInt(parts[2], 10)
+        const pe = await sanity.fetch('*[_id==$id][0]{_id, candidates, status}', { id })
+        if (!pe || pe.status !== 'selecting') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Seleção encerrada.' })
+          return NextResponse.json({ ok: true })
+        }
+        const candidates: Candidate[] = pe.candidates || []
+        const c = candidates.find(x => x.idx === idx)
+        if (c) c.selected = !c.selected
+        await sanity.patch(id).set({ candidates }).commit()
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: candidatesKeyboard(id, candidates),
+        })
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: c?.selected ? '✅ Entrou' : '⬜ Saiu' })
+        return NextResponse.json({ ok: true })
+      }
+
+      // --- Curadoria da edição: montar (confirmar seleção) ---
+      if (action === 'eb') {
+        const pe = await sanity.fetch('*[_id==$id][0]{_id, candidates, status, date}', { id })
+        if (!pe) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Seleção não existe mais.' })
+          return NextResponse.json({ ok: true })
+        }
+        const selected = (pe.candidates || []).filter((c: Candidate) => c.selected)
+        if (selected.length === 0) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Marque pelo menos uma manchete.' })
+          return NextResponse.json({ ok: true })
+        }
+        await sanity.patch(id).set({ status: 'selected' }).commit()
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Pronto!' })
+        await tg('editMessageText', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          text: `✅ Edição montada com ${selected.length} manchete${selected.length > 1 ? 's' : ''} escolhida${selected.length > 1 ? 's' : ''}.\n\nElas serão usadas na edição de ${String(pe.date).split('-').reverse().join('/')}, publicada automaticamente às 6h.`,
+        })
+        return NextResponse.json({ ok: true })
+      }
 
       const pending = await sanity.fetch('*[_id==$id][0]{_id, data, status, publishedId, publishedSlug}', { id })
       if (!pending) {
