@@ -5,7 +5,7 @@
  * Auto-publica no blog e notifica no Telegram.
  */
 import Anthropic from '@anthropic-ai/sdk'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, fetchPhoto, tgAlert, tgConfigured,
@@ -119,39 +119,53 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
   return { ...parsed, funnel: 'tofu', articleType: 'news', newsSources }
 }
 
+// Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
+async function processNews() {
+  // Trava de recência: se já saiu notícia nos últimos 50 min, não publica.
+  // Deixa GitHub (:00) e cron-job.org (:30) serem backup um do outro sem
+  // duplicar — mantém a cadência em ~1/hora.
+  const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
+  if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
+
+  const news = await fetchNews()
+  if (!news.length) return
+
+  const recent = await getRecentTitles(20)
+  const post = await generate(news, recent)
+
+  const articleImg = post.newsSources[0]?.imageUrl
+  const photo: Photo = articleImg
+    ? { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
+    : await fetchPhoto(post.coverQuery || 'stock market news')
+
+  const doc = await createSanityPost(
+    { ...post, articleType: 'news', sources: post.newsSources.map(s => ({ name: s.source, url: s.url })) } as unknown as GeneratedPost,
+    photo,
+  )
+  const finalSlug = (doc.slug as { current: string }).current
+  const blogUrl = `${SITE}/blog/${finalSlug}`
+
+  if (tgConfigured()) {
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📰 Notícia publicada\n\n${post.title}\n${blogUrl}\n\nFontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}` }),
+    }).catch(() => {})
+  }
+}
+
 export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  try {
-    const news = await fetchNews()
-    if (!news.length) return NextResponse.json({ ok: true, message: 'Sem notícias novas' })
-
-    const recent = await getRecentTitles(20)
-    const post = await generate(news, recent)
-
-    const articleImg = post.newsSources[0]?.imageUrl
-    const photo: Photo = articleImg
-      ? { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
-      : await fetchPhoto(post.coverQuery || 'stock market news')
-
-    const doc = await createSanityPost(
-      { ...post, articleType: 'news', sources: post.newsSources.map(s => ({ name: s.source, url: s.url })) } as unknown as GeneratedPost,
-      photo,
-    )
-    const finalSlug = (doc.slug as { current: string }).current
-    const blogUrl = `${SITE}/blog/${finalSlug}`
-
-    if (tgConfigured()) {
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📰 Notícia publicada\n\n${post.title}\n${blogUrl}\n\nFontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}` }),
-      }).catch(() => {})
+  // Responde NA HORA e gera em background. A geração leva mais que os 30s de
+  // timeout de alguns agendadores (cron-job.org free) — por isso o trabalho
+  // pesado roda em after(), enquanto o agendador recebe um 200 imediato.
+  after(async () => {
+    try {
+      await processNews()
+    } catch (err) {
+      await tgAlert('Cron notícias (1h)', err)
     }
-
-    return NextResponse.json({ ok: true, title: post.title, slug: finalSlug, sources: post.newsSources.length })
-  } catch (err) {
-    await tgAlert('Cron notícias (2h)', err)
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
-  }
+  })
+  return NextResponse.json({ ok: true, queued: true })
 }
