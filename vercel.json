@@ -5,6 +5,7 @@
   "functions": {
     "src/app/api/cron/edition/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/edition-candidates/route.ts": { "maxDuration": 120 },
+    "src/app/api/cron/edition-watchdog/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/news/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/publish/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/ig-backlog/route.ts": { "maxDuration": 120 },
