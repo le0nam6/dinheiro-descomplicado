@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 export const revalidate = 60
 
 const slugToCategory: Record<string, string> = {
+  'ganhar-dinheiro': 'ganhar dinheiro',
   'emprestimo': 'empréstimo',
   'investimentos': 'investimentos',
   'cartao-de-credito': 'cartão de crédito',
@@ -26,6 +27,18 @@ interface PillarInfo {
 }
 
 const pillars: Record<string, PillarInfo> = {
+  'ganhar dinheiro': {
+    title: 'Ganhar Dinheiro',
+    h1: 'Ganhar Dinheiro em 2026: Renda Extra, MMO e Liberdade Financeira',
+    desc: 'Renda extra, trabalhar pela internet (MMO), sair da CLT e construir liberdade financeira com mais de uma fonte de renda.',
+    icon: '🚀',
+    intro: 'Guardar e investir é metade do jogo — a outra metade é fazer entrar mais dinheiro. Aqui você encontra caminhos reais para criar renda extra, ganhar pela internet, empreender e, quem sabe, sair da CLT. Sem fórmula mágica e sem promessa de ficar rico da noite pro dia: só o que de fato funciona pra aumentar sua renda e comprar sua liberdade.',
+    faq: [
+      { q: 'Como começar a ter uma renda extra do zero?', a: 'Comece pelo que você já sabe fazer: freelas, serviços, venda de produtos ou conteúdo. O segredo é validar pequeno, com baixo custo, antes de escalar — e reinvestir os primeiros ganhos.' },
+      { q: 'Dá pra ganhar dinheiro pela internet de verdade?', a: 'Sim, mas leva tempo e consistência. Freelancing, conteúdo, afiliados, produtos digitais e e-commerce são caminhos reais — fuja de qualquer promessa de "ganho rápido e garantido".' },
+      { q: 'Quando vale a pena sair da CLT?', a: 'Quando sua renda alternativa já cobre seus custos essenciais por alguns meses e você tem reserva de emergência. Sair antes disso é risco; sair depois é estratégia.' },
+    ],
+  },
   'empréstimo': {
     title: 'Empréstimo',
     h1: 'Empréstimo em 2026: Guia Completo de Crédito Inteligente',

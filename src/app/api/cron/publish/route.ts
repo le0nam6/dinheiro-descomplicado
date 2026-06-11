@@ -90,6 +90,16 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
     bofu: 'fundo de funil (decision): recomendações específicas, ranking, melhores opções do momento',
   }[funnel]
 
+  // Rotação de foco: garante cobertura recorrente do novo pilar "Ganhar Dinheiro"
+  // (renda extra, MMO, sair da CLT) — ~3x/semana nos slots evergreen.
+  const focusByDay = ['ganhar dinheiro', 'investimentos', 'educação financeira', 'ganhar dinheiro', 'cartão de crédito', 'investimentos', 'ganhar dinheiro']
+  const focusCategory = type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : ''
+  const focusGuide = focusCategory === 'ganhar dinheiro'
+    ? `\n\nFOCO OBRIGATÓRIO DE HOJE — categoria "ganhar dinheiro": escreva sobre AUMENTAR A RENDA. Temas válidos: renda extra, trabalhar pela internet (MMO), freelancing, vender online, side hustle, empreender pequeno, sair da CLT com segurança, monetizar habilidades, liberdade financeira via múltiplas fontes de renda. NADA de "ganhar dinheiro rápido/garantido" — só caminhos reais e honestos. Defina "category": "ganhar dinheiro".`
+    : focusCategory
+      ? `\n\nFOCO DE HOJE: priorize a categoria "${focusCategory}".`
+      : ''
+
   const avoid = recentTitles.length
     ? `\n\nNÃO REPITA estes temas já publicados recentemente (escolha um ângulo ou assunto diferente):\n${recentTitles.map(t => `- ${t}`).join('\n')}`
     : ''
@@ -109,7 +119,7 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   } else {
     context = `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
   }
-  context += avoid
+  context += focusGuide + avoid
 
   const prompt = `${context}
 
@@ -144,7 +154,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   "slug": "slug-url-amigavel-sem-acento",
   "excerpt": "resumo de até 155 chars para SEO, direto ao ponto",
   "funnel": "${funnel}",
-  "category": "uma de: empréstimo | cartão de crédito | financiamento | investimentos | previdência | educação financeira",
+  "category": "uma de: ganhar dinheiro | empréstimo | cartão de crédito | financiamento | investimentos | previdência | educação financeira",
   "seoKeywords": ["kw1", "kw2", "kw3", "kw4", "kw5"],
   "readingTime": 5,
   "coverQuery": "query específica em inglês para buscar foto no Pexels. Para notícias: descreva o assunto real (ex: 'Azul airline Brazil airport plane', 'Selic interest rate Brazil bank', 'Nubank credit card Brazil'). Para evergreen: descreva a cena visual (ex: 'person counting money table', 'couple planning finances laptop'). Seja ESPECÍFICO — evite termos genéricos como 'money', 'finance', 'business'.",

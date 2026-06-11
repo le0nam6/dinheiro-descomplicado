@@ -21,10 +21,11 @@ export default function SobrePage() {
 
         <p>O <strong>Endinheirados</strong> nasceu de uma ideia simples: a maioria dos conteúdos sobre dinheiro no Brasil é complicada demais, cheia de jargão, ou promete enriquecimento rápido que nunca se sustenta.</p>
 
-        <p>Acreditamos no contrário. Ganhar dinheiro é importante, mas o que realmente muda uma vida é aprender a <strong>construir patrimônio que se perpetua</strong> — uma grana que cresce, se sustenta e dura para sempre.</p>
+        <p>Acreditamos no contrário, e em duas frentes: te ajudar a <strong>fazer mais dinheiro entrar</strong> — renda extra, ganhar pela internet, sair da CLT — e te ensinar a <strong>construir patrimônio que se perpetua</strong>, uma grana que cresce, se sustenta e dura para sempre. Ganhar e guardar, lado a lado.</p>
 
         <h2>O que você encontra aqui</h2>
         <ul>
+          <li><strong><a href="/categoria/ganhar-dinheiro">Ganhar dinheiro</a></strong> — renda extra, trabalhar pela internet (MMO), sair da CLT e construir liberdade financeira com mais de uma fonte de renda</li>
           <li><strong>Educação financeira de verdade</strong> — score, orçamento, reserva de emergência, juros compostos</li>
           <li><strong>Investimentos sem mistério</strong> — Tesouro Direto, CDB, renda fixa, do básico ao avançado</li>
           <li><strong>Crédito inteligente</strong> — empréstimos, cartões e financiamentos sem cair em ciladas</li>

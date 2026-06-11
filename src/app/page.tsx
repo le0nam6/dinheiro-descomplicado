@@ -6,12 +6,13 @@ import Link from 'next/link'
 export const revalidate = 60
 
 const categories = [
-  { label: 'Empréstimo', href: '/categoria/emprestimo', icon: '💳', desc: 'Consignado, pessoal, FGTS' },
+  { label: 'Ganhar Dinheiro', href: '/categoria/ganhar-dinheiro', icon: '🚀', desc: 'Renda extra, MMO, sair da CLT' },
   { label: 'Investimentos', href: '/categoria/investimentos', icon: '📈', desc: 'Renda fixa, ações, fundos' },
+  { label: 'Educação Financeira', href: '/categoria/educacao-financeira', icon: '📚', desc: 'Score, orçamento, hábitos' },
   { label: 'Cartão', href: '/categoria/cartao-de-credito', icon: '🏦', desc: 'Cashback, milhas, sem anuidade' },
+  { label: 'Empréstimo', href: '/categoria/emprestimo', icon: '💳', desc: 'Consignado, pessoal, FGTS' },
   { label: 'Financiamento', href: '/categoria/financiamento', icon: '🏠', desc: 'Imóvel, veículo, simulação' },
   { label: 'Previdência', href: '/categoria/previdencia', icon: '📊', desc: 'PGBL, VGBL, aposentadoria' },
-  { label: 'Educação Financeira', href: '/categoria/educacao-financeira', icon: '📚', desc: 'Score, orçamento, hábitos' },
 ]
 
 type Post = {
