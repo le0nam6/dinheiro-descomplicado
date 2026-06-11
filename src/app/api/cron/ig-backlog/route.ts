@@ -70,12 +70,13 @@ async function getPhoto(query: string): Promise<string | null> {
   return d.urls?.regular ?? null
 }
 
-async function getNextBacklogPost() {
-  // Busca todos os posts publicados no IG (lidos via campo igPublished no Sanity)
-  const allPosts = await sanity.fetch(
-    `*[_type=="post"]|order(publishedAt asc){"slug":slug.current,title,excerpt,igPublished}`
+async function getNextNewsPost() {
+  // Prioriza NOTÍCIA mais recente ainda não postada no IG. Notícia tem mais
+  // potencial no feed do que carrossel de conteúdo (este vai manual, com música).
+  const news = await sanity.fetch(
+    `*[_type=="post" && articleType=="news" && igPublished != true && publishedAt <= now()]|order(publishedAt desc)[0]{"slug":slug.current,title,excerpt}`
   )
-  return allPosts.find((p: { igPublished?: boolean }) => !p.igPublished) ?? null
+  return news ?? null
 }
 
 async function markIgPublished(slug: string, igId: string) {
@@ -122,8 +123,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const post = await getNextBacklogPost()
-    if (!post) return NextResponse.json({ ok: true, message: 'Backlog completo — todos os posts já publicados no IG' })
+    const post = await getNextNewsPost()
+    if (!post) return NextResponse.json({ ok: true, message: 'Sem notícia nova pra postar no IG agora' })
 
     console.log(`[ig-backlog] Publicando: "${post.title}"`)
 
@@ -138,35 +139,7 @@ export async function GET(request: Request) {
     // Gera imagem no padrão Endinheirados via /api/og
     const igImageUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title.toUpperCase())}&photo=${encodeURIComponent(photoUrl)}`
 
-    const token = process.env.TELEGRAM_BOT_TOKEN
-    const chatId = process.env.TELEGRAM_CHAT_ID
-    if (token && chatId) {
-      // Entrega no Telegram para postagem manual (com música)
-      const TG = `https://api.telegram.org/bot${token}`
-      const photoRes = await fetch(`${TG}/sendPhoto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          photo: igImageUrl,
-          caption: `📲 Post do backlog pronto pra postar (adicione a música no app)\n\n${blogUrl}`,
-        }),
-      })
-      const photoData = await photoRes.json()
-      if (!photoData.ok) throw new Error(`Telegram sendPhoto: ${JSON.stringify(photoData)}`)
-
-      await fetch(`${TG}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: `📋 LEGENDA (copie e cole):\n\n${caption}`, disable_web_page_preview: true }),
-      })
-
-      await markIgPublished(post.slug, `tg:${photoData.result?.message_id ?? 'sent'}`)
-
-      return NextResponse.json({ ok: true, channel: 'telegram', title: post.title, slug: post.slug, url: blogUrl })
-    }
-
-    // Fallback: publica direto no Instagram
+    // Notícia vai DIRETO pro Instagram (imagem única, sem música, sem etapa manual)
     const createRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -187,11 +160,19 @@ export async function GET(request: Request) {
 
     await markIgPublished(post.slug, pubData.id)
 
+    // Aviso de visibilidade no Telegram (não bloqueia)
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📲 Notícia postada no Instagram:\n${post.title}\n${blogUrl}`, disable_web_page_preview: true }),
+      }).catch(() => {})
+    }
+
     return NextResponse.json({ ok: true, channel: 'instagram', title: post.title, slug: post.slug, igPostId: pubData.id, url: blogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[ig-backlog] Erro:', message)
-    await tgAlert('Cron backlog (9h)', err)
+    console.error('[ig-news] Erro:', message)
+    await tgAlert('Cron notícia → Instagram', err)
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

@@ -1,27 +1,38 @@
-name: Instagram do blog (9h e 18h BRT)
+name: Notícia → Instagram (4x/dia)
 
-# Pega o próximo post do backlog, gera a arte no padrão Endinheirados (/api/og)
-# e ENTREGA no Telegram (imagem + legenda prontas pra postar com música).
-# Substitui as rotinas remotas: post-instagram-blog, post-instagram-blog-18h e
-# ig-detecta-post-novo. Horários UTC (BRT-3): 12→9h, 21→18h.
+# Posta a NOTÍCIA mais recente DIRETO no Instagram (imagem única, sem música),
+# 4x ao dia. Pega as melhores/mais recentes do dia que ainda não foram pro IG.
+# Carrossel de conteúdo é outro fluxo (publish-cron, 1x/dia à noite, manual).
+# Horários UTC (BRT-3): 14→11h, 17→14h, 20→17h, 23→20h.
 on:
   schedule:
-    - cron: '5 12,21 * * *'
+    - cron: '0 14,17,20,23 * * *'
   workflow_dispatch: {}
 
 concurrency:
-  group: ig-backlog
+  group: ig-news
   cancel-in-progress: false
 
 jobs:
-  ig-backlog:
+  ig-news:
     runs-on: ubuntu-latest
     steps:
       - name: Chamar /api/cron/ig-backlog
+        id: call
         run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 120 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://endinheirados.cc/api/cron/ig-backlog")
           echo "HTTP $code"
           cat /tmp/out.json
+          echo "BODY=$(cat /tmp/out.json)" >> "$GITHUB_ENV"
           test "$code" = "200"
+
+      - name: Avisar no Telegram se falhar
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=🚨 FALHA ao postar notícia no Instagram
+          Resposta: ${BODY}
+          Logs: https://github.com/le0nam6/dinheiro-descomplicado/actions/runs/${{ github.run_id }}"

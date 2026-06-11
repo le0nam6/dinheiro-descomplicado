@@ -1,10 +1,12 @@
-name: Notícias a cada 2h
+name: Notícias a cada 1h
 
-# Dispara a vertical jornalística a cada 2 horas (limite do Vercel Hobby é 1x/dia,
-# então o agendamento sub-diário roda aqui no GitHub Actions — grátis, sem PC).
+# Dispara a vertical jornalística a cada 1 hora. Roda no GitHub Actions (grátis).
+# Para confiabilidade extra, recomenda-se um gatilho no cron-job.org apontando
+# pro mesmo endpoint (best-effort do GitHub pode atrasar/dropar, mas a hora
+# seguinte cobre — notícia horária se auto-cura).
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
 
 jobs:
