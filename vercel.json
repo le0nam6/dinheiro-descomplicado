@@ -9,5 +9,9 @@
     "src/app/api/cron/publish/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/ig-backlog/route.ts": { "maxDuration": 120 },
     "src/app/api/cron/weekly-insights/route.ts": { "maxDuration": 300 }
-  }
+  },
+  "crons": [
+    { "path": "/api/cron/edition-candidates", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/edition", "schedule": "0 9 * * *" }
+  ]
 }
