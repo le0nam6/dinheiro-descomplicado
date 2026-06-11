@@ -6,7 +6,7 @@ name: Notícias a cada 1h
 # seguinte cobre — notícia horária se auto-cura).
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 0-2,9-23 * * *'   # de hora em hora, ~6h às 23h BRT (pula a madrugada)
   workflow_dispatch: {}   # permite rodar manualmente pelo painel do GitHub
 
 jobs:
