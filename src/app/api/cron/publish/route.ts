@@ -29,7 +29,7 @@ const TOPIC_TAXONOMY: Record<string, string[]> = {
     'Instagram como fonte de renda: quando começa a pagar de verdade',
     'newsletter paga no Substack: como brasileiros estão fazendo isso funcionar',
     'aluguel por temporada no Airbnb: quanto rende um quarto extra',
-    'revendedor de cosméticos (Avon, Natura, Boticário): vale a pena em 2024',
+    'revendedor de cosméticos (Avon, Natura, Boticário): vale a pena hoje',
     'motorista de app (Uber, 99, InDrive): quanto se ganha por hora de verdade',
     'entregador de app (iFood, Rappi, Loggi): a conta real do custo-benefício',
     'bico de fim de semana: as opções mais bem pagas por hora',
@@ -118,7 +118,7 @@ const TOPIC_TAXONOMY: Record<string, string[]> = {
   'cartão de crédito': [
     'como escolher o cartão de crédito certo para o seu perfil',
     'limite do cartão: como aumentar sem prejudicar o score',
-    'cashback: os cartões que mais devolvem dinheiro em 2024',
+    'cashback: os cartões que mais devolvem dinheiro hoje',
     'milhas aéreas: vale a pena acumular ou é ilusão',
     'cartão com anuidade zero: o que você abre mão',
     'como usar o cartão de crédito para investir o dinheiro mais tempo',
