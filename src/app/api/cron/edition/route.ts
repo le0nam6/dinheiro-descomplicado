@@ -109,7 +109,8 @@ ${forced
 
 CACOETES DE IA — PROIBIÇÕES ABSOLUTAS (todos os campos de texto):
 - ZERO travessão (—) em qualquer contexto. Se a frase depende dele, reescreva inteira.
-- Use contrações naturais: "pra", "pro", "tá", "né", "num", "numa". Frases como alguém falaria, não como escreveria num relatório.
+- Contrações coloquiais ("pra", "pro", "tá", "né", "num", "numa") são bem-vindas quando soam naturais no contexto — nunca forçadas. O critério é: o texto leria bem em voz alta?
+- Artigos e preposições corretos sempre: "do", "da", "no", "na", "ao", "à" onde a gramática exige. Sintaxe correta é inegociável — fluidez e coerência textual dependem disso.
 - Varie o ritmo organicamente: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo. NUNCA todas do mesmo tamanho.
 - Frases telegráficas empilhadas proibidas: 3+ frases seguidas com menos de 6 palavras cada. Errado: "Não é volume. É clareza. Não é frequência. É posicionamento." Certo: "O problema não é quantidade: é se o que você manda faz sentido pra quem recebe."
 - Paralelismo negativo ("Não é X. É Y.") máximo 1 vez por texto inteiro. Nunca repetido.

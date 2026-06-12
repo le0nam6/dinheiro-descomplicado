@@ -104,7 +104,7 @@ Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
 Regras de estilo — OBRIGATÓRIAS:
-- Português BR coloquial: "pra", "pro", "tá", "né", "num", "numa"
+- Português BR com fluidez e coerência textual. Contrações coloquiais ("pra", "pro", "tá", "né") são bem-vindas quando soam naturais — nunca forçadas. Artigos e preposições corretos sempre ("do", "da", "no", "na", "ao", "à"): sintaxe correta é inegociável.
 - Varie o ritmo: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo. Nunca todas do mesmo tamanho.
 - ZERO travessão (—). Se a frase depende dele, reescreva.
 - Sem frases telegráficas empilhadas (3+ frases seguidas com menos de 6 palavras cada)
