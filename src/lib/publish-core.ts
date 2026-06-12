@@ -161,15 +161,26 @@ export async function getTitlesByCategory(category: string): Promise<string[]> {
   )
 }
 
+// --- Fotos recentes usadas (evita repetição) ---
+export async function getRecentPhotoUrls(limit = 30): Promise<string[]> {
+  const urls: string[] = await sanity.fetch(
+    `*[_type=="post" && defined(coverImage.url)]|order(publishedAt desc)[0...${limit}].coverImage.url`
+  )
+  return urls.filter(Boolean)
+}
+
 // --- Busca de foto reutilizável: Pexels → Unsplash (#4 trocar foto) ---
-export async function fetchPhoto(query: string, excludeUrl?: string): Promise<Photo> {
+export async function fetchPhoto(query: string, excludeUrls: string[] = []): Promise<Photo> {
   if (process.env.PEXELS_API_KEY) {
+    // Busca 15 fotos em duas páginas alternadas (evita sempre pegar o mesmo top-1)
+    const page = Math.random() < 0.5 ? 1 : 2
     const res = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=8&orientation=square`,
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15&page=${page}&orientation=square`,
       { headers: { Authorization: process.env.PEXELS_API_KEY } }
     ).then(r => r.json()).catch(() => null)
     const photos = (res?.photos ?? []) as Array<{ src: { large2x: string; large: string }; alt?: string; photographer?: string }>
-    const pick = photos.find(p => (p.src.large2x || p.src.large) !== excludeUrl) || photos[0]
+    const excludeSet = new Set(excludeUrls)
+    const pick = photos.find(p => !excludeSet.has(p.src.large2x || p.src.large)) || photos[0]
     if (pick) return { url: pick.src.large2x || pick.src.large, alt: pick.alt || query, credit: `Foto: ${pick.photographer} via Pexels` }
   }
   const u = await fetch(

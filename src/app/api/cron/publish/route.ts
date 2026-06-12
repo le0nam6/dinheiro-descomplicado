@@ -7,8 +7,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
-  createSanityPost, buildSlideUrls, deliverCarousel,
-  tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getTitlesByCategory,
+  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
+  tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -428,41 +428,6 @@ REGRAS DO CARROSSEL (campo carousel):
 
 // --- Foto: Pexels (primário) → Unsplash (fallback) ---
 
-async function getPhoto(query: string, articleImageUrl?: string) {
-  // 1. Imagem extraída diretamente do artigo de notícia (mais relevante)
-  if (articleImageUrl) {
-    return { url: articleImageUrl, alt: query, credit: 'Foto: Fonte original' }
-  }
-
-  // 2. Pexels — melhor para buscas específicas (notícias, marcas, locais)
-  if (process.env.PEXELS_API_KEY) {
-    const pRes = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
-      { headers: { Authorization: process.env.PEXELS_API_KEY } }
-    )
-    const pData = await pRes.json()
-    const photo = pData.photos?.[0]
-    if (photo) {
-      return {
-        url: photo.src.large2x || photo.src.large,
-        alt: photo.alt || query,
-        credit: `Foto: ${photo.photographer} via Pexels`,
-      }
-    }
-  }
-
-  // 3. Unsplash — fallback
-  const res = await fetch(
-    `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
-    { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
-  )
-  const data = await res.json()
-  return {
-    url: data.urls?.regular ?? null,
-    alt: data.alt_description ?? query,
-    credit: `Foto: ${data.user?.name ?? 'Unsplash'} via Unsplash`,
-  }
-}
 
 // --- Handler principal ---
 
@@ -481,13 +446,18 @@ export async function GET(request: Request) {
     const news = schedule.type === 'news' ? await fetchNews() : ''
 
     // 2. Gerar conteúdo com Claude (evitando repetir temas recentes)
-    const recentTitles = await getRecentTitles(15)
+    const [recentTitles, recentPhotos] = await Promise.all([
+      getRecentTitles(15),
+      getRecentPhotoUrls(30),
+    ])
     const post = await generatePost(schedule, news, recentTitles)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
-    // 3. Foto: tenta imagem do artigo original → Pexels → Unsplash
+    // 3. Foto: tenta imagem do artigo original → Pexels (sem repetir) → Unsplash
     const articleImageUrl = schedule.type === 'news' ? (post.articleImageUrl as string | undefined) : undefined
-    const photo = await getPhoto(post.coverQuery || 'personal finance money', articleImageUrl)
+    const photo = articleImageUrl
+      ? { url: articleImageUrl, alt: post.title as string, credit: 'Foto: Fonte original' }
+      : await fetchPhoto(post.coverQuery as string || 'personal finance money', recentPhotos)
 
     // 4. Modo aprovação: cria rascunho pendente e manda os botões no Telegram.
     //    O blog e o carrossel só saem depois do seu OK.

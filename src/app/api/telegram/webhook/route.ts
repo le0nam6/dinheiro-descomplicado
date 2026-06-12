@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       if (action === 'np') {
         // Trocar foto DEPOIS de publicado: nova foto → atualiza post no blog → refaz carrossel
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando outra foto…' })
-        const newPhoto = await fetchPhoto(d.post.coverQuery || 'finance', d.photo.url)
+        const newPhoto = await fetchPhoto(d.post.coverQuery || 'finance', [d.photo.url])
         d.photo = newPhoto
         d.slideUrls = buildSlides(d.post, newPhoto)
         const postId = pending.publishedId as string
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
 
       if (action === 'ph') {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando outra foto…' })
-        const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', d.photo.url)
+        const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', [d.photo.url])
         d.photo = newPhoto
         d.slideUrls = buildSlides(d.post, newPhoto)
         await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()

@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
-  createSanityPost, getRecentTitles, fetchPhoto, tgAlert, tgConfigured,
+  createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, tgAlert, tgConfigured,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -149,24 +149,46 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
   return { ...parsed, funnel: 'tofu', articleType: 'news', newsSources }
 }
 
+// Retorna true se o título novo repete o mesmo assunto de algum título recente
+function isTooSimilar(newTitle: string, existingTitles: string[]): boolean {
+  const words = newTitle.toLowerCase().split(/\s+/).filter(w => w.length > 4)
+  return existingTitles.some(t => {
+    const existing = new Set(t.toLowerCase().split(/\s+/).filter(w => w.length > 4))
+    return words.filter(w => existing.has(w)).length >= 3
+  })
+}
+
 // Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
 async function processNews() {
   // Trava de recência: se já saiu notícia nos últimos 50 min, não publica.
-  // Deixa GitHub (:00) e cron-job.org (:30) serem backup um do outro sem
-  // duplicar — mantém a cadência em ~1/hora.
   const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
   if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
 
   const news = await fetchNews()
   if (!news.length) return
 
+  // Títulos das últimas 6h para checar duplicata de assunto
+  const recentNewsTitles: string[] = await sanity.fetch(
+    `*[_type=="post" && articleType=="news" && publishedAt >= $since]|order(publishedAt desc).title`,
+    { since: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() }
+  )
+
   const recent = await getRecentTitles(20)
   const post = await generate(news, recent)
 
-  const articleImg = post.newsSources[0]?.imageUrl
+  // Descarta se o assunto já foi publicado nas últimas 6h
+  if (isTooSimilar(post.title, recentNewsTitles)) {
+    console.log(`[news] Assunto já coberto nas últimas 6h, pulando: "${post.title}"`)
+    return
+  }
+
+  const [articleImg, recentPhotos] = [
+    post.newsSources[0]?.imageUrl,
+    await getRecentPhotoUrls(30),
+  ]
   const photo: Photo = articleImg
     ? { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
-    : await fetchPhoto(post.coverQuery || 'stock market news')
+    : await fetchPhoto(post.coverQuery || 'stock market news', recentPhotos)
 
   const doc = await createSanityPost(
     { ...post, articleType: 'news', sources: post.newsSources.map(s => ({ name: s.source, url: s.url })) } as unknown as GeneratedPost,
