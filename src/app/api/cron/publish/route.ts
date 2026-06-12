@@ -440,16 +440,21 @@ export async function GET(request: Request) {
 
   try {
     const schedule = getSchedule()
-    console.log(`[cron/publish] Rodando às ${schedule.hour}h — tipo: ${schedule.type}, funil: ${schedule.funnel}`)
+    const url = new URL(request.url)
+    const rejectedTitle = url.searchParams.get('rejected')
+      ? decodeURIComponent(url.searchParams.get('rejected')!)
+      : null
+    console.log(`[cron/publish] Rodando às ${schedule.hour}h — tipo: ${schedule.type}, funil: ${schedule.funnel}${rejectedTitle ? ` | rejeitado: "${rejectedTitle}"` : ''}`)
 
     // 1. Buscar notícias se necessário
     const news = schedule.type === 'news' ? await fetchNews() : ''
 
-    // 2. Gerar conteúdo com Claude (evitando repetir temas recentes)
-    const [recentTitles, recentPhotos] = await Promise.all([
+    // 2. Gerar conteúdo com Claude (evitando repetir temas recentes + título rejeitado)
+    const [recentTitlesRaw, recentPhotos] = await Promise.all([
       getRecentTitles(15),
       getRecentPhotoUrls(30),
     ])
+    const recentTitles = rejectedTitle ? [rejectedTitle, ...recentTitlesRaw] : recentTitlesRaw
     const post = await generatePost(schedule, news, recentTitles)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
@@ -489,9 +494,10 @@ export async function GET(request: Request) {
     const id = pending._id
 
     const tipo = schedule.type === 'news' ? '🔥 Notícia quente' : `📚 Evergreen (${schedule.funnel.toUpperCase()})`
+    const header = rejectedTitle ? `🔄 Alternativa ao rejeitado\n\n${tipo}` : `🆕 Post pronto pra revisão\n\n${tipo}`
     await tgSendPhoto(
       slideUrls[0],
-      `🆕 Post pronto pra revisão\n\n${tipo}\n📌 ${post.title}\n\n${(post.excerpt as string)}\n\nAprovar publica no blog + manda o carrossel aqui.`,
+      `${header}\n📌 ${post.title}\n\n${(post.excerpt as string)}\n\nAprovar publica no blog + manda o carrossel aqui.`,
       {
         inline_keyboard: [[
           { text: '✅ Aprovar', callback_data: `ap:${id}` },

@@ -149,12 +149,18 @@ export async function POST(request: Request) {
       }
 
       if (action === 'rj') {
-        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejeitado.' })
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rejeitado. Gerando alternativa…' })
         await sanity.delete(id)
         await tg('editMessageCaption', {
           chat_id: cq.message.chat.id, message_id: msgId,
-          caption: `❌ REJEITADO\n\n${d.post.title}`,
+          caption: `❌ REJEITADO\n\n${d.post.title}\n\n⏳ Gerando alternativa, aguarda…`,
         })
+        // Dispara novo post em background — passa título rejeitado para o modelo não repetir
+        const origin = new URL(request.url).origin
+        const rejectedTitle = encodeURIComponent(d.post.title)
+        fetch(`${origin}/api/cron/publish?rejected=${rejectedTitle}`, {
+          headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        }).catch(() => {})
         return NextResponse.json({ ok: true, rejected: id })
       }
 
