@@ -93,7 +93,8 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   // Rotação de foco: garante cobertura recorrente do novo pilar "Ganhar Dinheiro"
   // (renda extra, MMO, sair da CLT) — ~3x/semana nos slots evergreen.
   const focusByDay = ['ganhar dinheiro', 'investimentos', 'educação financeira', 'ganhar dinheiro', 'cartão de crédito', 'investimentos', 'ganhar dinheiro']
-  const focusCategory = type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : ''
+  const forcedCategory = (schedule as ReturnType<typeof getSchedule> & { forceCategory?: string }).forceCategory
+  const focusCategory = forcedCategory || (type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : '')
   const focusGuide = focusCategory === 'ganhar dinheiro'
     ? `\n\nFOCO OBRIGATÓRIO DE HOJE — categoria "ganhar dinheiro": escreva sobre AUMENTAR A RENDA. Temas válidos: renda extra, trabalhar pela internet (MMO), freelancing, vender online, side hustle, empreender pequeno, sair da CLT com segurança, monetizar habilidades, liberdade financeira via múltiplas fontes de renda. NADA de "ganhar dinheiro rápido/garantido" — só caminhos reais e honestos. Defina "category": "ganhar dinheiro".`
     : focusCategory
@@ -266,8 +267,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const schedule = getSchedule()
-    console.log(`[cron/publish] Rodando às ${schedule.hour}h — tipo: ${schedule.type}, funil: ${schedule.funnel}`)
+    const url = new URL(request.url)
+    const forceCategory = url.searchParams.get('force_category') || undefined
+    const schedule = { ...getSchedule(), ...(forceCategory ? { forceCategory, type: 'evergreen' as const } : {}) }
+    console.log(`[cron/publish] Rodando às ${schedule.hour}h — tipo: ${schedule.type}, funil: ${schedule.funnel}${forceCategory ? `, força categoria: ${forceCategory}` : ''}`)
 
     // 1. Buscar notícias se necessário
     const news = schedule.type === 'news' ? await fetchNews() : ''
