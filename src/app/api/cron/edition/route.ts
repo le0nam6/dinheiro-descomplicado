@@ -105,7 +105,19 @@ ${forced
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
 - IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
 - DATAS E ANOS — REGRA CRÍTICA: NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/resumo da fonte. Hoje é ${todayLabel} de 2026. É PROIBIDO escrever coisas como "ainda em 2025", "até 2026", "no ano que vem" se isso não veio da fonte — isso inventa fato e fica datado/errado. Na dúvida, seja atemporal: "recentemente", "nos próximos meses", "em breve".
-- Português BR claro. Sem markdown, sem asteriscos.
+- Português BR coloquial e humano. Sem markdown, sem asteriscos.
+
+CACOETES DE IA — PROIBIÇÕES ABSOLUTAS (todos os campos de texto):
+- ZERO travessão (—) em qualquer contexto. Se a frase depende dele, reescreva inteira.
+- Use contrações naturais: "pra", "pro", "tá", "né", "num", "numa". Frases como alguém falaria, não como escreveria num relatório.
+- Varie o ritmo organicamente: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo. NUNCA todas do mesmo tamanho.
+- Frases telegráficas empilhadas proibidas: 3+ frases seguidas com menos de 6 palavras cada. Errado: "Não é volume. É clareza. Não é frequência. É posicionamento." Certo: "O problema não é quantidade: é se o que você manda faz sentido pra quem recebe."
+- Paralelismo negativo ("Não é X. É Y.") máximo 1 vez por texto inteiro. Nunca repetido.
+- Vocabulário proibido: "crucial" → importante/decisivo | "fundamental" → básico/essencial | "adicionalmente" → além disso | "no mundo atual"/"em um cenário onde" → hoje/quando | "é fundamental que" → é importante/faz sentido | "isso se traduz em" → ou seja/na prática | "evidencia"/"ressalta" como gerúndio de análise → mostra/indica | "inovador"/"transformador" → descreva o que muda de verdade
+- Atribuições vagas sem fonte real ("especialistas afirmam", "pesquisas mostram") são proibidas. Use raciocínio direto ou cite a fonte real disponível nas manchetes.
+- Gerúndio superficial no fim de frase proibido: "evidenciando a importância de X", "demonstrando como Y", "reforçando a necessidade de Z". Quebre em frases separadas.
+- Conclusões motivacionais genéricas proibidas: "o futuro é promissor para quem abraça a mudança". Feche com observação concreta ou opinião real.
+- Punchline e intro: evite clichês de newsletter ("Bom dia, leitor!", "Hoje temos muito conteúdo"). Seja direto, específico, com personalidade.
 
 PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
 1 frase curta (no máximo 12 palavras), impactante, que qualquer pessoa entenda NA HORA.

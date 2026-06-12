@@ -103,7 +103,16 @@ Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
 
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
-Regras: português BR informal Gen Z, sem emojis no corpo, sem clickbait, exatamente 5 hashtags minúsculas sem acento. Retorne APENAS a legenda, sem explicações.`,
+Regras de estilo — OBRIGATÓRIAS:
+- Português BR coloquial: "pra", "pro", "tá", "né", "num", "numa"
+- Varie o ritmo: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo. Nunca todas do mesmo tamanho.
+- ZERO travessão (—). Se a frase depende dele, reescreva.
+- Sem frases telegráficas empilhadas (3+ frases seguidas com menos de 6 palavras cada)
+- Proibido: "crucial", "fundamental", "adicionalmente", "isso se traduz em", "é importante destacar", "no cenário atual", "inovador", "transformador"
+- Sem atribuições vagas ("especialistas dizem") — use raciocínio direto
+- Sem gerúndio de análise colado no fim: "evidenciando a importância de X" → quebre em frase separada
+- Sem conclusão motivacional vaga. Termine com algo concreto ou com gancho real.
+- Sem emojis no corpo, sem clickbait, exatamente 5 hashtags minúsculas sem acento. Retorne APENAS a legenda, sem explicações.`,
     }],
   })
   return (msg.content[0] as { text: string }).text.trim()
