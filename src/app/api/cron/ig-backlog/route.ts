@@ -1,10 +1,11 @@
 /**
- * Vercel Cron: publica 1 post do backlog no Instagram (6h diário)
- * Usa o template Canva via Graph API com foto do Unsplash
+ * Vercel Cron (4x/dia): envia notícia para o Telegram para publicação manual no IG.
+ * Segue a diretriz: 4 notícias principais/dia + 1 carrossel à noite (aprovado via /publish).
+ * Substitui o auto-post direto no Instagram — o controle editorial fica com você.
  */
 import { createClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
-import { tgAlert } from '@/lib/publish-core'
+import { tgAlert, tgSendPhoto, tgSendMessage } from '@/lib/publish-core'
 
 const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
@@ -14,12 +15,8 @@ const sanity = createClient({
   useCdn: false,
 })
 
-const IG_USER_ID = process.env.IG_USER_ID!
-const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
-const GRAPH      = 'https://graph.instagram.com/v21.0'
-const SITE       = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
 
-// Gera query de busca específica usando Claude Haiku
 async function getPhotoQuery(title: string, excerpt: string): Promise<string> {
   try {
     const Anthropic = (await import('@anthropic-ai/sdk')).default
@@ -45,13 +42,11 @@ Responda APENAS com a query, sem explicações.`,
     })
     return (msg.content[0] as { text: string }).text.trim()
   } catch {
-    // Fallback simples se Claude falhar
     return `${title.split(' ').slice(0, 3).join(' ')} Brazil finance`
   }
 }
 
 async function getPhoto(query: string): Promise<string | null> {
-  // 1. Pexels — busca mais específica e relevante
   if (process.env.PEXELS_API_KEY) {
     const res = await fetch(
       `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
@@ -61,7 +56,6 @@ async function getPhoto(query: string): Promise<string | null> {
     const photo = d.photos?.[0]
     if (photo) return photo.src.large2x || photo.src.large
   }
-  // 2. Unsplash — fallback
   const res = await fetch(
     `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=squarish&content_filter=high`,
     { headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
@@ -71,18 +65,16 @@ async function getPhoto(query: string): Promise<string | null> {
 }
 
 async function getNextNewsPost() {
-  // Prioriza NOTÍCIA mais recente ainda não postada no IG. Notícia tem mais
-  // potencial no feed do que carrossel de conteúdo (este vai manual, com música).
   const news = await sanity.fetch(
-    `*[_type=="post" && articleType=="news" && igPublished != true && publishedAt <= now()]|order(publishedAt desc)[0]{"slug":slug.current,title,excerpt}`
+    `*[_type=="post" && articleType=="news" && igQueued != true && publishedAt <= now()]|order(publishedAt desc)[0]{"slug":slug.current,title,excerpt}`
   )
   return news ?? null
 }
 
-async function markIgPublished(slug: string, igId: string) {
-  const doc = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: slug })
-  if (doc) {
-    await sanity.patch(doc).set({ igPublished: true, igPostId: igId }).commit()
+async function markIgQueued(slug: string) {
+  const id = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: slug })
+  if (id) {
+    await sanity.patch(id).set({ igQueued: true }).commit()
   }
 }
 
@@ -103,15 +95,15 @@ Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
 
 [PARÁGRAFO 1 — 4-5 linhas: contexto do tema, por que importa, situação cotidiana que o leitor reconhece. Tom casual, geração Z, sem enrolação]
 
-[PARÁGRAFO 2 — 4-5 linhas: o que o guia ensina de concreto, o que o leitor vai conseguir fazer após ler]
+[PARÁGRAFO 2 — 4-5 linhas: o que a matéria conta de concreto, o impacto real no bolso ou na vida do leitor]
 
 [PARÁGRAFO 3 — 4-5 linhas: gancho final, desperta curiosidade, convida a acessar]
 
-🔗 Acesse o guia completo em endinheirados.cc/blog/${post.slug}
+🔗 Leia a matéria completa: endinheirados.cc/blog/${post.slug}
 
-#finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
+#mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
-Regras: português BR informal, sem emojis no corpo, sem clickbait, exatamente 5 hashtags minúsculas sem acento. Retorne APENAS a legenda, sem explicações.`,
+Regras: português BR informal Gen Z, sem emojis no corpo, sem clickbait, exatamente 5 hashtags minúsculas sem acento. Retorne APENAS a legenda, sem explicações.`,
     }],
   })
   return (msg.content[0] as { text: string }).text.trim()
@@ -124,14 +116,13 @@ export async function GET(request: Request) {
 
   try {
     const post = await getNextNewsPost()
-    if (!post) return NextResponse.json({ ok: true, message: 'Sem notícia nova pra postar no IG agora' })
+    if (!post) return NextResponse.json({ ok: true, message: 'Sem notícia nova pra enfileirar no IG agora' })
 
-    console.log(`[ig-backlog] Publicando: "${post.title}"`)
+    console.log(`[ig-backlog] Enfileirando para o IG: "${post.title}"`)
 
     const photoQuery = await getPhotoQuery(post.title, post.excerpt)
-    console.log(`[ig-backlog] Query de foto: "${photoQuery}"`)
     const photoUrl = await getPhoto(photoQuery)
-    if (!photoUrl) throw new Error('Unsplash não retornou foto')
+    if (!photoUrl) throw new Error('Nenhuma foto encontrada para o post')
 
     const caption = await buildCaption(post)
     const blogUrl = `${SITE}/blog/${post.slug}`
@@ -139,40 +130,20 @@ export async function GET(request: Request) {
     // Gera imagem no padrão Endinheirados via /api/og
     const igImageUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title.toUpperCase())}&photo=${encodeURIComponent(photoUrl)}`
 
-    // Notícia vai DIRETO pro Instagram (imagem única, sem música, sem etapa manual)
-    const createRes = await fetch(`${GRAPH}/${IG_USER_ID}/media`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: igImageUrl, caption, access_token: IG_TOKEN }),
-    })
-    const createData = await createRes.json()
-    if (!createData.id) throw new Error(`Erro ao criar mídia: ${JSON.stringify(createData)}`)
+    // Envia para o Telegram para publicação manual
+    await tgSendPhoto(
+      igImageUrl,
+      `📲 Post para o Instagram\n\n📌 ${post.title}\n\n${blogUrl}`,
+    )
+    await tgSendMessage(`📋 LEGENDA (copie e cole no IG):\n\n${caption}`)
 
-    await new Promise(r => setTimeout(r, 8000))
+    await markIgQueued(post.slug)
 
-    const pubRes = await fetch(`${GRAPH}/${IG_USER_ID}/media_publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creation_id: createData.id, access_token: IG_TOKEN }),
-    })
-    const pubData = await pubRes.json()
-    if (!pubData.id) throw new Error(`Erro ao publicar: ${JSON.stringify(pubData)}`)
-
-    await markIgPublished(post.slug, pubData.id)
-
-    // Aviso de visibilidade no Telegram (não bloqueia)
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📲 Notícia postada no Instagram:\n${post.title}\n${blogUrl}`, disable_web_page_preview: true }),
-      }).catch(() => {})
-    }
-
-    return NextResponse.json({ ok: true, channel: 'instagram', title: post.title, slug: post.slug, igPostId: pubData.id, url: blogUrl })
+    return NextResponse.json({ ok: true, channel: 'telegram', title: post.title, slug: post.slug, url: blogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[ig-news] Erro:', message)
-    await tgAlert('Cron notícia → Instagram', err)
+    console.error('[ig-backlog] Erro:', message)
+    await tgAlert('Cron IG backlog → Telegram', err)
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

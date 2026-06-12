@@ -90,7 +90,27 @@ RITMO E ESTRUTURA do corpo (body):
 - 3 a 5 subtítulos de seção, começando EXATAMENTE com "## ". Os subtítulos devem ser específicos e instigantes, não genéricos ("## O impacto nos juros" é melhor que "## Análise").
 - ZERO markdown inline: sem asteriscos, sem underline, sem backticks. Texto puro.
 
-ESTILO: português BR claro e acessível — pode ser levemente informal, mas é jornalismo. Precisão primeiro.
+PÚBLICO-ALVO — CRÍTICO: brasileiros curiosos sobre dinheiro e mercado financeiro que NÃO são especialistas. Escreva como se estivesse explicando pra um amigo que perguntou "mas o que isso significa, exatamente?". Não assuma que o leitor já conhece termos financeiros.
+
+ESTILO — linguagem humana, informal, Gen Z:
+- Tom de amigo que entende de finanças, não de professor nem de jornalista formal
+- Frases curtas. Parágrafos curtos (3-4 linhas max). Uma ideia por parágrafo.
+- Use "você", "bora", "olha", "cara", "na prática", "no fim do dia" com naturalidade
+- Compare com o cotidiano: Nubank, Netflix, iFood, PIX, FGTS, aluguel, boleto
+- Varie o ritmo: um parágrafo curtinho de ênfase, um maior desenvolvendo a ideia
+- NUNCA use: "mergulhar", "navegar", "certamente", "é importante destacar", "vale ressaltar", "no atual cenário"
+- Precisão jornalística sim — mas em linguagem que qualquer pessoa entende
+
+TERMOS TÉCNICOS — obrigatório:
+- Se o texto citar qualquer termo financeiro ou econômico (Selic, spread, yield, carry trade, drawdown, hedge, CDB, LCI, Ibovespa, IPO, etc.), SEMPRE explique no mesmo parágrafo, de forma simples.
+- Formato: "A taxa Selic (a taxa básica de juros do Brasil, definida pelo Banco Central a cada 45 dias) voltou a subir."
+- Formato alternativo: "O carry trade — estratégia de tomar dinheiro barato num país e aplicar onde os juros são mais altos — ficou menos atrativo."
+- Se houver espaço natural, sugira um approfundamento: "Quer entender mais sobre [TERMO]? Temos um guia completo no blog."
+
+THROWBACK / ZOOM OUT — use quando a notícia precisa de contexto:
+- Se a notícia só faz sentido com um pano de fundo histórico ou de mercado, inclua uma seção chamada "## Um passo atrás" (ou título equivalente e específico)
+- Nessa seção: explique de forma simples o que aconteceu antes, como chegamos até aqui e por que o leitor deveria se importar agora
+- Use APENAS quando o contexto é realmente necessário para entender a notícia — não em toda matéria
 
 Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válido:
 {
