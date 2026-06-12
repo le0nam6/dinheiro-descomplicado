@@ -1,8 +1,8 @@
-name: Notícia → Instagram (4x/dia)
+name: Notícia → Telegram para IG (4x/dia)
 
-# Posta a NOTÍCIA mais recente DIRETO no Instagram (imagem única, sem música),
-# 4x ao dia. Pega as melhores/mais recentes do dia que ainda não foram pro IG.
-# Carrossel de conteúdo é outro fluxo (publish-cron, 1x/dia à noite, manual).
+# Envia a notícia mais recente pro Telegram para publicação manual no Instagram,
+# 4x ao dia. O controle editorial fica com você — sem auto-post.
+# Carrossel de conteúdo é outro fluxo (publish-cron, aprovação manual).
 # Horários UTC (BRT-3): 14→11h, 17→14h, 20→17h, 23→20h.
 on:
   schedule:

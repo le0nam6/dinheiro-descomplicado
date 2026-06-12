@@ -13,9 +13,6 @@
   },
   "crons": [
     { "path": "/api/cron/edition-candidates", "schedule": "0 1 * * *" },
-    { "path": "/api/cron/edition", "schedule": "0 9 * * *" },
-    { "path": "/api/cron/news", "schedule": "0 0-2,9-23 * * *" },
-    { "path": "/api/cron/publish", "schedule": "0 12,15,18,21 * * *" },
-    { "path": "/api/cron/ig-backlog", "schedule": "0 13,17,20,23 * * *" }
+    { "path": "/api/cron/edition", "schedule": "0 9 * * *" }
   ]
 }
