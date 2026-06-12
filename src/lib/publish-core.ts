@@ -153,6 +153,14 @@ export async function getRecentTitles(limit = 15): Promise<string[]> {
   return sanity.fetch(`*[_type=="post"]|order(publishedAt desc)[0...${limit}].title`)
 }
 
+// Todos os títulos já publicados numa categoria específica (evita cluster de tema)
+export async function getTitlesByCategory(category: string): Promise<string[]> {
+  return sanity.fetch(
+    `*[_type=="post" && category==$cat]|order(publishedAt desc).title`,
+    { cat: category }
+  )
+}
+
 // --- Busca de foto reutilizável: Pexels → Unsplash (#4 trocar foto) ---
 export async function fetchPhoto(query: string, excludeUrl?: string): Promise<Photo> {
   if (process.env.PEXELS_API_KEY) {

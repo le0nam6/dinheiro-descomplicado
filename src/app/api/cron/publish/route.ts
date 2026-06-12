@@ -8,10 +8,193 @@ import { NextResponse } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
   createSanityPost, buildSlideUrls, deliverCarousel,
-  tgConfigured, tgSendPhoto, tgAlert, getRecentTitles,
+  tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getTitlesByCategory,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// --- Taxonomia de tópicos por categoria ---
+// Cada entrada é um ângulo específico ainda não coberto pelo blog.
+// O modelo escolhe UM que não conste nos títulos já publicados.
+const TOPIC_TAXONOMY: Record<string, string[]> = {
+  'ganhar dinheiro': [
+    'dropshipping no Shopee e Mercado Livre: como começar sem estoque',
+    'marketing de afiliados na Hotmart e Monetizze: quanto dá pra ganhar de verdade',
+    'afiliado Amazon Brasil: passo a passo para o primeiro link',
+    'freelancing no Workana e 99Freelas: como montar o perfil e fechar o primeiro cliente',
+    'Fiverr para brasileiros: vender serviços em dólar',
+    'criar e vender curso online: quanto custa e quanto pode render',
+    'YouTube do zero à monetização: qual o caminho real',
+    'TikTok Creator Fund no Brasil: quem pode receber e quanto',
+    'Instagram como fonte de renda: quando começa a pagar de verdade',
+    'newsletter paga no Substack: como brasileiros estão fazendo isso funcionar',
+    'aluguel por temporada no Airbnb: quanto rende um quarto extra',
+    'revendedor de cosméticos (Avon, Natura, Boticário): vale a pena em 2024',
+    'motorista de app (Uber, 99, InDrive): quanto se ganha por hora de verdade',
+    'entregador de app (iFood, Rappi, Loggi): a conta real do custo-benefício',
+    'bico de fim de semana: as opções mais bem pagas por hora',
+    'como precificar o seu trabalho freelancer sem vender barato',
+    'abrir MEI: quando vale a pena e o que muda no bolso',
+    'CLT com CNPJ: como fazer isso de forma legal',
+    'consultoria: como transformar o que você já sabe em fonte de renda',
+    'vender fotos no Shutterstock e Adobe Stock: funciona para brasileiros',
+    'aulas particulares online: plataformas, preço e como atrair alunos',
+    'personal trainer online: como montar a clientela do zero',
+    'social media freelancer: o que as empresas pagam e o que exigem',
+    'copywriter freelancer: onde encontrar clientes e quanto cobrar',
+    'dev freelancer: como sair do trampo fixo sem perder renda',
+    'vender no eBay para o exterior: exportação simples para pessoa física',
+    'print on demand: criar produtos sem estoque e vender online',
+    'renda com dividendos: quanto precisa investir para ter R$1.000 por mês',
+    'FIIs como renda mensal: como montar uma carteira do zero',
+    'aluguel de vaga de garagem: quanto rende e como funciona',
+    'venda de produtos digitais (e-books, templates, planilhas)',
+    'revenda de produtos importados: o que pode e o que é ilegal',
+    'agência de serviços digitais: como dois ou três freelancers crescem juntos',
+    'checklist financeiro para largar a CLT com segurança',
+    'quanto guardar antes de se tornar PJ ou abrir negócio',
+    'renda extra na aposentadoria: o que funciona para quem tem mais de 50 anos',
+    'side hustle enquanto ainda é CLT: como organizar o tempo',
+    'monetizar habilidades artísticas: ilustração, design, música',
+    'trabalho remoto internacional: plataformas e como receber em dólar',
+    'compra e venda de domínios: o mercado de nomes de sites',
+  ],
+  'investimentos': [
+    'Tesouro IPCA+: para quais objetivos ele é o melhor',
+    'Tesouro Selic vs Tesouro IPCA+: quando trocar um pelo outro',
+    'CDB vs LCI vs LCA: a diferença real no rendimento líquido',
+    'FIIs de tijolo vs papel: qual é melhor para quem está começando',
+    'como montar uma carteira de dividendos do zero',
+    'ETF vs fundo de índice: quando um é melhor que o outro',
+    'como investir com menos de R$100 por mês',
+    'carteira para quem ganha salário mínimo',
+    'como declarar investimentos no imposto de renda',
+    'ações de small caps: risco e retorno na prática',
+    'BDRs: como investir em empresas americanas pela B3',
+    'criptomoedas no imposto de renda: o que precisa declarar',
+    'previdência privada PGBL vs VGBL: qual vale mais para você',
+    'como funcionam os fundos multimercado',
+    'renda fixa vs renda variável: montar a mistura certa',
+    'como avaliar se uma ação está cara ou barata (P/L, P/VP)',
+    'debêntures incentivadas: o que são e quando fazem sentido',
+    'investimento em ouro: como funciona no Brasil',
+    'COE: o que é e por que a maioria deve evitar',
+    'como rebalancear a carteira de investimentos',
+    'investir para a aposentadoria: por onde começar aos 20, 30 e 40 anos',
+    'fundo de emergência vs investimento: a linha que separa os dois',
+    'como investir a restituição do imposto de renda',
+    'investir o 13º salário: o que fazer com o dinheiro extra',
+    'impacto dos juros altos nos seus investimentos em renda fixa',
+    'como a Selic alta afeta quem investe em ações',
+    'LCI e LCA isentas: o que muda com as novas regras',
+    'spread bancário: por que o banco paga menos do que cobra',
+    'como calcular o rendimento real descontando inflação',
+    'investimento sustentável (ESG): faz diferença no retorno',
+  ],
+  'educação financeira': [
+    'como montar uma planilha de controle de gastos do zero',
+    'método 50/30/20: funciona para quem ganha pouco',
+    'método envelope: a técnica analógica que ainda funciona',
+    'como sair do cheque especial em 90 dias',
+    'fundo de emergência: quanto você realmente precisa guardar',
+    'como negociar dívidas com o banco: o script que funciona',
+    'Serasa Limpa Nome: vale a pena ou tem armadilha',
+    'educação financeira para casais: como alinhar os gastos',
+    'mesada para filhos: quanto dar e como ensinar o valor',
+    'como organizar as finanças depois de uma separação',
+    'dívida de cartão de crédito: a matemática do buraco',
+    'consórcio: quando vale e quando é cilada',
+    'como usar o FGTS de forma estratégica',
+    'planejamento financeiro para autônomos e PJs',
+    'como economizar no supermercado sem abrir mão de qualidade',
+    'assinaturas que você paga e não usa: o dinheiro invisível',
+    'financiamento de carro: a conta que ninguém faz direito',
+    'como planejar uma viagem sem entrar em dívida',
+    'poupar vs investir: a diferença prática entre os dois',
+    'como criar uma reserva para o IPTU e IPVA sem apertar',
+    'o custo real de um pet: o que ninguém calcula antes de adotar',
+    'saúde financeira: os sinais de que as finanças estão fora de controle',
+  ],
+  'cartão de crédito': [
+    'como escolher o cartão de crédito certo para o seu perfil',
+    'limite do cartão: como aumentar sem prejudicar o score',
+    'cashback: os cartões que mais devolvem dinheiro em 2024',
+    'milhas aéreas: vale a pena acumular ou é ilusão',
+    'cartão com anuidade zero: o que você abre mão',
+    'como usar o cartão de crédito para investir o dinheiro mais tempo',
+    'parcelar vs pagar à vista: quando o parcelamento compensa',
+    'cartão de crédito para negativados: o que existe no mercado',
+    'fatura do cartão: o que cada cobrança significa',
+    'como cancelar um cartão sem prejudicar o score',
+    'cartão adicional: riscos e benefícios de dar para terceiros',
+    'chargeback: como funciona o estorno no cartão',
+    'golpes no cartão de crédito: os mais comuns e como se proteger',
+    'Nubank vs Itaú vs Bradesco: comparativo honesto de cartões',
+    'cartão black e platinum: quem realmente se beneficia',
+  ],
+  'empréstimo': [
+    'empréstimo consignado: quando é a melhor e a pior opção',
+    'crédito pessoal vs empréstimo com garantia: a diferença real',
+    'CDC vs leasing: o que muda na prática',
+    'portabilidade de crédito: como usar para pagar menos juros',
+    'empréstimo com garantia de imóvel (home equity): quando vale',
+    'FGTS como garantia de empréstimo: entendendo o novo modelo',
+    'cheque especial: como sair sem pedir outro empréstimo',
+    'como comparar taxas de empréstimo (CET vs taxa nominal)',
+    'empréstimo para negativados: o que é legítimo e o que é golpe',
+    'quando é melhor pedir empréstimo do que parcelar no cartão',
+  ],
+  'financiamento': [
+    'financiamento imobiliário: SFH vs SFI — qual muda o seu bolso',
+    'FGTS no financiamento: como usar e quanto economiza',
+    'financiamento pelo MCMV: quem pode e como funciona',
+    'tabela SAC vs Price: a diferença real em reais',
+    'amortização extra no financiamento: prazo vs parcela — o que compensa',
+    'portabilidade de financiamento imobiliário: quanto pode economizar',
+    'consórcio imobiliário vs financiamento: comparativo honesto',
+    'financiamento de carro: o custo total que ninguém mostra',
+    'score para aprovação de financiamento: o que realmente pesa',
+  ],
+  'previdência': [
+    'INSS: como calcular quanto você vai receber na aposentadoria',
+    'contribuição facultativa no INSS: vale a pena para autônomo',
+    'previdência privada: como avaliar o fundo antes de contratar',
+    'taxa de administração da previdência: o impacto em 30 anos',
+    'portabilidade de previdência privada: quando e como fazer',
+    'PGBL para quem declara no modelo completo: a conta do benefício fiscal',
+    'como a previdência privada é tributada no resgate',
+    'aposentadoria por invalidez vs aposentadoria por idade',
+    'pensão por morte: quem tem direito e quanto recebe',
+    'como regularizar contribuições em atraso no INSS',
+  ],
+}
+
+// --- Busca de sugestões no Google via Serper ---
+async function fetchGoogleSuggestions(query: string): Promise<string[]> {
+  const key = process.env.SERPER_API_KEY
+  if (!key) return []
+  try {
+    const res = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: query, gl: 'br', hl: 'pt-br', num: 10 }),
+      signal: AbortSignal.timeout(5000),
+    })
+    const data = await res.json()
+    const suggestions: string[] = []
+    // "People also ask"
+    for (const q of (data.peopleAlsoAsk || []).slice(0, 6)) {
+      if (q.question) suggestions.push(q.question)
+    }
+    // Buscas relacionadas
+    for (const r of (data.relatedSearches || []).slice(0, 6)) {
+      if (r.query) suggestions.push(r.query)
+    }
+    return suggestions
+  } catch {
+    return []
+  }
+}
 
 // --- Calendário de conteúdo ---
 
@@ -90,18 +273,41 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
     bofu: 'fundo de funil (decision): recomendações específicas, ranking, melhores opções do momento',
   }[funnel]
 
-  // Rotação de foco: garante cobertura recorrente do novo pilar "Ganhar Dinheiro"
-  // (renda extra, MMO, sair da CLT) — ~3x/semana nos slots evergreen.
   const focusByDay = ['ganhar dinheiro', 'investimentos', 'educação financeira', 'ganhar dinheiro', 'cartão de crédito', 'investimentos', 'ganhar dinheiro']
   const focusCategory = type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : ''
-  const focusGuide = focusCategory === 'ganhar dinheiro'
-    ? `\n\nFOCO OBRIGATÓRIO DE HOJE — categoria "ganhar dinheiro": escreva sobre AUMENTAR A RENDA. Temas válidos: renda extra, trabalhar pela internet (MMO), freelancing, vender online, side hustle, empreender pequeno, sair da CLT com segurança, monetizar habilidades, liberdade financeira via múltiplas fontes de renda. NADA de "ganhar dinheiro rápido/garantido" — só caminhos reais e honestos. Defina "category": "ganhar dinheiro".`
-    : focusCategory
-      ? `\n\nFOCO DE HOJE: priorize a categoria "${focusCategory}".`
+
+  // Busca títulos já publicados na categoria + sugestões do Google em paralelo
+  const [categoryTitles, googleSuggestions] = await Promise.all([
+    focusCategory ? getTitlesByCategory(focusCategory) : Promise.resolve([] as string[]),
+    focusCategory ? fetchGoogleSuggestions(`${focusCategory} finanças pessoais Brasil`) : Promise.resolve([] as string[]),
+  ])
+
+  // Monta guia de foco com taxonomia + títulos já cobertos
+  let focusGuide = ''
+  if (focusCategory) {
+    const taxonomy = TOPIC_TAXONOMY[focusCategory] ?? []
+    const coveredTitles = [...new Set([...recentTitles, ...categoryTitles])]
+
+    const taxonomyBlock = taxonomy.length
+      ? `\nLISTA DE ÂNGULOS DISPONÍVEIS para a categoria "${focusCategory}" (escolha UM que ainda não foi coberto):\n${taxonomy.map(t => `- ${t}`).join('\n')}`
       : ''
 
-  const avoid = recentTitles.length
-    ? `\n\nNÃO REPITA estes temas já publicados recentemente (escolha um ângulo ou assunto diferente):\n${recentTitles.map(t => `- ${t}`).join('\n')}`
+    const googleBlock = googleSuggestions.length
+      ? `\nPERGUNTAS REAIS que brasileiros estão buscando no Google agora (use como inspiração de ângulo ou título):\n${googleSuggestions.map(s => `- ${s}`).join('\n')}`
+      : ''
+
+    const coveredBlock = coveredTitles.length
+      ? `\nTÍTULOS JÁ PUBLICADOS nessa categoria — NÃO repita o mesmo ângulo:\n${coveredTitles.map(t => `- ${t}`).join('\n')}`
+      : ''
+
+    focusGuide = `\n\nFOCO OBRIGATÓRIO — categoria "${focusCategory}":${taxonomyBlock}${googleBlock}${coveredBlock}\n\nEscolha o ângulo mais útil e ainda não coberto. Defina "category": "${focusCategory}". ${focusCategory === 'ganhar dinheiro' ? 'NADA de "ganhar dinheiro rápido/garantido" — só caminhos reais e honestos.' : ''}`
+  }
+
+  const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
+
+  // Evita repetição global recente
+  const globalAvoid = recentTitles.length
+    ? `\n\nNÃO REPITA estes temas recentes de outras categorias:\n${recentTitles.slice(0, 20).map(t => `- ${t}`).join('\n')}`
     : ''
 
   // Para notícias, inclui imageUrl do artigo original se disponível
@@ -119,11 +325,13 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   } else {
     context = `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
   }
-  context += focusGuide + avoid
+  context += focusGuide + globalAvoid
 
   const prompt = `${context}
 
 Você escreve para o blog Endinheirados (endinheirados.cc), portal de finanças pessoais para brasileiros da Geração Z.
+
+ANO ATUAL: ${currentYear}. NUNCA escreva outro ano como "este ano", "em 2025", "ano passado" sem fonte explícita — ${currentYear} é o presente. Qualquer referência temporal sem fonte deve ser atemporal ("recentemente", "hoje em dia", "nos últimos meses").
 
 PÚBLICO-ALVO — CRÍTICO: brasileiros curiosos sobre dinheiro que NÃO são especialistas. Escreva como se fosse explicar pra um amigo que perguntou "mas como isso funciona mesmo?". Não assuma que o leitor conhece termos financeiros.
 

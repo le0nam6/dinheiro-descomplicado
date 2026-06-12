@@ -51,6 +51,7 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 async function generate(news: NewsItem[], recent: string[]): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
   const top = news.slice(0, 12)
+  const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
   const prompt = `Você é repórter de finanças do portal Endinheirados (endinheirados.cc). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
 
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
@@ -65,7 +66,7 @@ IMPARCIALIDADE É MANDATÓRIA:
 - Atribua afirmações às fontes ("segundo o Banco Central", "de acordo com a InfoMoney").
 - Sem alarmismo, sem clickbait. Título descritivo e honesto.
 - Não invente números, datas ou falas. Se faltar dado, fale de forma genérica.
-- DATAS E ANOS — REGRA CRÍTICA: NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/fonte. É PROIBIDO escrever "em 2025", "ainda em 2025", "até 2026" se isso não veio da fonte. Na dúvida, seja atemporal ("recentemente", "nos próximos meses").
+- DATAS E ANOS — REGRA CRÍTICA: O ANO ATUAL É ${currentYear}. NUNCA escreva qualquer outro ano como "ano atual", "este ano", "em 2025" ou similar — ${currentYear} é o presente. NUNCA afirme um ano futuro ou passado que NÃO esteja explicitamente na manchete/fonte. Na dúvida, seja atemporal ("recentemente", "nos próximos meses").
 - Explique o impacto para o brasileiro comum de forma didática e neutra.
 
 ÂNGULO DA MATÉRIA — ESCOLHA UM e siga a estrutura dele (NÃO use sempre o mesmo padrão "subtítulo + 1 parágrafo"):
