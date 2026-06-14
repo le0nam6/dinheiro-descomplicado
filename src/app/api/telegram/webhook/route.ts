@@ -295,12 +295,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
 
-      // /pendentes — lista posts aguardando aprovação
+      // /pendentes — reenvia cada post pendente com o teclado de aprovação
       if (cmd === '/pendentes') {
-        const list = await sanity.fetch('*[_type=="pendingPost" && status=="pending"]|order(createdAt desc){data}')
-        if (!list.length) { await tg('sendMessage', { chat_id: chatId, text: '✅ Nenhum post aguardando aprovação.' }); return NextResponse.json({ ok: true }) }
-        const titles = list.map((p: { data: string }) => { try { return '• ' + JSON.parse(p.data).post.title } catch { return '• (erro)' } }).join('\n')
-        await tg('sendMessage', { chat_id: chatId, text: `📋 Aguardando aprovação (${list.length}):\n${titles}` })
+        const list = await sanity.fetch('*[_type=="pendingPost" && status=="pending"]|order(createdAt desc){_id, data}')
+        if (!list.length) {
+          await tg('sendMessage', { chat_id: chatId, text: '✅ Nenhum post aguardando aprovação.' })
+          return NextResponse.json({ ok: true })
+        }
+        await tg('sendMessage', { chat_id: chatId, text: `📋 ${list.length} post${list.length > 1 ? 's' : ''} aguardando aprovação:` })
+        for (const p of list as Array<{ _id: string; data: string }>) {
+          try {
+            const pd: PendingData = JSON.parse(p.data)
+            await tg('sendPhoto', {
+              chat_id: chatId,
+              photo: pd.slideUrls[0],
+              caption: `📌 ${pd.post.title}\n\n${pd.post.excerpt || ''}`,
+              reply_markup: approvalKeyboard(p._id),
+            })
+          } catch { /* ignora posts com data corrompida */ }
+        }
         return NextResponse.json({ ok: true })
       }
 
