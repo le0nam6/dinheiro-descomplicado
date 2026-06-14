@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
         destination: 'https://endinheirados.cc/:path*',
         permanent: true,
       },
+      {
+        source: '/blog/caz%C3%A9tv-recorde-youtube-brasil-copa-do-mundo',
+        destination: '/blog/cazetv-recorde-youtube-brasil-copa-do-mundo',
+        permanent: true,
+      },
     ]
   },
 };
