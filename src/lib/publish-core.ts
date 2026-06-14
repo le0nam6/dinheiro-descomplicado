@@ -169,6 +169,27 @@ export async function getRecentPhotoUrls(limit = 30): Promise<string[]> {
   return urls.filter(Boolean)
 }
 
+// --- Busca de imagens via Serper (Google Images) ---
+export async function fetchSerperImages(query: string, n = 3): Promise<Photo[]> {
+  const key = process.env.SERPER_API_KEY
+  if (!key) return []
+  try {
+    const res = await fetch('https://google.serper.dev/images', {
+      method: 'POST',
+      headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: query, gl: 'br', hl: 'pt', num: n * 2 }),
+      signal: AbortSignal.timeout(6000),
+    })
+    const d = await res.json()
+    return ((d.images ?? []) as Array<{ imageUrl: string; title: string; source: string }>)
+      .slice(0, n)
+      .map(img => ({ url: img.imageUrl, alt: img.title || query, credit: `Foto: ${img.source}` }))
+      .filter(p => p.url)
+  } catch {
+    return []
+  }
+}
+
 // --- Busca de foto reutilizável: Pexels → Unsplash (#4 trocar foto) ---
 export async function fetchPhoto(query: string, excludeUrls: string[] = []): Promise<Photo> {
   if (process.env.PEXELS_API_KEY) {

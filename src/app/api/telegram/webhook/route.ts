@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
-  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
+  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
 } from '@/lib/publish-core'
 import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
 
@@ -35,7 +35,7 @@ async function tg(method: string, body: Record<string, unknown>) {
   }).then(r => r.json())
 }
 
-type PendingData = { post: GeneratedPost; photo: Photo; slideUrls: string[]; caption: string }
+type PendingData = { post: GeneratedPost; photo: Photo; slideUrls: string[]; caption: string; imageOptions?: Photo[] }
 
 function buildSlides(post: GeneratedPost, photo: Photo) {
   const coverTitle = post.igTitle || post.title
@@ -186,19 +186,62 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, editingCaption: id })
       }
 
-      if (action === 'ph') {
-        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando outra foto…' })
-        const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', [d.photo.url])
-        d.photo = newPhoto
-        d.slideUrls = buildSlides(d.post, newPhoto)
-        await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()
+      // pi:N:id — escolhe uma das opções de imagem pré-buscadas
+      if (action === 'pi') {
+        const imgIdx = parseInt(parts[1], 10)
+        const postId = parts.slice(2).join(':')
+        const pendingPi = await sanity.fetch('*[_id==$id][0]{_id, data, status}', { id: postId })
+        if (!pendingPi) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rascunho não encontrado.' })
+          return NextResponse.json({ ok: true })
+        }
+        const dPi: PendingData = JSON.parse(pendingPi.data)
+        const picked = dPi.imageOptions?.[imgIdx]
+        if (!picked) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Opção não encontrada.' })
+          return NextResponse.json({ ok: true })
+        }
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: `Opção ${imgIdx + 1} selecionada!` })
+        dPi.photo = picked
+        dPi.slideUrls = buildSlides(dPi.post, picked)
+        await sanity.patch(postId).set({ data: JSON.stringify(dPi) }).commit()
         await tg('sendPhoto', {
           chat_id: cq.message.chat.id,
-          photo: d.slideUrls[0],
-          caption: `🖼 Foto trocada\n\n📌 ${d.post.title}`,
-          reply_markup: approvalKeyboard(id),
+          photo: dPi.slideUrls[0],
+          caption: `✅ Opção ${imgIdx + 1} aplicada\n\n📌 ${dPi.post.title}`,
+          reply_markup: approvalKeyboard(postId),
         })
-        return NextResponse.json({ ok: true, photoSwapped: id })
+        return NextResponse.json({ ok: true, pickedImage: imgIdx })
+      }
+
+      if (action === 'ph') {
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando mais fotos…' })
+        const newOptions = await fetchSerperImages(d.post.coverQuery || d.post.title || 'mercado financeiro', 3)
+        if (newOptions.length === 0) {
+          // Fallback: troca por uma foto do Pexels/Unsplash
+          const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', [d.photo.url])
+          d.photo = newPhoto
+          d.slideUrls = buildSlides(d.post, newPhoto)
+          await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()
+          await tg('sendPhoto', {
+            chat_id: cq.message.chat.id,
+            photo: d.slideUrls[0],
+            caption: `🖼 Foto trocada\n\n📌 ${d.post.title}`,
+            reply_markup: approvalKeyboard(id),
+          })
+          return NextResponse.json({ ok: true, photoSwapped: id })
+        }
+        d.imageOptions = newOptions
+        await sanity.patch(id).set({ data: JSON.stringify(d) }).commit()
+        for (let i = 0; i < newOptions.length; i++) {
+          await tg('sendPhoto', {
+            chat_id: cq.message.chat.id,
+            photo: newOptions[i].url,
+            caption: `Opção ${i + 1}`,
+            reply_markup: { inline_keyboard: [[{ text: `✅ Usar opção ${i + 1}`, callback_data: `pi:${i}:${id}` }]] },
+          })
+        }
+        return NextResponse.json({ ok: true, newOptions: newOptions.length })
       }
     }
 

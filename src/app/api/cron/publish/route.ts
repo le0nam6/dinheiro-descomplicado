@@ -7,7 +7,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
-  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto,
+  createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
   tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
 } from '@/lib/publish-core'
 
@@ -494,11 +494,17 @@ export async function GET(request: Request) {
     const post = await generatePost(effectiveSchedule, news, recentTitles, rejectedTitle)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
-    // 3. Foto: tenta imagem do artigo original → Pexels (sem repetir) → Unsplash
+    // 3. Foto: tenta imagem do artigo original → Serper → Pexels/Unsplash
     const articleImageUrl = schedule.type === 'news' ? (post.articleImageUrl as string | undefined) : undefined
-    const photo = articleImageUrl
-      ? { url: articleImageUrl, alt: post.title as string, credit: 'Foto: Fonte original' }
-      : await fetchPhoto(post.coverQuery as string || 'personal finance money', recentPhotos)
+    const coverQuery = (post.coverQuery as string) || 'personal finance money'
+
+    // Busca foto principal e 3 opções alternativas em paralelo
+    const [photo, imageOptions] = await Promise.all([
+      articleImageUrl
+        ? Promise.resolve({ url: articleImageUrl, alt: post.title as string, credit: 'Foto: Fonte original' })
+        : fetchPhoto(coverQuery, recentPhotos),
+      fetchSerperImages(post.title as string || coverQuery, 3),
+    ])
 
     // 4. Modo aprovação: cria rascunho pendente e manda os botões no Telegram.
     //    O blog e o carrossel só saem depois do seu OK.
@@ -519,18 +525,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: true, mode: 'auto', sanityId: doc._id, slug: post.slug })
     }
 
-    // Guarda o rascunho pendente (inclui coverQuery p/ "trocar foto")
-    const coverQuery = (post.coverQuery as string) || 'personal finance money'
+    // Guarda o rascunho pendente (inclui opções de imagem pré-buscadas)
     const pending = await sanity.create({
       _type: 'pendingPost',
       status: 'pending',
       createdAt: new Date().toISOString(),
-      data: JSON.stringify({ post: { ...post, coverQuery }, photo, slideUrls, caption }),
+      data: JSON.stringify({ post: { ...post, coverQuery }, photo, slideUrls, caption, imageOptions }),
     })
     const id = pending._id
 
     const tipo = schedule.type === 'news' ? '🔥 Notícia quente' : `📚 Evergreen (${schedule.funnel.toUpperCase()})`
     const header = rejectedTitle ? `🔄 Alternativa ao rejeitado\n\n${tipo}` : `🆕 Post pronto pra revisão\n\n${tipo}`
+
+    // Envia o preview principal com os botões de aprovação
     await tgSendPhoto(
       slideUrls[0],
       `${header}\n📌 ${post.title}\n\n${(post.excerpt as string)}\n\nAprovar publica no blog + manda o carrossel aqui.`,
@@ -541,10 +548,31 @@ export async function GET(request: Request) {
         ], [
           { text: '✏️ Título', callback_data: `ed:${id}` },
           { text: '📝 Legenda', callback_data: `ec:${id}` },
-          { text: '🖼 Foto', callback_data: `ph:${id}` },
+          { text: '🖼 Mais fotos', callback_data: `ph:${id}` },
         ]],
       }
     )
+
+    // Envia as 3 opções de imagem do Google para escolha
+    if (imageOptions.length > 0) {
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: '🖼 Opções de foto via Google — toca para usar:' }),
+      }).catch(() => {})
+      for (let i = 0; i < imageOptions.length; i++) {
+        await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            photo: imageOptions[i].url,
+            caption: `Opção ${i + 1}`,
+            reply_markup: { inline_keyboard: [[{ text: `✅ Usar opção ${i + 1}`, callback_data: `pi:${i}:${id}` }]] },
+          }),
+        }).catch(() => {})
+      }
+    }
 
     return NextResponse.json({ ok: true, mode: 'approval', pendingId: id, slug: post.slug })
   } catch (err) {

@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
-  createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, tgAlert, tgConfigured,
+  createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, fetchSerperImages, tgAlert, tgConfigured,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -199,13 +199,17 @@ async function processNews() {
     return
   }
 
-  const [articleImg, recentPhotos] = [
-    post.newsSources[0]?.imageUrl,
-    await getRecentPhotoUrls(30),
-  ]
-  const photo: Photo = articleImg
-    ? { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
-    : await fetchPhoto(post.coverQuery || 'stock market news', recentPhotos)
+  const articleImg = post.newsSources[0]?.imageUrl
+  const recentPhotos = await getRecentPhotoUrls(30)
+
+  let photo: Photo
+  if (articleImg) {
+    photo = { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
+  } else {
+    // Tenta Serper (Google Images) com o título real da notícia; fallback para Pexels/Unsplash
+    const serperPics = await fetchSerperImages(post.title || post.coverQuery || 'mercado financeiro brasil', 1)
+    photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || 'stock market news', recentPhotos)
+  }
 
   const doc = await createSanityPost(
     { ...post, articleType: 'news', sources: post.newsSources.map(s => ({ name: s.source, url: s.url })) } as unknown as GeneratedPost,
