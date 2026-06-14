@@ -37,6 +37,10 @@ export function PostForm({ id }: { id?: string }) {
   const [funnel, setFunnel] = useState('tofu')
   const [keywords, setKeywords] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
+  const [imageQuery, setImageQuery] = useState('')
+  const [imageResults, setImageResults] = useState<{ url: string; thumb: string; source: string; title: string }[]>([])
+  const [searchingImages, setSearchingImages] = useState(false)
+  const [imageErr, setImageErr] = useState('')
   const [bodyMarkdown, setBodyMarkdown] = useState('')
   const [publishedLocal, setPublishedLocal] = useState(isoToLocal())
 
@@ -51,6 +55,7 @@ export function PostForm({ id }: { id?: string }) {
         setFunnel(d.post.funnel || 'tofu')
         setKeywords((d.post.seoKeywords || []).join(', '))
         setCoverUrl(d.post.coverImage?.url || '')
+        setImageQuery(d.post.title || '')
         setBodyMarkdown(d.post.bodyMarkdown || '')
         if (d.post.publishedAt) setPublishedLocal(isoToLocal(d.post.publishedAt))
       }
@@ -86,6 +91,21 @@ export function PostForm({ id }: { id?: string }) {
 
   function publishNow() { setPublishedLocal(isoToLocal(new Date().toISOString())) }
 
+  async function searchImages() {
+    const q = imageQuery.trim() || title.trim()
+    if (!q) return
+    setSearchingImages(true)
+    setImageErr('')
+    setImageResults([])
+    try {
+      const d = await fetch(`/api/admin/images?q=${encodeURIComponent(q)}`).then(r => r.json())
+      if (d.error) { setImageErr(d.error); return }
+      setImageResults(d.images || [])
+      if (!d.images?.length) setImageErr('Nenhuma imagem encontrada. Tente outra busca.')
+    } catch { setImageErr('Erro ao buscar imagens.') }
+    setSearchingImages(false)
+  }
+
   async function remove() {
     if (!isEdit) return
     if (!confirm('Excluir este artigo de vez? Não dá pra desfazer.')) return
@@ -116,7 +136,7 @@ export function PostForm({ id }: { id?: string }) {
         {/* Título */}
         <div>
           <label className="block text-sm font-bold text-gray-700 mb-1">Título</label>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título do artigo"
+          <input value={title} onChange={e => { setTitle(e.target.value); if (!isEdit) setImageQuery(e.target.value) }} placeholder="Título do artigo"
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400" />
         </div>
 
@@ -168,11 +188,57 @@ export function PostForm({ id }: { id?: string }) {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400" />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">URL da imagem de capa</label>
-            <input value={coverUrl} onChange={e => setCoverUrl(e.target.value)} placeholder="https://..."
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400" />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">🖼️ Imagem de capa</label>
+
+            {/* Busca no Google Imagens */}
+            <div className="flex gap-2 mb-3">
+              <input
+                value={imageQuery}
+                onChange={e => setImageQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && searchImages()}
+                placeholder={title || 'Buscar imagem no Google...'}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+              <button
+                type="button"
+                onClick={searchImages}
+                disabled={searchingImages}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
+              >
+                {searchingImages ? 'Buscando...' : '🔍 Google Imagens'}
+              </button>
+            </div>
+
+            {imageErr && <p className="text-xs text-red-600 mb-2">{imageErr}</p>}
+
+            {/* Grade de resultados */}
+            {imageResults.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {imageResults.map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setCoverUrl(img.url); setImageResults([]) }}
+                    className={`relative group rounded-xl overflow-hidden border-2 transition-all ${coverUrl === img.url ? 'border-green-500' : 'border-transparent hover:border-green-400'}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.thumb} alt={img.title} className="w-full h-28 object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1.5 py-0.5 truncate">{img.source}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* URL manual */}
+            <input
+              value={coverUrl}
+              onChange={e => { setCoverUrl(e.target.value); setImageResults([]) }}
+              placeholder="Ou cole a URL da imagem diretamente..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
+            />
             {coverUrl && /* eslint-disable-next-line @next/next/no-img-element */ (
-              <img src={coverUrl} alt="capa" className="mt-2 h-28 rounded-lg object-cover" />
+              <img src={coverUrl} alt="capa" className="mt-2 h-28 rounded-lg object-cover w-full" />
             )}
           </div>
         </div>
