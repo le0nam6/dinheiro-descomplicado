@@ -10,15 +10,19 @@ export async function GET(req: Request) {
       { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
     )
     const d = await res.json()
-    const m = d.chart.result[0].meta
+    const result = d.chart.result[0]
+    const m = result.meta
     const price: number = m.regularMarketPrice
     const prev: number = m.previousClose ?? m.chartPreviousClose
+    const rawCloses: (number | null)[] = result.indicators?.quote?.[0]?.close ?? []
+    const closes = rawCloses.filter((v): v is number => v != null).slice(-30)
     return NextResponse.json({
       ok: true,
       symbol,
       price,
       changePct: ((price - prev) / prev) * 100,
       currency: m.currency || 'BRL',
+      closes,
     })
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 })

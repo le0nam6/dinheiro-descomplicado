@@ -4,7 +4,7 @@ import { IconTrendingUp, IconTrendingDown, IconSearch, IconX } from '@tabler/ico
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 type SearchResult = { symbol: string; name: string; exchange: string; type: string }
-type TickerQuote = { symbol: string; name: string; price: number; changePct: number; currency: string }
+type TickerQuote = { symbol: string; name: string; price: number; changePct: number; currency: string; closes: number[] }
 
 function fmtPrice(price: number, brl: boolean) {
   const big = price >= 1000
@@ -12,6 +12,22 @@ function fmtPrice(price: number, brl: boolean) {
     ? price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
     : price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return brl ? `R$ ${v}` : v
+}
+
+function Sparkline({ closes, up }: { closes: number[]; up: boolean }) {
+  if (closes.length < 2) return null
+  const min = Math.min(...closes)
+  const max = Math.max(...closes)
+  const range = max - min || 1
+  const W = 200, H = 48
+  const pts = closes
+    .map((c, i) => `${(i / (closes.length - 1)) * W},${H - ((c - min) / range) * H}`)
+    .join(' ')
+  return (
+    <svg width={W} height={H} className="mt-2" viewBox={`0 0 ${W} ${H}`}>
+      <polyline fill="none" stroke={up ? '#16a34a' : '#ef4444'} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" points={pts} />
+    </svg>
+  )
 }
 
 function QuoteCard({ q, href }: { q: Quote; href?: string }) {
@@ -74,7 +90,7 @@ function TickerSearch() {
     try {
       const d = await fetch(`/api/quotes/ticker?symbol=${encodeURIComponent(r.symbol)}`).then(res => res.json())
       if (d.ok) {
-        setSelected({ symbol: r.symbol, name: r.name, price: d.price, changePct: d.changePct, currency: d.currency })
+        setSelected({ symbol: r.symbol, name: r.name, price: d.price, changePct: d.changePct, currency: d.currency, closes: d.closes ?? [] })
       }
     } catch { /* ignore */ }
     setLoadingQuote(false)
@@ -86,9 +102,10 @@ function TickerSearch() {
   const isBRL = selected?.currency === 'BRL'
 
   return (
-    <div className="mt-12">
-      <h2 className="text-base font-bold text-gray-900 mb-3">Buscar empresa ou FII</h2>
-      <p className="text-sm text-gray-500 mb-4">Digite o nome ou ticker (ex: Petrobras, KNRI11, AAPL)</p>
+    <div className="mb-10">
+      <h2 className="text-base font-bold text-gray-900 mb-1">Buscar empresa, FII ou ativo</h2>
+      <p className="text-sm text-gray-500 mb-3">Digite o nome ou ticker (ex: Petrobras, KNRI11, AAPL)</p>
+
       <div className="relative max-w-lg" style={{ isolation: 'isolate' }}>
         <div className="relative">
           <IconSearch size={16} stroke={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -106,9 +123,8 @@ function TickerSearch() {
           )}
         </div>
 
-        {/* Dropdown de sugestões */}
         {(results.length > 0 || (loading && query.length >= 2)) && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
             {loading && results.length === 0 && (
               <div className="px-4 py-3 text-sm text-gray-400">Buscando...</div>
             )}
@@ -129,28 +145,33 @@ function TickerSearch() {
         )}
       </div>
 
-      {/* Resultado do ticker selecionado */}
       {loadingQuote && (
         <div className="mt-4 text-sm text-gray-400">Carregando cotação...</div>
       )}
       {selected && (
-        <div className="mt-4 inline-flex items-center gap-6 border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">{selected.symbol}</p>
-            <p className="font-bold text-gray-900 text-base leading-tight max-w-xs truncate">{selected.name}</p>
+        <div className="mt-4 inline-flex flex-col border border-gray-200 rounded-2xl p-5 bg-white shadow-sm min-w-[280px]">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">{selected.symbol}</p>
+              <p className="font-bold text-gray-900 text-base leading-tight max-w-[220px]">{selected.name}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">
+                {isBRL ? 'R$ ' : `${selected.currency} `}
+                {selected.price >= 1000
+                  ? selected.price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                  : selected.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className={`flex items-center justify-end gap-1 text-sm font-semibold tabular-nums ${up ? 'text-green-600' : 'text-red-500'}`}>
+                {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}
+                {Math.abs(selected.changePct).toFixed(2)}%
+              </p>
+            </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-bold text-gray-900 tabular-nums">
-              {isBRL ? 'R$ ' : `${selected.currency} `}
-              {selected.price >= 1000
-                ? selected.price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
-                : selected.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <p className={`flex items-center justify-end gap-1 text-sm font-semibold tabular-nums ${up ? 'text-green-600' : 'text-red-500'}`}>
-              {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}
-              {Math.abs(selected.changePct).toFixed(2)}%
-            </p>
-          </div>
+          {selected.closes.length >= 2 && (
+            <Sparkline closes={selected.closes} up={!!up} />
+          )}
+          <p className="text-[11px] text-gray-400 mt-2">Últimos 30 dias · Fonte: Yahoo Finance</p>
         </div>
       )}
     </div>
@@ -177,6 +198,8 @@ export default function CotacoesPage() {
       <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Cotações</h1>
       <p className="text-sm text-gray-500 mb-8">Atualizado em tempo real · atualiza a cada 2 min{updated ? ` · última atualização às ${updated}` : ''}</p>
 
+      <TickerSearch />
+
       {!quotes.length && (
         <div className="text-gray-400 text-sm py-10">Carregando cotações…</div>
       )}
@@ -195,8 +218,6 @@ export default function CotacoesPage() {
           </div>
         )
       })}
-
-      <TickerSearch />
     </div>
   )
 }
