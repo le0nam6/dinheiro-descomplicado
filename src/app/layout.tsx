@@ -64,36 +64,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 function Header() {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-      {/* Logo row: espaço livre | logo | [meta badge + toggle] */}
-      <div className="max-w-4xl mx-auto px-4 pt-1 pb-0 flex items-center overflow-hidden">
-        {/* Espaço à esquerda (espelha o lado direito) */}
-        <div className="flex-1 flex items-center gap-2 invisible">
-          <SubscriberGoalBadge />
-          <ThemeToggle />
-        </div>
-
-        {/* Logo centralizada */}
-        <a href="/" className="shrink-0">
+      {/* Mobile: logo à esquerda + controles à direita | Desktop: logo centralizada */}
+      <div className="max-w-4xl mx-auto px-4 pt-1 pb-0 flex items-center sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        {/* Logo — esquerda no mobile, centro no desktop */}
+        <a href="/" className="shrink-0 sm:flex sm:justify-center">
           <img
             src="/logo-endinheirados.webp"
             alt="Endinheirados"
             width={240}
             height={160}
             className="w-auto object-contain"
-            style={{ height: 'clamp(64px, 8vw, 96px)', marginTop: '-6%', marginBottom: '-6%' }}
+            style={{ height: 'clamp(48px, 7vw, 88px)', marginTop: '-5%', marginBottom: '-5%' }}
           />
         </a>
 
-        {/* Lado direito: meta de inscritos + toggle de tema */}
-        <div className="flex-1 flex items-center justify-end gap-2">
+        {/* Desktop: espaço fantasma à esquerda p/ equilibrar */}
+        <div className="hidden sm:flex items-center gap-2 opacity-0 pointer-events-none overflow-hidden min-w-0 order-first">
           <SubscriberGoalBadge />
+          <ThemeToggle />
+        </div>
+
+        {/* Controles — sempre à direita */}
+        <div className="ml-auto sm:ml-0 flex items-center justify-end gap-2 min-w-0">
+          <div className="hidden sm:block"><SubscriberGoalBadge /></div>
           <ThemeToggle />
         </div>
       </div>
 
-      {/* Nav como submenu */}
-      <nav className="border-t border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-start sm:justify-center gap-1.5 flex-nowrap overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {/* Nav: scroll horizontal no mobile sem vazar */}
+      <nav className="border-t border-gray-100 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="px-4 py-2.5 flex items-center gap-1 w-max sm:w-auto sm:max-w-4xl sm:mx-auto sm:justify-center">
           <a href="/edicao" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><IconNews size={16} stroke={1.75} /> Edições</a>
           <a href="/cotacoes" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cotações</a>
           <a href="/categoria/noticias" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Notícias</a>
