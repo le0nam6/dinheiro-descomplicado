@@ -214,7 +214,7 @@ export function PostForm({ id }: { id?: string }) {
             {/* Grade de resultados */}
             {imageResults.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-3">
-                {imageResults.map((img, i) => (
+                {imageResults.slice(0, 6).map((img, i) => (
                   <button
                     key={i}
                     type="button"

@@ -28,41 +28,36 @@ export async function GET(req: Request) {
   const q = new URL(req.url).searchParams.get('q')?.trim()
   if (!q) return NextResponse.json({ images: [] })
 
-  const apiKey = process.env.GOOGLE_SEARCH_API_KEY
-  const cx = process.env.GOOGLE_SEARCH_ENGINE_ID
-  if (!apiKey || !cx) {
-    return NextResponse.json({ error: 'Google Search não configurado' }, { status: 500 })
+  const apiKey = process.env.SERPER_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Serper não configurado' }, { status: 500 })
   }
 
   try {
-    const url = new URL('https://www.googleapis.com/customsearch/v1')
-    url.searchParams.set('key', apiKey)
-    url.searchParams.set('cx', cx)
-    url.searchParams.set('searchType', 'image')
-    url.searchParams.set('q', q)
-    url.searchParams.set('num', '3')
-    url.searchParams.set('imgType', 'photo')
-    url.searchParams.set('safe', 'active')
-    url.searchParams.set('lr', 'lang_pt')
-
-    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) })
+    const res = await fetch('https://google.serper.dev/images', {
+      method: 'POST',
+      headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q, gl: 'br', hl: 'pt', num: 6 }),
+      signal: AbortSignal.timeout(8000),
+    })
     const d = await res.json()
 
     if (!res.ok) {
-      return NextResponse.json({ error: d.error?.message || 'Erro na busca' }, { status: 500 })
+      return NextResponse.json({ error: d.message || 'Erro na busca' }, { status: 500 })
     }
 
-    const images = (d.items ?? []).map((item: {
-      link: string
-      image: { thumbnailLink: string; contextLink: string }
-      displayLink: string
+    const images = (d.images ?? []).slice(0, 6).map((item: {
       title: string
+      imageUrl: string
+      thumbnailUrl: string
+      source: string
+      link: string
     }) => ({
-      url: item.link,
-      thumb: item.image.thumbnailLink,
-      source: item.displayLink,
+      url: item.imageUrl,
+      thumb: item.thumbnailUrl,
+      source: item.source,
       title: item.title,
-      contextLink: item.image.contextLink,
+      contextLink: item.link,
     }))
 
     return NextResponse.json({ images })
