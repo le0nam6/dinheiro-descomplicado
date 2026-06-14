@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 export const revalidate = 60
 
 const slugToCategory: Record<string, string> = {
+  'noticias': 'notícias',
   'ganhar-dinheiro': 'ganhar dinheiro',
   'emprestimo': 'empréstimo',
   'investimentos': 'investimentos',

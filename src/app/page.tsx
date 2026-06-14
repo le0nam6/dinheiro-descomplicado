@@ -5,13 +5,12 @@ import Link from 'next/link'
 export const revalidate = 60
 
 const categories = [
-  { label: 'Ganhar Dinheiro', href: '/categoria/ganhar-dinheiro', icon: '🚀' },
-  { label: 'Investimentos', href: '/categoria/investimentos', icon: '📈' },
+  { label: 'Notícias', href: '/categoria/noticias', icon: '📰' },
+  { label: 'Blog', href: '/blog', icon: '✍️' },
   { label: 'Educação Financeira', href: '/categoria/educacao-financeira', icon: '📚' },
-  { label: 'Cartão', href: '/categoria/cartao-de-credito', icon: '🏦' },
-  { label: 'Empréstimo', href: '/categoria/emprestimo', icon: '💳' },
-  { label: 'Financiamento', href: '/categoria/financiamento', icon: '🏠' },
-  { label: 'Previdência', href: '/categoria/previdencia', icon: '📊' },
+  { label: 'Ganhe Dinheiro', href: '/categoria/ganhar-dinheiro', icon: '🚀' },
+  { label: 'Investimentos', href: '/categoria/investimentos', icon: '📈' },
+  { label: 'Ferramentas', href: '/ferramentas', icon: '🛠️' },
 ]
 
 type Post = {
