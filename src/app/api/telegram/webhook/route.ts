@@ -105,6 +105,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
 
+      // --- Escolha de imagem: pi:N:postId (deve vir ANTES do fetch genérico pois id=parts[1]='N') ---
+      if (action === 'pi') {
+        const imgIdx = parseInt(parts[1], 10)
+        const postId = parts.slice(2).join(':')
+        const pendingPi = await sanity.fetch('*[_id==$id][0]{_id, data, status}', { id: postId })
+        if (!pendingPi) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rascunho não encontrado.' })
+          return NextResponse.json({ ok: true })
+        }
+        const dPi: PendingData = JSON.parse(pendingPi.data)
+        const picked = dPi.imageOptions?.[imgIdx]
+        if (!picked) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Opção não encontrada.' })
+          return NextResponse.json({ ok: true })
+        }
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: `Opção ${imgIdx + 1} selecionada!` })
+        dPi.photo = picked
+        dPi.slideUrls = buildSlides(dPi.post, picked)
+        await sanity.patch(postId).set({ data: JSON.stringify(dPi) }).commit()
+        await tg('sendPhoto', {
+          chat_id: cq.message.chat.id,
+          photo: dPi.slideUrls[0],
+          caption: `✅ Opção ${imgIdx + 1} aplicada\n\n📌 ${dPi.post.title}`,
+          reply_markup: approvalKeyboard(postId),
+        })
+        return NextResponse.json({ ok: true, pickedImage: imgIdx })
+      }
+
       const pending = await sanity.fetch('*[_id==$id][0]{_id, data, status, publishedId, publishedSlug}', { id })
       if (!pending) {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Esse rascunho não existe mais.' })
@@ -184,34 +212,6 @@ export async function POST(request: Request) {
           reply_markup: { force_reply: true },
         })
         return NextResponse.json({ ok: true, editingCaption: id })
-      }
-
-      // pi:N:id — escolhe uma das opções de imagem pré-buscadas
-      if (action === 'pi') {
-        const imgIdx = parseInt(parts[1], 10)
-        const postId = parts.slice(2).join(':')
-        const pendingPi = await sanity.fetch('*[_id==$id][0]{_id, data, status}', { id: postId })
-        if (!pendingPi) {
-          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rascunho não encontrado.' })
-          return NextResponse.json({ ok: true })
-        }
-        const dPi: PendingData = JSON.parse(pendingPi.data)
-        const picked = dPi.imageOptions?.[imgIdx]
-        if (!picked) {
-          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Opção não encontrada.' })
-          return NextResponse.json({ ok: true })
-        }
-        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: `Opção ${imgIdx + 1} selecionada!` })
-        dPi.photo = picked
-        dPi.slideUrls = buildSlides(dPi.post, picked)
-        await sanity.patch(postId).set({ data: JSON.stringify(dPi) }).commit()
-        await tg('sendPhoto', {
-          chat_id: cq.message.chat.id,
-          photo: dPi.slideUrls[0],
-          caption: `✅ Opção ${imgIdx + 1} aplicada\n\n📌 ${dPi.post.title}`,
-          reply_markup: approvalKeyboard(postId),
-        })
-        return NextResponse.json({ ok: true, pickedImage: imgIdx })
       }
 
       if (action === 'ph') {
