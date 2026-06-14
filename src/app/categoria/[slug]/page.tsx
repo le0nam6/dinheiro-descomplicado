@@ -28,6 +28,17 @@ interface PillarInfo {
 }
 
 const pillars: Record<string, PillarInfo> = {
+  'notícias': {
+    title: 'Notícias',
+    h1: 'Notícias de Finanças e Economia em 2026',
+    desc: 'As principais notícias sobre economia, mercado financeiro, empresas e investimentos que você precisa saber.',
+    icon: '📰',
+    intro: 'Tudo o que acontece no mundo financeiro e econômico que afeta o seu bolso. Notícias sobre Bolsa de Valores, câmbio, juros, empresas e muito mais — explicadas de forma simples e direta.',
+    faq: [
+      { q: 'Por que acompanhar notícias de economia?', a: 'O mercado financeiro é influenciado por eventos econômicos e políticos. Entender o que está acontecendo ajuda a tomar melhores decisões de investimento e proteger seu dinheiro.' },
+      { q: 'Como as notícias afetam os investimentos?', a: 'Notícias sobre inflação, juros (Selic), câmbio e empresas impactam diretamente a Bolsa, a renda fixa e o seu poder de compra. Estar informado é essencial para quem investe.' },
+    ],
+  },
   'ganhar dinheiro': {
     title: 'Ganhar Dinheiro',
     h1: 'Ganhar Dinheiro em 2026: Renda Extra, MMO e Liberdade Financeira',

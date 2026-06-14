@@ -94,14 +94,12 @@ function Header() {
       {/* Nav como submenu */}
       <nav className="border-t border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-start sm:justify-center gap-1.5 flex-nowrap overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <a href="/mercado" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"><IconChartLine size={16} stroke={1.75} /> Mercado</a>
+          <a href="/categoria/noticias" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Notícias</a>
           <a href="/blog" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
-          <a href="/categoria/ganhar-dinheiro" className="shrink-0 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 rounded-lg transition-colors">Ganhar Dinheiro</a>
-          <a href="/categoria/investimentos" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
           <a href="/categoria/educacao-financeira" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
-          <a href="/categoria/cartao-de-credito" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cartão</a>
-          <a href="/categoria/emprestimo" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Empréstimo</a>
-          <a href="/ferramentas" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><IconTool size={16} stroke={1.75} /> Ferramentas</a>
+          <a href="/categoria/ganhar-dinheiro" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Ganhe Dinheiro</a>
+          <a href="/categoria/investimentos" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Investimentos</a>
+          <a href="/ferramentas" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"><IconTool size={16} stroke={1.75} /> Ferramentas</a>
         </div>
       </nav>
     </header>
