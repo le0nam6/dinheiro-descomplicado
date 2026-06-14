@@ -34,9 +34,15 @@ async function getFxCrypto(): Promise<Quote[]> {
 
   const out: Quote[] = [...fxOut]
   try {
-    const cg = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=brl&include_24hr_change=true', { next: { revalidate: 300 } }).then(r => r.json())
-    if (cg?.bitcoin) out.push({ symbol: 'BTCBRL', label: 'Bitcoin', price: cg.bitcoin.brl, changePct: cg.bitcoin.brl_24h_change ?? 0, kind: 'cripto' })
-    if (cg?.ethereum) out.push({ symbol: 'ETHBRL', label: 'Ethereum', price: cg.ethereum.brl, changePct: cg.ethereum.brl_24h_change ?? 0, kind: 'cripto' })
+    const cg = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,ripple,cardano,dogecoin,litecoin&vs_currencies=brl&include_24hr_change=true', { next: { revalidate: 300 } }).then(r => r.json())
+    if (cg?.bitcoin)     out.push({ symbol: 'BTCBRL',  label: 'Bitcoin',  price: cg.bitcoin.brl,     changePct: cg.bitcoin.brl_24h_change ?? 0,     kind: 'cripto' })
+    if (cg?.ethereum)    out.push({ symbol: 'ETHBRL',  label: 'Ethereum', price: cg.ethereum.brl,    changePct: cg.ethereum.brl_24h_change ?? 0,    kind: 'cripto' })
+    if (cg?.solana)      out.push({ symbol: 'SOLBRL',  label: 'Solana',   price: cg.solana.brl,      changePct: cg.solana.brl_24h_change ?? 0,      kind: 'cripto' })
+    if (cg?.binancecoin) out.push({ symbol: 'BNBBRL',  label: 'BNB',      price: cg.binancecoin.brl, changePct: cg.binancecoin.brl_24h_change ?? 0, kind: 'cripto' })
+    if (cg?.ripple)      out.push({ symbol: 'XRPBRL',  label: 'XRP',      price: cg.ripple.brl,      changePct: cg.ripple.brl_24h_change ?? 0,      kind: 'cripto' })
+    if (cg?.cardano)     out.push({ symbol: 'ADABRL',  label: 'Cardano',  price: cg.cardano.brl,     changePct: cg.cardano.brl_24h_change ?? 0,     kind: 'cripto' })
+    if (cg?.dogecoin)    out.push({ symbol: 'DOGEBRL', label: 'Dogecoin', price: cg.dogecoin.brl,    changePct: cg.dogecoin.brl_24h_change ?? 0,    kind: 'cripto' })
+    if (cg?.litecoin)    out.push({ symbol: 'LTCBRL',  label: 'Litecoin', price: cg.litecoin.brl,    changePct: cg.litecoin.brl_24h_change ?? 0,    kind: 'cripto' })
   } catch { /* ignore */ }
   return out
 }

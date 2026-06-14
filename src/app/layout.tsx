@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { ExitIntentPopup } from '@/components/ExitIntentPopup'
 import { SubscriberMilestone } from '@/components/SubscriberMilestone'
 import { SubscriberGoalBadge } from '@/components/SubscriberGoalBadge'
-import { IconChartLine, IconTool, IconNews, IconCoinEuro } from '@tabler/icons-react'
+import { IconTool, IconNews } from '@tabler/icons-react'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -95,7 +95,7 @@ function Header() {
       <nav className="border-t border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-start sm:justify-center gap-1.5 flex-nowrap overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <a href="/edicao" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><IconNews size={16} stroke={1.75} /> Edições</a>
-          <a href="/mercado" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"><IconCoinEuro size={16} stroke={1.75} /> Cotações</a>
+          <a href="/cotacoes" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cotações</a>
           <a href="/categoria/noticias" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Notícias</a>
           <a href="/blog" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
           <a href="/categoria/educacao-financeira" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
