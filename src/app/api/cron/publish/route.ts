@@ -503,7 +503,7 @@ export async function GET(request: Request) {
       articleImageUrl
         ? Promise.resolve({ url: articleImageUrl, alt: post.title as string, credit: 'Foto: Fonte original' })
         : fetchPhoto(coverQuery, recentPhotos),
-      fetchSerperImages(post.title as string || coverQuery, 3),
+      fetchSerperImages(coverQuery, 3),
     ])
 
     // 4. Modo aprovação: cria rascunho pendente e manda os botões no Telegram.

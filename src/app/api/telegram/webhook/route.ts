@@ -216,7 +216,7 @@ export async function POST(request: Request) {
 
       if (action === 'ph') {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando mais fotos…' })
-        const newOptions = await fetchSerperImages(d.post.coverQuery || d.post.title || 'mercado financeiro', 3)
+        const newOptions = await fetchSerperImages(d.post.coverQuery || 'personal finance', 3)
         if (newOptions.length === 0) {
           // Fallback: troca por uma foto do Pexels/Unsplash
           const newPhoto = await fetchPhoto(d.post.coverQuery || 'personal finance money', [d.photo.url])
