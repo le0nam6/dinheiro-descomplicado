@@ -225,9 +225,17 @@ REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem ne
 ${isFriday ? '\n"recommendation" — É SEXTA: recomende UMA série OU UM livro (pode ter relação leve com dinheiro, ambição, negócios, ou só ser muito bom). 2-3 frases dizendo o que é e por que vale.' : ''}
 ${isSunday ? '\n"reflection" — É DOMINGO: escreva uma reflexão curta (2-3 frases) sobre dinheiro, tempo, escolhas ou propósito. Tom de quem pensa alto num domingo à tarde, sem ser piegas nem clichê de autoajuda.' : ''}
 
+TÍTULO DA EDIÇÃO ("title") — REGRAS OBRIGATÓRIAS:
+- Máximo 70 caracteres (limite SEO)
+- Deve conter a keyword principal do dia (ex: "Dólar", "Selic", "Copom", "Bitcoin", "Ibovespa", "Petróleo", "Lula", nome de empresa relevante)
+- Tom direto, jornalístico, sem clickbait, sem ponto de exclamação
+- Formatos válidos: "[Fato A] e [Fato B]: o que importa hoje" ou "[Fato principal] — o que muda no seu bolso" ou "[Keyword sobe/cai/decide] e [consequência direta]"
+- Exemplos válidos: "Dólar sobe e Copom mantém juros: o que muda no seu bolso" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde" / "Ibovespa cai 1,2% e inflação surpreende: entenda o que aconteceu"
+- PROIBIDO: "Edição de DD de mês", títulos genéricos sem keyword, títulos com mais de 70 chars
+
 Retorne SOMENTE JSON válido:
 {
-  "title": "Edição de DD de mês de AAAA",
+  "title": "título temático máx 70 chars com keyword do dia",
   "punchline": "frase curta universal sobre dinheiro/vida, entendida por qualquer um, sem citar notícia/empresa/ano (máx 12 palavras)",
   "intro": "abertura com personalidade (2-3 frases)",
   "closing": "fecho da edição (1 frase)",
@@ -414,10 +422,12 @@ export async function GET(request: Request) {
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
-    const [{ curation, news: pool }, marketSnapshot] = await Promise.all([
+    const [{ curation, news: pool }, marketSnapshot, lastNumber] = await Promise.all([
       curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated),
       fetchMarketSnapshot(),
+      sanity.fetch<number | null>('*[_type=="edition" && defined(number)] | order(number desc)[0].number'),
     ])
+    const editionNumber = (lastNumber ?? 0) + 1
     // marca a seleção como usada (não bloqueia em caso de falha de permissão)
     if (useCurated && curated?._id) { try { await sanity.patch(curated._id).set({ status: 'used' }).commit() } catch { /* ignore */ } }
 
@@ -442,12 +452,18 @@ export async function GET(request: Request) {
 
     const wod = curation.wordOfDay
     const slugValue = preview ? previewSlug : date
+    const thematicTitle = (curation.title && curation.title.length <= 120 && !curation.title.startsWith('Edição de'))
+      ? curation.title
+      : editionTitle(date)
+    // publishedAt = 6h BRT (UTC-3 = 9h UTC) da data da edição, independente de quando o cron rodou
+    const publishedAt = new Date(`${date}T09:00:00.000Z`).toISOString()
     await sanity.create({
       _type: 'edition',
       date,
+      number: preview ? undefined : editionNumber,
       slug: { _type: 'slug', current: slugValue },
-      title: preview ? `[RASCUNHO] ${editionTitle(date)}` : editionTitle(date),
-      publishedAt: new Date().toISOString(),
+      title: preview ? `[RASCUNHO] ${thematicTitle}` : thematicTitle,
+      publishedAt,
       punchline: curation.punchline || '',
       intro: curation.intro || '',
       closing: curation.closing || '',

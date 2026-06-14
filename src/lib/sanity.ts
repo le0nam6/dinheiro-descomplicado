@@ -58,7 +58,7 @@ export async function getEditions(limit = 30) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, title, intro, readingTime, "storyCount": count(stories) }`,
+      `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, number, title, intro, readingTime, "storyCount": count(stories) }`,
       { limit },
       { next: { revalidate: 60, tags: ['edition'] } }
     )
@@ -69,7 +69,7 @@ export async function getLatestEdition() {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "edition"] | order(date desc)[0]{ date, slug, title, intro }`,
+      `*[_type == "edition"] | order(date desc)[0]{ date, slug, number, title, intro }`,
       {},
       { next: { revalidate: 60, tags: ['edition'] } }
     )
@@ -80,7 +80,7 @@ export async function getEditionByDate(date: string) {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "edition" && slug.current == $date][0] { date, slug, title, punchline, intro, closing, publishedAt, readingTime, stories, marketSnapshot, wordOfDay, curiosity, recommendation, reflection }`,
+      `*[_type == "edition" && slug.current == $date][0] { date, slug, number, title, punchline, intro, closing, publishedAt, readingTime, stories, marketSnapshot, wordOfDay, curiosity, recommendation, reflection }`,
       { date },
       { next: { revalidate: 60, tags: [`edition:${date}`] } }
     )

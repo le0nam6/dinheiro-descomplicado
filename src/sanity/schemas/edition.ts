@@ -10,8 +10,9 @@ export const editionSchema = defineType({
   type: 'document',
   fields: [
     defineField({ name: 'date', title: 'Data (YYYY-MM-DD)', type: 'string', validation: r => r.required() }),
+    defineField({ name: 'number', title: 'Número da edição', type: 'number', description: 'Sequencial automático (1, 2, 3…)' }),
     defineField({ name: 'slug', title: 'Slug', type: 'slug', options: { source: 'date' }, validation: r => r.required() }),
-    defineField({ name: 'title', title: 'Título', type: 'string', validation: r => r.required() }),
+    defineField({ name: 'title', title: 'Título temático', type: 'string', description: 'Título jornalístico gerado por IA com a keyword do dia (máx 70 chars)', validation: r => r.required() }),
     defineField({ name: 'publishedAt', title: 'Publicado em', type: 'datetime', validation: r => r.required() }),
     defineField({ name: 'punchline', title: 'Punchline (abertura impactante)', type: 'string', description: 'Frase curta, motivacional-informal, que dá o tapa inicial. Aparece no topo, em destaque.' }),
     defineField({ name: 'intro', title: 'Abertura', type: 'text', rows: 4, description: 'Frase de abertura com personalidade — o "bom dia" que prende o leitor.' }),

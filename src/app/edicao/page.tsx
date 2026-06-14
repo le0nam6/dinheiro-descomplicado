@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/edicao' },
 }
 
-type EditionCard = { date: string; slug: { current: string }; title: string; intro?: string; readingTime?: number; storyCount?: number }
+type EditionCard = { date: string; slug: { current: string }; number?: number; title: string; intro?: string; readingTime?: number; storyCount?: number }
 
 function formatDate(date: string) {
   return new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
@@ -39,7 +39,10 @@ export default async function EditionsPage() {
         <Link href={`/edicao/${latest.slug.current}`} className="block group mb-10">
           <div className="border-2 border-green-600 rounded-2xl p-6 bg-green-50/50 hover:bg-green-50 transition-colors">
             <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">Edição mais recente</p>
-            <h2 className="text-2xl font-extrabold text-gray-900 group-hover:text-green-800 transition-colors">{latest.title}</h2>
+            <div className="flex items-baseline gap-3">
+              {latest.number && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full shrink-0">#{latest.number}</span>}
+              <h2 className="text-2xl font-extrabold text-gray-900 group-hover:text-green-800 transition-colors">{latest.title}</h2>
+            </div>
             <p className="text-sm text-gray-400 mt-1 capitalize">{formatDate(latest.date)}</p>
             {latest.intro && <p className="text-gray-700 mt-3 leading-relaxed">{latest.intro}</p>}
             <p className="inline-flex items-center gap-1.5 text-green-700 font-semibold text-sm mt-4">
@@ -55,9 +58,12 @@ export default async function EditionsPage() {
           {rest.map(e => (
             <Link key={e.slug.current} href={`/edicao/${e.slug.current}`} className="block group">
               <div className="border border-gray-200 rounded-xl p-4 hover:border-green-300 hover:bg-green-50/30 transition-colors flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="font-bold text-gray-900 group-hover:text-green-700 transition-colors truncate">{e.title}</h3>
-                  <p className="text-xs text-gray-400 mt-0.5 capitalize">{formatDate(e.date)}</p>
+                <div className="min-w-0 flex items-start gap-2">
+                  {e.number && <span className="text-[11px] font-bold text-gray-400 shrink-0 mt-0.5">#{e.number}</span>}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-900 group-hover:text-green-700 transition-colors truncate">{e.title}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5 capitalize">{formatDate(e.date)}</p>
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-1 text-xs text-gray-400 shrink-0">
                   <IconClock size={13} stroke={1.75} /> {e.readingTime || 4} min

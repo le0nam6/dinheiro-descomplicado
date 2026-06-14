@@ -30,6 +30,8 @@ export function AdminDashboard() {
   const [campaignResult, setCampaignResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [syncSending, setSyncSending] = useState(false)
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [migrating, setMigrating] = useState(false)
+  const [migrateResult, setMigrateResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/posts').then(r => r.json()).then(d => { setPosts(d.posts || []); setLoading(false) })
@@ -93,6 +95,20 @@ export function AdminDashboard() {
       setSyncResult({ ok: false, msg: String(e) })
     }
     setSyncSending(false)
+  }
+
+  async function migrateEditionNumbers() {
+    setMigrating(true)
+    setMigrateResult(null)
+    try {
+      const res = await fetch('/api/admin/migrate-edition-numbers', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) setMigrateResult({ ok: true, msg: `${data.updated?.length ?? 0} edições numeradas. ${data.failed?.length ? `Falhas: ${data.failed.join(', ')}` : ''}` })
+      else setMigrateResult({ ok: false, msg: data.error || 'Erro desconhecido' })
+    } catch (e) {
+      setMigrateResult({ ok: false, msg: String(e) })
+    }
+    setMigrating(false)
   }
 
   async function saveSettings() {
@@ -193,6 +209,23 @@ export function AdminDashboard() {
                 {testSending ? 'Enviando...' : testSent ? '✓ Enviado!' : 'Enviar prévia'}
               </button>
             </div>
+          </section>
+
+          <section className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+            <h2 className="font-bold text-gray-900">Numerar edições existentes</h2>
+            <p className="text-sm text-gray-500">Migração one-shot: atribui número sequencial (do mais antigo ao mais novo) a todas as edições que ainda não têm número. Execute uma vez.</p>
+            <button
+              onClick={migrateEditionNumbers}
+              disabled={migrating}
+              className="bg-amber-600 hover:bg-amber-500 disabled:opacity-60 text-white font-bold text-sm px-5 py-2 rounded-xl transition-colors"
+            >
+              {migrating ? 'Numerando...' : 'Numerar edições'}
+            </button>
+            {migrateResult && (
+              <p className={`text-sm font-medium ${migrateResult.ok ? 'text-green-700' : 'text-red-600'}`}>
+                {migrateResult.ok ? '✓ ' : '✗ '}{migrateResult.msg}
+              </p>
+            )}
           </section>
 
           <section className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
