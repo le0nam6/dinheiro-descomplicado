@@ -32,6 +32,8 @@ export function AdminDashboard() {
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [migrating, setMigrating] = useState(false)
   const [migrateResult, setMigrateResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [migratingTitles, setMigratingTitles] = useState(false)
+  const [migrateTitlesResult, setMigrateTitlesResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/posts').then(r => r.json()).then(d => { setPosts(d.posts || []); setLoading(false) })
@@ -95,6 +97,20 @@ export function AdminDashboard() {
       setSyncResult({ ok: false, msg: String(e) })
     }
     setSyncSending(false)
+  }
+
+  async function migrateEditionTitles() {
+    setMigratingTitles(true)
+    setMigrateTitlesResult(null)
+    try {
+      const res = await fetch('/api/admin/migrate-edition-titles', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) setMigrateTitlesResult({ ok: true, msg: `${data.updated?.length ?? 0} títulos gerados. ${data.failed?.length ? `Falhas: ${data.failed.join(', ')}` : ''}` })
+      else setMigrateTitlesResult({ ok: false, msg: data.error || 'Erro desconhecido' })
+    } catch (e) {
+      setMigrateTitlesResult({ ok: false, msg: String(e) })
+    }
+    setMigratingTitles(false)
   }
 
   async function migrateEditionNumbers() {
@@ -209,6 +225,23 @@ export function AdminDashboard() {
                 {testSending ? 'Enviando...' : testSent ? '✓ Enviado!' : 'Enviar prévia'}
               </button>
             </div>
+          </section>
+
+          <section className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+            <h2 className="font-bold text-gray-900">Gerar títulos temáticos (edições antigas)</h2>
+            <p className="text-sm text-gray-500">Usa o Claude para gerar um título jornalístico para cada edição que ainda tem o título genérico "Edição de DD de mês de AAAA". Pode demorar alguns minutos.</p>
+            <button
+              onClick={migrateEditionTitles}
+              disabled={migratingTitles}
+              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white font-bold text-sm px-5 py-2 rounded-xl transition-colors"
+            >
+              {migratingTitles ? 'Gerando títulos...' : 'Gerar títulos temáticos'}
+            </button>
+            {migrateTitlesResult && (
+              <p className={`text-sm font-medium ${migrateTitlesResult.ok ? 'text-green-700' : 'text-red-600'}`}>
+                {migrateTitlesResult.ok ? '✓ ' : '✗ '}{migrateTitlesResult.msg}
+              </p>
+            )}
           </section>
 
           <section className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
