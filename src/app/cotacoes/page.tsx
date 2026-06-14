@@ -72,21 +72,11 @@ function TickerSearch() {
     setLoadingQuote(true)
     setSelected(null)
     try {
-      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(r.symbol)}?range=1d&interval=1d`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-      })
-      const d = await res.json()
-      const m = d.chart.result[0].meta
-      const price = m.regularMarketPrice
-      const prev = m.previousClose ?? m.chartPreviousClose
-      setSelected({
-        symbol: r.symbol,
-        name: r.name,
-        price,
-        changePct: ((price - prev) / prev) * 100,
-        currency: m.currency || 'BRL',
-      })
-    } catch { setSelected(null) }
+      const d = await fetch(`/api/quotes/ticker?symbol=${encodeURIComponent(r.symbol)}`).then(res => res.json())
+      if (d.ok) {
+        setSelected({ symbol: r.symbol, name: r.name, price: d.price, changePct: d.changePct, currency: d.currency })
+      }
+    } catch { /* ignore */ }
     setLoadingQuote(false)
   }
 
@@ -99,28 +89,33 @@ function TickerSearch() {
     <div className="mt-12">
       <h2 className="text-base font-bold text-gray-900 mb-3">Buscar empresa ou FII</h2>
       <p className="text-sm text-gray-500 mb-4">Digite o nome ou ticker (ex: Petrobras, KNRI11, AAPL)</p>
-      <div className="relative max-w-lg">
-        <IconSearch size={16} stroke={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setSelected(null) }}
-          placeholder="Nome ou ticker..."
-          className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-        />
-        {query && (
-          <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            <IconX size={16} />
-          </button>
-        )}
+      <div className="relative max-w-lg" style={{ isolation: 'isolate' }}>
+        <div className="relative">
+          <IconSearch size={16} stroke={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); setSelected(null) }}
+            placeholder="Nome ou ticker..."
+            className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+          />
+          {query && (
+            <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <IconX size={16} />
+            </button>
+          )}
+        </div>
 
         {/* Dropdown de sugestões */}
-        {results.length > 0 && (
-          <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        {(results.length > 0 || (loading && query.length >= 2)) && (
+          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl">
+            {loading && results.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-400">Buscando...</div>
+            )}
             {results.map(r => (
               <button
                 key={r.symbol}
-                onClick={() => pickTicker(r)}
+                onMouseDown={e => { e.preventDefault(); pickTicker(r) }}
                 className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-green-50 transition-colors border-b border-gray-100 last:border-0"
               >
                 <div className="min-w-0">
@@ -130,11 +125,6 @@ function TickerSearch() {
                 <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full ml-3 shrink-0">{r.type}</span>
               </button>
             ))}
-          </div>
-        )}
-        {loading && query.length >= 2 && results.length === 0 && (
-          <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
-            Buscando...
           </div>
         )}
       </div>
