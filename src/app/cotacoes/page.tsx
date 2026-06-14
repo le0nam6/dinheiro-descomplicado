@@ -4,28 +4,58 @@ import { IconTrendingUp, IconTrendingDown, IconSearch, IconX } from '@tabler/ico
 
 type Quote = { symbol: string; label: string; price: number; changePct: number; kind: string }
 type SearchResult = { symbol: string; name: string; exchange: string; type: string }
-type TickerQuote = { symbol: string; name: string; price: number; changePct: number; currency: string; closes: number[] }
+type ChartData = { price: number; changePct: number; currency: string; closes: number[] }
+
+const RANGES = [
+  { label: '1D', value: '1d' },
+  { label: '5D', value: '5d' },
+  { label: '1M', value: '1mo' },
+  { label: '3M', value: '3mo' },
+  { label: '6M', value: '6mo' },
+  { label: '1A', value: '1y' },
+]
 
 function fmtPrice(price: number, brl: boolean) {
-  const big = price >= 1000
-  const v = big
+  const v = price >= 1000
     ? price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
     : price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return brl ? `R$ ${v}` : v
 }
 
-function Sparkline({ closes, up }: { closes: number[]; up: boolean }) {
+function LineChart({ closes, up, symbol }: { closes: number[]; up: boolean; symbol: string }) {
   if (closes.length < 2) return null
+  const W = 600, H = 120
   const min = Math.min(...closes)
   const max = Math.max(...closes)
   const range = max - min || 1
-  const W = 200, H = 48
-  const pts = closes
-    .map((c, i) => `${(i / (closes.length - 1)) * W},${H - ((c - min) / range) * H}`)
-    .join(' ')
+  const pad = 4
+
+  const pts = closes.map((c, i) => ({
+    x: (i / (closes.length - 1)) * W,
+    y: pad + (H - pad * 2) - ((c - min) / range) * (H - pad * 2),
+  }))
+
+  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const fillPath = `${linePath} L${W},${H} L0,${H} Z`
+  const color = up ? '#16a34a' : '#ef4444'
+  const gradId = `grad-${symbol.replace(/[^a-z0-9]/gi, '')}`
+
   return (
-    <svg width={W} height={H} className="mt-2" viewBox={`0 0 ${W} ${H}`}>
-      <polyline fill="none" stroke={up ? '#16a34a' : '#ef4444'} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" points={pts} />
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="block w-full"
+      style={{ height: 140 }}
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -43,9 +73,7 @@ function QuoteCard({ q, href }: { q: Quote; href?: string }) {
       </p>
     </div>
   )
-  return href
-    ? <a href={href}>{inner}</a>
-    : <div>{inner}</div>
+  return href ? <a href={href}>{inner}</a> : <div>{inner}</div>
 }
 
 const SLUG: Record<string, string> = {
@@ -63,56 +91,74 @@ const GROUPS = [
 function TickerSearch() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
-  const [selected, setSelected] = useState<TickerQuote | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [loadingQuote, setLoadingQuote] = useState(false)
+  const [loadingSearch, setLoadingSearch] = useState(false)
+
+  const [ticker, setTicker] = useState<{ symbol: string; name: string } | null>(null)
+  const [range, setRange] = useState('1mo')
+  const [chartData, setChartData] = useState<ChartData | null>(null)
+  const [loadingChart, setLoadingChart] = useState(false)
+
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Autocomplete
   useEffect(() => {
     if (query.length < 2) { setResults([]); return }
     if (debounce.current) clearTimeout(debounce.current)
     debounce.current = setTimeout(async () => {
-      setLoading(true)
+      setLoadingSearch(true)
       try {
         const d = await fetch(`/api/quotes/search?q=${encodeURIComponent(query)}`).then(r => r.json())
         setResults(d.results || [])
       } catch { setResults([]) }
-      setLoading(false)
+      setLoadingSearch(false)
     }, 350)
     return () => { if (debounce.current) clearTimeout(debounce.current) }
   }, [query])
 
-  async function pickTicker(r: SearchResult) {
+  // Fetch chart when ticker or range changes
+  useEffect(() => {
+    if (!ticker) return
+    let cancelled = false
+    setLoadingChart(true)
+    setChartData(null)
+    fetch(`/api/quotes/ticker?symbol=${encodeURIComponent(ticker.symbol)}&range=${range}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled && d.ok) setChartData(d) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingChart(false) })
+    return () => { cancelled = true }
+  }, [ticker, range])
+
+  function pickTicker(r: SearchResult) {
     setResults([])
     setQuery(r.name)
-    setLoadingQuote(true)
-    setSelected(null)
-    try {
-      const d = await fetch(`/api/quotes/ticker?symbol=${encodeURIComponent(r.symbol)}`).then(res => res.json())
-      if (d.ok) {
-        setSelected({ symbol: r.symbol, name: r.name, price: d.price, changePct: d.changePct, currency: d.currency, closes: d.closes ?? [] })
-      }
-    } catch { /* ignore */ }
-    setLoadingQuote(false)
+    setTicker({ symbol: r.symbol, name: r.name })
   }
 
-  function clear() { setQuery(''); setResults([]); setSelected(null) }
+  function clear() {
+    setQuery(''); setResults([]); setTicker(null); setChartData(null)
+  }
 
-  const up = selected && selected.changePct >= 0
-  const isBRL = selected?.currency === 'BRL'
+  const closes = chartData?.closes ?? []
+  const periodChangePct = closes.length >= 2
+    ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
+    : (chartData?.changePct ?? 0)
+  const up = periodChangePct >= 0
+  const isBRL = chartData?.currency === 'BRL'
 
   return (
     <div className="mb-10">
       <h2 className="text-base font-bold text-gray-900 mb-1">Buscar empresa, FII ou ativo</h2>
       <p className="text-sm text-gray-500 mb-3">Digite o nome ou ticker (ex: Petrobras, KNRI11, AAPL)</p>
 
+      {/* Input com autocomplete */}
       <div className="relative max-w-lg" style={{ isolation: 'isolate' }}>
         <div className="relative">
           <IconSearch size={16} stroke={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             type="text"
             value={query}
-            onChange={e => { setQuery(e.target.value); setSelected(null) }}
+            onChange={e => { setQuery(e.target.value); setTicker(null); setChartData(null) }}
             placeholder="Nome ou ticker..."
             className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
           />
@@ -123,9 +169,9 @@ function TickerSearch() {
           )}
         </div>
 
-        {(results.length > 0 || (loading && query.length >= 2)) && (
+        {(results.length > 0 || (loadingSearch && query.length >= 2)) && (
           <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-            {loading && results.length === 0 && (
+            {loadingSearch && results.length === 0 && (
               <div className="px-4 py-3 text-sm text-gray-400">Buscando...</div>
             )}
             {results.map(r => (
@@ -145,33 +191,64 @@ function TickerSearch() {
         )}
       </div>
 
-      {loadingQuote && (
-        <div className="mt-4 text-sm text-gray-400">Carregando cotação...</div>
-      )}
-      {selected && (
-        <div className="mt-4 inline-flex flex-col border border-gray-200 rounded-2xl p-5 bg-white shadow-sm min-w-[280px]">
-          <div className="flex items-start justify-between gap-6">
+      {/* Card do ticker selecionado */}
+      {ticker && (loadingChart || chartData) && (
+        <div className="mt-4 border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden max-w-2xl">
+          {/* Header: nome + preço + variação + filtros */}
+          <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">{selected.symbol}</p>
-              <p className="font-bold text-gray-900 text-base leading-tight max-w-[220px]">{selected.name}</p>
+              <p className="text-xs text-gray-400 font-mono mb-0.5">{ticker.symbol}</p>
+              <p className="font-bold text-gray-900 text-base leading-tight">{ticker.name}</p>
+              {chartData && (
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="text-2xl font-extrabold text-gray-900 tabular-nums">
+                    {isBRL ? 'R$ ' : `${chartData.currency} `}
+                    {chartData.price >= 1000
+                      ? chartData.price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                      : chartData.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className={`flex items-center gap-0.5 text-sm font-bold tabular-nums ${up ? 'text-green-600' : 'text-red-500'}`}>
+                    {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}
+                    {periodChangePct >= 0 ? '+' : ''}{periodChangePct.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+              {loadingChart && !chartData && (
+                <div className="mt-1.5 text-sm text-gray-400">Carregando...</div>
+              )}
             </div>
-            <div className="text-right shrink-0">
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">
-                {isBRL ? 'R$ ' : `${selected.currency} `}
-                {selected.price >= 1000
-                  ? selected.price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
-                  : selected.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p className={`flex items-center justify-end gap-1 text-sm font-semibold tabular-nums ${up ? 'text-green-600' : 'text-red-500'}`}>
-                {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}
-                {Math.abs(selected.changePct).toFixed(2)}%
-              </p>
+
+            {/* Filtros de período */}
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {RANGES.map(r => (
+                <button
+                  key={r.value}
+                  onClick={() => setRange(r.value)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                    range === r.value
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
           </div>
-          {selected.closes.length >= 2 && (
-            <Sparkline closes={selected.closes} up={!!up} />
-          )}
-          <p className="text-[11px] text-gray-400 mt-2">Últimos 30 dias · Fonte: Yahoo Finance</p>
+
+          {/* Área do gráfico */}
+          <div className="relative" style={{ height: 140 }}>
+            {loadingChart && (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 bg-white">
+                Carregando gráfico...
+              </div>
+            )}
+            {!loadingChart && closes.length >= 2 && (
+              <LineChart closes={closes} up={up} symbol={ticker.symbol} />
+            )}
+          </div>
+
+          <p className="text-[11px] text-gray-400 text-right px-5 pb-3 pt-1">Fonte: Yahoo Finance · valores com atraso</p>
         </div>
       )}
     </div>
@@ -196,7 +273,10 @@ export default function CotacoesPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Cotações</h1>
-      <p className="text-sm text-gray-500 mb-8">Atualizado em tempo real · atualiza a cada 2 min{updated ? ` · última atualização às ${updated}` : ''}</p>
+      <p className="text-sm text-gray-500 mb-8">
+        Atualizado em tempo real · atualiza a cada 2 min
+        {updated ? ` · última atualização às ${updated}` : ''}
+      </p>
 
       <TickerSearch />
 
