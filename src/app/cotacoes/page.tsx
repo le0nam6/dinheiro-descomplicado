@@ -100,8 +100,9 @@ function TickerSearch() {
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Autocomplete
+  // Autocomplete — não busca quando um ticker já foi selecionado
   useEffect(() => {
+    if (ticker) { setResults([]); return }
     if (query.length < 2) { setResults([]); return }
     if (debounce.current) clearTimeout(debounce.current)
     debounce.current = setTimeout(async () => {
@@ -113,7 +114,7 @@ function TickerSearch() {
       setLoadingSearch(false)
     }, 350)
     return () => { if (debounce.current) clearTimeout(debounce.current) }
-  }, [query])
+  }, [query, ticker])
 
   // Fetch chart when ticker or range changes
   useEffect(() => {
