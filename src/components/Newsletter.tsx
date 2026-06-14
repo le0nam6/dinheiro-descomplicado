@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 
-export function Newsletter() {
+export function Newsletter({ referredBy }: { referredBy?: string } = {}) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [referralCode, setReferralCode] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -14,11 +15,13 @@ export function Newsletter() {
       const res = await fetch('/api/newsletter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, ...(referredBy ? { referredBy } : {}) }),
       })
+      const data = await res.json()
       if (res.ok) {
         setStatus('success')
-        setEmail('')
+        setReferralCode(data.referralCode ?? null)
+        try { localStorage.setItem('newsletter_subscribed', '1') } catch {}
       } else {
         setStatus('error')
       }
@@ -28,9 +31,31 @@ export function Newsletter() {
   }
 
   if (status === 'success') {
+    const link = referralCode ? `https://endinheirados.cc/indicacao/${referralCode}` : null
     return (
-      <div className="max-w-md mx-auto bg-green-100 border border-green-300 rounded-xl px-4 py-3 text-green-800 text-sm font-medium">
-        ✅ Inscrição confirmada! Em breve você recebe nossas dicas.
+      <div className="max-w-md mx-auto space-y-3">
+        <div className="bg-green-100 border border-green-300 rounded-xl px-4 py-3 text-green-800 text-sm font-medium">
+          ✅ Inscrição confirmada! Em breve você recebe nossas dicas.
+        </div>
+        {link && (
+          <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-left space-y-1.5">
+            <p className="text-xs font-bold text-gray-700">Seu link de indicação:</p>
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={link}
+                className="flex-1 text-xs px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 truncate"
+              />
+              <button
+                onClick={() => navigator.clipboard?.writeText(link)}
+                className="shrink-0 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+              >
+                Copiar
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">Indique amigos e desbloqueie recompensas.</p>
+          </div>
+        )}
       </div>
     )
   }

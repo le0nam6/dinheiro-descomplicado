@@ -20,11 +20,38 @@ const FEEDS = [
   { source: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147' },
   { source: 'Investing.com', url: 'https://br.investing.com/rss/news_285.rss' },
   { source: 'Investing.com Mundo', url: 'https://br.investing.com/rss/news_25.rss' },
+  { source: 'NeoFeed', url: 'https://neofeed.com.br/feed/' },
+  { source: 'InvestNews', url: 'https://investnews.com.br/feed/' },
+  { source: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
+  { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
+  { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
+
+const STOPWORDS = new Set(['de','do','da','dos','das','e','o','a','os','as','em','no','na','nos','nas','por','para','com','que','um','uma','se','ao','à','ou','foi','são','mais','mas','este','esta','esse','essa','pelo','pela','como','está','pelo','num','numa','entre','já','não','isso','isso','sua','seu','suas','seus','também'])
+
+function titleFingerprint(title: string): Set<string> {
+  return new Set(
+    title.toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !STOPWORDS.has(w))
+  )
+}
+
+function isDuplicate(title: string, seen: Set<string>[]): boolean {
+  const fp = titleFingerprint(title)
+  if (fp.size === 0) return false
+  for (const s of seen) {
+    const inter = [...fp].filter(w => s.has(w)).length
+    const sim = inter / Math.min(fp.size, s.size)
+    if (sim >= 0.6) return true
+  }
+  return false
+}
 
 async function fetchNews(): Promise<Omit<Candidate, '_key' | 'idx' | 'selected'>[]> {
   const cutoff = Date.now() - 30 * 60 * 60 * 1000
-  const items: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
+  const raw: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
   await Promise.allSettled(FEEDS.map(async ({ source, url }) => {
     try {
       const xml = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7000) }).then(r => r.text())
@@ -39,10 +66,19 @@ async function fetchNews(): Promise<Omit<Candidate, '_key' | 'idx' | 'selected'>
         const title = get('title'), link = get('link'), pub = get('pubDate')
         if (!title || !link) continue
         if (pub && new Date(pub).getTime() < cutoff) continue
-        items.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 220), url: link, pubDate: pub || '' })
+        raw.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 220), url: link, pubDate: pub || '' })
       }
     } catch { /* feed off */ }
   }))
+  // Deduplicação: remove itens com título ≥60% similar a outro já aceito
+  const seen: Set<string>[] = []
+  const items: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
+  for (const item of raw) {
+    if (!isDuplicate(item.title, seen)) {
+      seen.push(titleFingerprint(item.title))
+      items.push(item)
+    }
+  }
   return items
 }
 
@@ -71,8 +107,7 @@ export async function GET(request: Request) {
     const news = await fetchNews()
     if (news.length < 6) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
-    // 3x as finais: ~18 candidatas
-    const candidates: Candidate[] = news.slice(0, 18).map((n, i) => ({
+    const candidates: Candidate[] = news.slice(0, 45).map((n, i) => ({
       _key: nanoid(8), idx: i, source: n.source, title: n.title, description: n.description, url: n.url, pubDate: n.pubDate, selected: false,
     }))
 
@@ -84,17 +119,35 @@ export async function GET(request: Request) {
       _type: 'pendingEdition', date, status: 'selecting', candidates, createdAt: new Date().toISOString(),
     })
 
-    const sent = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID,
-        text: candidatesMessage(date, candidates),
-        reply_markup: candidatesKeyboard(doc._id, candidates),
-        disable_web_page_preview: true,
-      }),
-    }).then(r => r.json())
+    const tgPost = async (body: object) =>
+      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, disable_web_page_preview: true, ...body }),
+      }).then(r => r.json())
 
-    // guarda o id da mensagem pra poder editar o teclado nos toggles
+    // Parte a lista em chunks de ≤4000 chars para não bater o limite do Telegram
+    const fullText = candidatesMessage(date, candidates)
+    const LIMIT = 4000
+    const chunks: string[] = []
+    if (fullText.length <= LIMIT) {
+      chunks.push(fullText)
+    } else {
+      const lines = fullText.split('\n\n')
+      let cur = ''
+      for (const line of lines) {
+        if ((cur + '\n\n' + line).length > LIMIT && cur) { chunks.push(cur.trim()); cur = line }
+        else { cur = cur ? cur + '\n\n' + line : line }
+      }
+      if (cur.trim()) chunks.push(cur.trim())
+    }
+
+    // Envia partes de texto sem teclado, exceto a última que leva o teclado
+    for (let i = 0; i < chunks.length - 1; i++) {
+      await tgPost({ text: chunks[i] })
+    }
+    const sent = await tgPost({ text: chunks[chunks.length - 1], reply_markup: candidatesKeyboard(doc._id, candidates) })
+
+    // guarda o id da mensagem com o teclado pra editar nos toggles
     if (sent?.result?.message_id) {
       await sanity.patch(doc._id).set({ chatId: sent.result.chat.id, messageId: sent.result.message_id }).commit()
     }

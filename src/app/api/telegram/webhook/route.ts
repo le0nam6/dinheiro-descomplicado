@@ -74,13 +74,13 @@ export async function POST(request: Request) {
         const c = candidates.find(x => x.idx === idx)
         if (c) c.selected = !c.selected
         await sanity.patch(id).set({ candidates }).commit()
-        await tg('editMessageText', {
+        const nSel = candidates.filter(x => x.selected).length
+        // Atualiza só o teclado (evita reenviar texto longo que estoura o limite do Telegram)
+        await tg('editMessageReplyMarkup', {
           chat_id: cq.message.chat.id, message_id: msgId,
-          text: candidatesMessage(pe.date, candidates),
-          disable_web_page_preview: true,
           reply_markup: candidatesKeyboard(id, candidates),
         })
-        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: c?.selected ? '✅ Entrou' : '⬜ Saiu' })
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: c?.selected ? `✅ Entrou — ${nSel} selecionada${nSel !== 1 ? 's' : ''}` : `⬜ Saiu — ${nSel} selecionada${nSel !== 1 ? 's' : ''}` })
         return NextResponse.json({ ok: true })
       }
 

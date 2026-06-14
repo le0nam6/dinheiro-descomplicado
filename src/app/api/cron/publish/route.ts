@@ -264,7 +264,7 @@ async function fetchNews(): Promise<string> {
 
 // --- Gerar post com Claude ---
 
-async function generatePost(schedule: ReturnType<typeof getSchedule>, news: string, recentTitles: string[]) {
+async function generatePost(schedule: ReturnType<typeof getSchedule>, news: string, recentTitles: string[], rejectedTitle?: string | null) {
   const { type, funnel } = schedule
 
   const funnelGuide = {
@@ -316,7 +316,20 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   if (type === 'news') {
     try {
       const newsItems: Array<{ title: string; description: string; url: string; imageUrl?: string }> = JSON.parse(news)
-      const picked = newsItems[0]
+
+      // Ao gerar alternativa, descarta itens com ≥2 palavras-chave em comum com o rejeitado
+      let picked = newsItems[0]
+      if (rejectedTitle) {
+        const rejWords = new Set(
+          rejectedTitle.toLowerCase().split(/\s+/).filter(w => w.length > 4)
+        )
+        const different = newsItems.find(n => {
+          const overlap = n.title.toLowerCase().split(/\s+/).filter(w => rejWords.has(w)).length
+          return overlap < 2
+        })
+        if (different) picked = different
+      }
+
       articleImageUrl = picked?.imageUrl || undefined
       context = `Com base nesta notícia financeira recente do mercado brasileiro:\nTítulo: ${picked?.title}\nDescrição: ${picked?.description}\nURL: ${picked?.url}\n\nCrie um post educativo que explica o impacto dessa notícia para o brasileiro comum.`
     } catch {
@@ -360,6 +373,7 @@ CACOETES DE IA — PROIBIÇÕES ABSOLUTAS:
 - Paralelismo negativo ("Não é X. É Y.") máximo 1 vez por texto. Nunca repetido.
 - Vocabulário proibido — substitua sempre: "crucial" → importante/decisivo | "fundamental" → básico/essencial | "delve"/"aprofundar" → entrar em/olhar mais de perto | "highlight" (verbo) → apontar/mostrar | "adicionalmente" → além disso/também | "no mundo atual"/"em um cenário onde" → hoje/quando | "é fundamental que" → é importante/faz sentido | "isso se traduz em" → ou seja/na prática | "evidencia"/"ressalta"/"demonstra" como gerúndio de análise → mostra/indica/deixa claro | "inovador"/"revolucionário"/"transformador" → descreva o que realmente muda
 - Atribuições vagas: "especialistas afirmam", "pesquisas mostram" sem fonte real são proibidos. Use raciocínio direto.
+- FONTES JORNALÍSTICAS — NUNCA cite o nome de portais ou veículos no corpo do texto ("segundo o InfoMoney", "de acordo com o G1", "conforme o Valor", "a CNN Brasil informou" etc.). Escreva os fatos diretamente. Se for atribuir algo, use a instituição ou empresa (ex: "o Banco Central anunciou", "a Nubank confirmou") — nunca o veículo que noticiou.
 - Gerúndio superficial no fim de frase: "evidenciando a importância de X", "demonstrando como Y" são proibidos. Quebre em frases separadas.
 - Conclusões motivacionais genéricas: "o futuro é promissor para quem abraça a mudança" e variações são proibidas. Termine com algo concreto.
 - Títulos de seção sem Title Case: "## Como funciona na prática", não "## Como Funciona Na Prática"
@@ -444,10 +458,31 @@ export async function GET(request: Request) {
     const rejectedTitle = url.searchParams.get('rejected')
       ? decodeURIComponent(url.searchParams.get('rejected')!)
       : null
-    console.log(`[cron/publish] Rodando às ${schedule.hour}h — tipo: ${schedule.type}, funil: ${schedule.funnel}${rejectedTitle ? ` | rejeitado: "${rejectedTitle}"` : ''}`)
+    const forceTopic = url.searchParams.get('force_topic')
+      ? decodeURIComponent(url.searchParams.get('force_topic')!)
+      : null
+    // Injeta notícia específica via query params (bypassa RSS)
+    const injectTitle = url.searchParams.get('inject_title') ? decodeURIComponent(url.searchParams.get('inject_title')!) : null
+    const injectUrl   = url.searchParams.get('inject_url')   ? decodeURIComponent(url.searchParams.get('inject_url')!)   : null
+    const injectDesc  = url.searchParams.get('inject_desc')  ? decodeURIComponent(url.searchParams.get('inject_desc')!)  : null
 
-    // 1. Buscar notícias se necessário
-    const news = schedule.type === 'news' ? await fetchNews() : ''
+    // 1. Buscar notícias
+    let news: string
+    if (injectTitle) {
+      news = JSON.stringify([{ title: injectTitle, description: injectDesc || '', url: injectUrl || '' }])
+    } else if (schedule.type === 'news' || forceTopic) {
+      news = await fetchNews()
+      if (forceTopic) {
+        try {
+          const all: Array<{ title: string; description: string; url: string; imageUrl?: string }> = JSON.parse(news)
+          const kw = forceTopic.toLowerCase()
+          const filtered = all.filter(n => n.title.toLowerCase().includes(kw) || n.description.toLowerCase().includes(kw))
+          if (filtered.length > 0) news = JSON.stringify(filtered)
+        } catch { /* mantém news original */ }
+      }
+    } else {
+      news = ''
+    }
 
     // 2. Gerar conteúdo com Claude (evitando repetir temas recentes + título rejeitado)
     const [recentTitlesRaw, recentPhotos] = await Promise.all([
@@ -455,7 +490,8 @@ export async function GET(request: Request) {
       getRecentPhotoUrls(30),
     ])
     const recentTitles = rejectedTitle ? [rejectedTitle, ...recentTitlesRaw] : recentTitlesRaw
-    const post = await generatePost(schedule, news, recentTitles)
+    const effectiveSchedule = (forceTopic || injectTitle) ? { ...schedule, type: 'news' as const } : schedule
+    const post = await generatePost(effectiveSchedule, news, recentTitles, rejectedTitle)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
     // 3. Foto: tenta imagem do artigo original → Pexels (sem repetir) → Unsplash

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-const CATEGORIES = ['ganhar dinheiro', 'empréstimo', 'cartão de crédito', 'financiamento', 'investimentos', 'previdência', 'educação financeira']
+const CATEGORIES = ['notícias', 'ganhar dinheiro', 'empréstimo', 'cartão de crédito', 'financiamento', 'investimentos', 'previdência', 'educação financeira']
 const FUNNELS = [
   { v: 'tofu', label: 'Topo (descoberta)' },
   { v: 'mofu', label: 'Meio (consideração)' },

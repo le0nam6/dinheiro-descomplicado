@@ -9,7 +9,7 @@ export const postSchema = defineType({
     defineField({ name: 'slug', title: 'Slug', type: 'slug', options: { source: 'title' }, validation: r => r.required() }),
     defineField({ name: 'publishedAt', title: 'Publicado em', type: 'datetime', validation: r => r.required() }),
     defineField({ name: 'funnel', title: 'Funil', type: 'string', options: { list: ['tofu', 'mofu', 'bofu'] }, validation: r => r.required() }),
-    defineField({ name: 'category', title: 'Categoria', type: 'string', options: { list: ['ganhar dinheiro', 'empréstimo', 'cartão de crédito', 'financiamento', 'investimentos', 'previdência', 'educação financeira'] } }),
+    defineField({ name: 'category', title: 'Categoria', type: 'string', options: { list: ['notícias', 'ganhar dinheiro', 'empréstimo', 'cartão de crédito', 'financiamento', 'investimentos', 'previdência', 'educação financeira'] } }),
     defineField({ name: 'excerpt', title: 'Resumo (meta description)', type: 'text', rows: 3, validation: r => r.required().max(160) }),
     defineField({ name: 'coverImage', title: 'Imagem de capa', type: 'object', fields: [
       { name: 'url', title: 'URL', type: 'url' },

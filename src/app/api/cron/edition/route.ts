@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto } from '@/lib/publish-core'
+import { sendEditionCampaign } from '@/lib/brevo'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -17,13 +18,35 @@ const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
   { source: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
   { source: 'G1 Política', url: 'https://g1.globo.com/rss/g1/politica/' },
-  { source: 'Exame', url: 'https://exame.com/feed/' },
+  { source: 'Exame', url: 'https://exame.com/economia/feed/' },
   { source: 'Valor (Brazil Journal)', url: 'https://braziljournal.com/feed/' },
   { source: 'Reuters Business', url: 'https://feeds.reuters.com/reuters/businessNews' },
   { source: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147' },
   { source: 'Investing.com', url: 'https://br.investing.com/rss/news_285.rss' },
   { source: 'Investing.com Mundo', url: 'https://br.investing.com/rss/news_25.rss' },
+  { source: 'Suno Research', url: 'https://www.suno.com.br/noticias/feed/' },
+  { source: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
+  { source: 'Agência Brasil', url: 'https://agenciabrasil.ebc.com.br/economia/feed/rss' },
+  { source: 'NeoFeed', url: 'https://neofeed.com.br/feed/' },
+  { source: 'InvestNews', url: 'https://investnews.com.br/feed/' },
+  { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
+  { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
+
+// Termos no título que indicam conteúdo completamente fora de pauta (esportes, entretenimento)
+const OFF_TOPIC: string[] = [
+  'copa do mundo', 'copa america', 'copa do nordeste', 'copa do brasil', 'copa libertadores',
+  'seleção brasileira', 'seleção sub-', 'escalação', 'convocação da seleção',
+  'treino da seleção', 'torcida', 'campeonato brasileiro', 'campeonato paulista',
+  'premier league', 'champions league', 'série a', 'série b',
+  'big brother', 'bbb', 'paredão', 'eliminação do', 'celebridade', 'famoso',
+  'fofoca', 'affair', 'reality show', 'novela das',
+]
+
+function isOffTopic(item: { title: string; description: string }): boolean {
+  const text = (item.title + ' ' + item.description).toLowerCase()
+  return OFF_TOPIC.some(kw => text.includes(kw))
+}
 
 type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
 
@@ -50,7 +73,8 @@ async function fetchNews(): Promise<NewsItem[]> {
           b.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
           b.match(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i) ||
           b.match(/<img[^>]+src=["']([^"']+)["']/i)
-        items.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 260), url: link, imageUrl: img?.[1] })
+        const item = { source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 260), url: link, imageUrl: img?.[1] }
+        if (!isOffTopic(item)) items.push(item)
       }
     } catch { /* feed off */ }
   }))
@@ -83,7 +107,7 @@ type Curation = {
 
 async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false): Promise<{ curation: Curation; news: NewsItem[] }> {
   // No modo curado (forced), o editor já escolheu — usa TODAS as manchetes recebidas.
-  const pool = forced ? news : news.slice(0, 45)
+  const pool = forced ? news : news.slice(0, 70)
   const isFriday = weekday === 'sexta-feira'
   const isSunday = weekday === 'domingo'
   const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
@@ -91,7 +115,16 @@ async function curate(news: NewsItem[], previousHeadlines: string[], weekday: st
 
 HOJE É ${weekday.toUpperCase()}, ${todayLabel}.
 
-REFERÊNCIA DE TOM: newsletter "The News" — direto, inteligente, escaneável, leve mas preciso. Parece uma mensagem de um amigo que entende muito de finanças: explica sem condescendência, tem personalidade, não é chato. A pessoa deve sair MAIS INTELIGENTE em poucos minutos.
+REFERÊNCIA DE TOM: newsletter "The News" — direto, inteligente, escaneável, leve mas preciso. Parece uma mensagem de um amigo de 18 a 28 anos que entende muito de finanças: explica sem condescendência, tem personalidade, usa ironia quando cabe, não é chato nem frio. A pessoa deve sair MAIS INTELIGENTE e com VONTADE DE COMPARTILHAR.
+
+PERSONA — você é o Endinheirados:
+Caloroso, curioso, bem-humorado. Não tem medo de dizer o que acha. Usa o cotidiano pra explicar o complexo (Nubank, iFood, boleto, aluguel). Reage às notícias em vez de só reportá-las. Quando algo é absurdo, diz que é absurdo. Quando é surpreendente, demonstra surpresa. Escreve como gente, não como robô.
+
+EXEMPLOS DE TOM (não copie, inspire-se no espírito):
+- Frio/errado: "O cenário macroeconômico apresenta incertezas relevantes."
+- Quente/certo: "O mercado tá nervoso, e com razão: tem muita coisa acontecendo ao mesmo tempo."
+- Frio/errado: "A medida pode impactar negativamente os consumidores de baixa renda."
+- Quente/certo: "Quem vai sentir mais no bolso é quem já tá no limite do orçamento."
 
 MANCHETES REAIS DAS ÚLTIMAS HORAS (índice | fonte | título | resumo):
 ${pool.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
@@ -102,9 +135,12 @@ ${previousHeadlines.length ? previousHeadlines.map(h => `- ${h}`).join('\n') : '
 REGRAS EDITORIAIS:
 ${forced
   ? '- As manchetes acima foram ESCOLHIDAS A DEDO pelo editor-chefe. Use TODAS elas — não descarte por relevância. Apenas AGRUPE as que tratam do mesmo fato numa única matéria.'
-  : '- Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.'}
+  : `- Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.
+- VETO ABSOLUTO — JAMAIS inclua na edição: Copa do Mundo, qualquer campeonato de futebol/esporte, notícia de celebridade, fofoca, novela, entretenimento, BBB ou reality show. Mesmo que dominem as manchetes do dia, ignore completamente. Prefira uma edição com menos matérias do que incluir lixo.
+- Manchetes da fonte "Endinheirados (publicado hoje)" são notícias que já saíram no nosso próprio site durante o dia — priorizá-las é desejável, pois reforça a cobertura do que já noticiamos.`}
 - Agrupe manchetes que tratam do MESMO fato numa única matéria.
-- IMPARCIALIDADE mandatória: reporte fatos, atribua às fontes ("segundo o Banco Central"), sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
+- IMPARCIALIDADE mandatória: reporte fatos, sem opinião torcedora, sem alarmismo, sem clickbait, sem inventar números.
+- FONTES — REGRA CRÍTICA: NUNCA cite o nome de portais ou veículos dentro do texto das matérias ("segundo o InfoMoney", "de acordo com o G1", "conforme o Valor", "a Reuters noticiou" etc.). Escreva os fatos diretamente, como se fossem de conhecimento próprio. Se for atribuir algo a uma instituição oficial (Banco Central, governo, empresa), use o nome da instituição — nunca o do portal que noticiou. As fontes jornalísticas existem nos bastidores; o leitor não precisa saber qual feed trouxe a informação.
 - DATAS E ANOS — REGRA CRÍTICA: O ANO ATUAL É ${currentYear}. Hoje é ${todayLabel} de ${currentYear}. NUNCA escreva outro ano como "este ano", "em 2025" ou similar — ${currentYear} é o presente. NUNCA afirme um ano, mês ou data específica que NÃO esteja explicitamente na manchete/resumo da fonte. Na dúvida, seja atemporal: "recentemente", "nos próximos meses", "em breve".
 - Português BR coloquial e humano. Sem markdown, sem asteriscos.
 
@@ -180,8 +216,8 @@ Exemplos de estilo:
 BLOCOS EXTRAS (deixam a edição mais viva — preencha todos os pedidos abaixo):
 REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem negrito/itálico markdown, sem marcadores de lista (nada de "•", "-", "1️⃣"), sem numeração emoji. Frases corridas normais.
 
-"wordOfDay" — PALAVRA DO DIA: um termo de finanças/economia útil e não óbvio.
-  - "word": o termo (ex.: "Hedge", "Drawdown", "Carry trade", "Spread bancário").
+"wordOfDay" — PALAVRA DO DIA: uma palavra interessante de qualquer área — pode ser finanças, mas também psicologia, filosofia, comportamento, tecnologia, sociologia, qualquer coisa que seja útil saber e pouco conhecida.
+  - "word": o termo (ex.: "Efeito Dunning-Kruger", "Ancoragem", "FOMO", "Antifragilidade", "Heurística").
   - "meaning": o que significa, em linguagem simples (1-2 frases).
   - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
 
@@ -356,7 +392,25 @@ export async function GET(request: Request) {
       : []
     const useCurated = forcedNews.length > 0
 
-    const news = useCurated ? forcedNews : await fetchNews()
+    const rawNews = useCurated ? forcedNews : await fetchNews()
+
+    // Posts de notícia já publicados HOJE via cron de news — entram no topo do pool
+    // como candidatos prioritários (já passaram pelo filtro de relevância do news cron)
+    const todayStart = `${date}T00:00:00Z`
+    const todayPosts: Array<{ title: string; excerpt: string; slug: { current: string } }> = await sanity.fetch(
+      `*[_type=="post" && articleType=="news" && publishedAt >= $start]|order(publishedAt desc){title,excerpt,"slug":slug.current}`,
+      { start: todayStart }
+    ).catch(() => [])
+
+    const todayAsNews: NewsItem[] = todayPosts.map(p => ({
+      source: 'Endinheirados (publicado hoje)',
+      title: p.title,
+      description: p.excerpt || '',
+      url: `${SITE}/blog/${p.slug}`,
+    }))
+
+    // Candidatos do dia vêm PRIMEIRO para garantir que o Claude os veja
+    const news = useCurated ? forcedNews : [...todayAsNews, ...rawNews]
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
@@ -413,6 +467,7 @@ export async function GET(request: Request) {
       revalidateTag('edition', 'max')
       revalidatePath('/', 'page')
       revalidatePath('/edicao', 'page')
+      revalidatePath(`/edicao/${date}`, 'page')
       if (tgConfigured()) {
         await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -422,6 +477,20 @@ export async function GET(request: Request) {
           }),
         }).catch(() => {})
       }
+      // Envia campanha de e-mail para inscritos no Brevo
+      sendEditionCampaign({
+        date,
+        title: curation.title || '',
+        url,
+        punchline: curation.punchline,
+        intro: curation.intro,
+        closing: curation.closing,
+        stories,
+        wordOfDay: curation.wordOfDay,
+        curiosity: curation.curiosity,
+        recommendation: curation.recommendation,
+        reflection: curation.reflection,
+      }).catch(e => tgAlert('Brevo sendEditionCampaign', e))
     }
 
     return NextResponse.json({ ok: true, preview, date, stories: stories.length, url })

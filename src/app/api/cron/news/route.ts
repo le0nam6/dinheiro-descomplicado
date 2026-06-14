@@ -20,6 +20,11 @@ const FEEDS = [
   { source: 'Reuters Business', url: 'https://feeds.reuters.com/reuters/businessNews' },
   { source: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147' },
   { source: 'Investing.com', url: 'https://br.investing.com/rss/news_285.rss' },
+  { source: 'NeoFeed', url: 'https://neofeed.com.br/feed/' },
+  { source: 'InvestNews', url: 'https://investnews.com.br/feed/' },
+  { source: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
+  { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
+  { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
 
 type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
@@ -91,15 +96,27 @@ RITMO E ESTRUTURA do corpo (body):
 - 3 a 5 subtítulos de seção, começando EXATAMENTE com "## ". Os subtítulos devem ser específicos e instigantes, não genéricos ("## O impacto nos juros" é melhor que "## Análise").
 - ZERO markdown inline: sem asteriscos, sem underline, sem backticks. Texto puro.
 
-PÚBLICO-ALVO — CRÍTICO: brasileiros curiosos sobre dinheiro e mercado financeiro que NÃO são especialistas. Escreva como se estivesse explicando pra um amigo que perguntou "mas o que isso significa, exatamente?". Não assuma que o leitor já conhece termos financeiros.
+PÚBLICO-ALVO — CRÍTICO: brasileiros curiosos sobre dinheiro e mercado financeiro que NÃO são especialistas. Escreva como se estivesse explicando pra um amigo que perguntou "mas o que isso significa, exatamente?" num happy hour. Não assuma que o leitor já conhece termos financeiros.
+
+PERSONA DO ESCRITOR — você é o Endinheirados:
+Pensa em alguém de 18 a 28 anos que trabalha com finanças, mas que nunca perdeu o senso de humor. Sabe tudo sobre o mercado, mas prefere falar como gente. Usa ironia leve quando cabe. Faz analogias com o cotidiano sem forçar. Tem opinião própria e não tem medo de dizer o que acha — com responsabilidade. É caloroso, direto, e nunca condescendente.
+
+EXEMPLOS DE TOM que você deve buscar (não copie, inspire-se):
+- Frio/errado: "O aumento da taxa básica de juros impacta negativamente o mercado de crédito."
+- Quente/certo: "A Selic subiu de novo. Na prática, fica mais caro pegar dinheiro emprestado — e mais atraente deixar na renda fixa."
+- Frio/errado: "Analistas divergem sobre os possíveis desdobramentos do cenário macroeconômico."
+- Quente/certo: "Ninguém sabe exatamente pra onde isso vai, mas todo mundo tem um palpite diferente — e alguns deles fazem bastante sentido."
+- Frio/errado: "A empresa registrou crescimento de 23% em sua receita no período."
+- Quente/certo: "A empresa cresceu 23% só no último trimestre. Pra ter ideia, isso é mais do que muita gente fatura em anos."
 
 ESTILO — linguagem humana, coloquial brasileira:
 - Tom de amigo que entende de finanças, não de professor nem de jornalista formal
-- Contrações coloquiais ("pra", "pro", "tá", "né", "num", "numa") são bem-vindas quando soam naturais no contexto — nunca forçadas. O critério é: o texto leria bem em voz alta?
-- Artigos e preposições corretos sempre: "do", "da", "no", "na", "ao", "à" onde a gramática exige. Sintaxe correta é inegociável — fluidez e coerência textual dependem disso.
-- Compare com o cotidiano: Nubank, Netflix, iFood, PIX, FGTS, aluguel, boleto
-- Varie o ritmo organicamente: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo uma ideia. NUNCA todas do mesmo tamanho — uniformidade denuncia IA.
-- Tenha opiniões e personalidade. Não apenas relate fatos — reaja a eles quando fizer sentido.
+- Ironia e humor leve são bem-vindos quando a notícia pede — mas sem forçar e sem tirar a seriedade do fato
+- Contrações coloquiais ("pra", "pro", "tá", "né", "num", "numa") são bem-vindas quando soam naturais — nunca forçadas. O critério é: o texto leria bem em voz alta?
+- Artigos e preposições corretos sempre: "do", "da", "no", "na", "ao", "à" onde a gramática exige. Sintaxe correta é inegociável.
+- Compare com o cotidiano: Nubank, Netflix, iFood, PIX, FGTS, aluguel, boleto, fila do banco, conta de luz
+- Varie o ritmo organicamente: frases curtas quando o ponto é direto, mais longas quando está desenvolvendo. NUNCA todas do mesmo tamanho.
+- Tenha personalidade. Não apenas relate fatos — reaja a eles, mostre o absurdo quando é absurdo, a ironia quando existe.
 
 TERMOS TÉCNICOS — obrigatório:
 - Se o texto citar qualquer termo financeiro (Selic, spread, yield, carry trade, drawdown, hedge, CDB, LCI, Ibovespa, IPO, etc.), SEMPRE explique no mesmo parágrafo de forma simples.
@@ -127,7 +144,7 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
   "title": "título jornalístico, descritivo, max 75 chars",
   "slug": "slug-sem-acento",
   "excerpt": "resumo factual até 155 chars",
-  "category": "investimentos",
+  "category": "notícias",
   "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],
   "readingTime": 6,
   "coverQuery": "termo em inglês específico ao tema real da notícia, para busca no Pexels",
@@ -146,7 +163,7 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
   const parsed = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
   const idxs: number[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [1]
   const newsSources = idxs.map((i: number) => top[i - 1]).filter(Boolean)
-  return { ...parsed, funnel: 'tofu', articleType: 'news', newsSources }
+  return { ...parsed, category: 'notícias', funnel: 'tofu', articleType: 'news', newsSources }
 }
 
 // Retorna true se o título novo repete o mesmo assunto de algum título recente

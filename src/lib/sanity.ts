@@ -8,7 +8,7 @@ export const client = isConfigured
       projectId,
       dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
       apiVersion: '2024-01-01',
-      useCdn: true,
+      useCdn: false,
     })
   : null
 
@@ -60,7 +60,7 @@ export async function getEditions(limit = 30) {
     return await client.fetch(
       `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, title, intro, readingTime, "storyCount": count(stories) }`,
       { limit },
-      { next: { revalidate: 3600, tags: ['edition'] } }
+      { next: { revalidate: 60, tags: ['edition'] } }
     )
   } catch { return [] }
 }
@@ -71,7 +71,7 @@ export async function getLatestEdition() {
     return await client.fetch(
       `*[_type == "edition"] | order(date desc)[0]{ date, slug, title, intro }`,
       {},
-      { next: { revalidate: 3600, tags: ['edition'] } }
+      { next: { revalidate: 60, tags: ['edition'] } }
     )
   } catch { return null }
 }
@@ -82,7 +82,7 @@ export async function getEditionByDate(date: string) {
     return await client.fetch(
       `*[_type == "edition" && slug.current == $date][0] { date, slug, title, punchline, intro, closing, publishedAt, readingTime, stories, marketSnapshot, wordOfDay, curiosity, recommendation, reflection }`,
       { date },
-      { next: { revalidate: 3600, tags: [`edition:${date}`] } }
+      { next: { revalidate: 60, tags: [`edition:${date}`] } }
     )
   } catch { return null }
 }
@@ -96,6 +96,42 @@ export async function getPostsByCategory(category: string) {
       { next: { revalidate: 600, tags: ['post'] } }
     )
   } catch { return [] }
+}
+
+export type ReferralMilestone = { count: number; emoji: string; label: string; reward: string }
+export type SiteSettings = {
+  subscriberGoal: number
+  subscriberGoalReward: string
+  referralMilestones: ReferralMilestone[]
+}
+
+const DEFAULT_SETTINGS: SiteSettings = {
+  subscriberGoal: 100,
+  subscriberGoalReward: 'sortearemos um livro de finanças entre todos os inscritos',
+  referralMilestones: [
+    { count: 1,  emoji: '🌱', label: 'Poupador Ativo',          reward: 'Acesso ao grupo exclusivo no Telegram' },
+    { count: 3,  emoji: '📊', label: 'Investidor Descoberto',   reward: 'Planilha de controle financeiro personalizada' },
+    { count: 5,  emoji: '💼', label: 'Gestor de Dinheiro',      reward: 'Kit Digital Endinheirados (guias + templates)' },
+    { count: 10, emoji: '🏆', label: 'Guardião da Grana',       reward: 'Menção especial na newsletter + badge exclusivo' },
+    { count: 20, emoji: '👑', label: 'Embaixador Endinheirado', reward: 'Acesso antecipado a conteúdos e ferramentas' },
+  ],
+}
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  if (!client) return DEFAULT_SETTINGS
+  try {
+    const s = await client.fetch(
+      `*[_type == "siteSettings"][0]{ subscriberGoal, subscriberGoalReward, referralMilestones }`,
+      {},
+      { next: { revalidate: 300, tags: ['siteSettings'] } }
+    )
+    if (!s) return DEFAULT_SETTINGS
+    return {
+      subscriberGoal: s.subscriberGoal ?? DEFAULT_SETTINGS.subscriberGoal,
+      subscriberGoalReward: s.subscriberGoalReward ?? DEFAULT_SETTINGS.subscriberGoalReward,
+      referralMilestones: s.referralMilestones?.length ? s.referralMilestones : DEFAULT_SETTINGS.referralMilestones,
+    }
+  } catch { return DEFAULT_SETTINGS }
 }
 
 export async function getCategoryCounts() {
