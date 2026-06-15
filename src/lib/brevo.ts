@@ -287,7 +287,7 @@ function buildEditionHtml(p: EditionParams): string {
   const summaryHtml = p.stories.length > 0 ? `
   <tr><td style="background:#ffffff;padding:20px 40px 4px;">
     <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Nesta edição</p>
-    ${p.stories.map(s => `<p style="margin:0 0 5px;font-size:14px;color:#374151;line-height:1.4;">${esc(s.emoji || '•')} <strong style="color:#111827;">${esc(s.tag || '')}</strong>&nbsp; ${esc(s.headline || '')}</p>`).join('')}
+    ${p.stories.map(s => `<p style="margin:0 0 5px;font-size:14px;color:#374151;line-height:1.4;">${esc(s.emoji || '•')} ${esc(s.headline || '')}</p>`).join('')}
   </td></tr>
   <tr><td style="height:4px;background:#ffffff;border-bottom:2px solid #f3f4f6;"></td></tr>` : ''
 

@@ -134,7 +134,7 @@ ${previousHeadlines.length ? previousHeadlines.map(h => `- ${h}`).join('\n') : '
 
 REGRAS EDITORIAIS:
 ${forced
-  ? '- As manchetes acima foram ESCOLHIDAS A DEDO pelo editor-chefe. Use TODAS elas — não descarte por relevância. Apenas AGRUPE as que tratam do mesmo fato numa única matéria.'
+  ? '- As manchetes acima foram ESCOLHIDAS A DEDO pelo editor-chefe. Use TODAS elas — não descarte por relevância. Apenas AGRUPE as que tratam do mesmo fato numa única matéria.\n- REGRA CRÍTICA NO MODO CURADO: o campo "headline" de cada matéria deve reproduzir o título original da fonte com fidelidade máxima — pode ajustar gramática menor, mas NUNCA mude o sentido, a ironia ou as palavras-chave. O editor escolheu aquele título por um motivo.'
   : `- Selecione de 5 a 7 assuntos REALMENTE relevantes para o mercado financeiro. Priorize o que move juros, câmbio, bolsa, inflação, emprego e o bolso do brasileiro.
 - VETO ABSOLUTO — JAMAIS inclua na edição: Copa do Mundo, qualquer campeonato de futebol/esporte, notícia de celebridade, fofoca, novela, entretenimento, BBB ou reality show. Mesmo que dominem as manchetes do dia, ignore completamente. Prefira uma edição com menos matérias do que incluir lixo.
 - Manchetes da fonte "Endinheirados (publicado hoje)" são notícias que já saíram no nosso próprio site durante o dia — priorizá-las é desejável, pois reforça a cobertura do que já noticiamos.`}
