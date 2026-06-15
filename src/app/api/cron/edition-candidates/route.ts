@@ -49,8 +49,14 @@ function isDuplicate(title: string, seen: Set<string>[]): boolean {
   return false
 }
 
+// Meia-noite do dia atual em BRT (America/Sao_Paulo = UTC-3)
+function startOfTodayBRT(): number {
+  const todayBRT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  return new Date(`${todayBRT}T00:00:00-03:00`).getTime()
+}
+
 async function fetchNews(): Promise<Omit<Candidate, '_key' | 'idx' | 'selected'>[]> {
-  const cutoff = Date.now() - 30 * 60 * 60 * 1000
+  const cutoff = startOfTodayBRT()
   const raw: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
   await Promise.allSettled(FEEDS.map(async ({ source, url }) => {
     try {
