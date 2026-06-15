@@ -16,30 +16,41 @@ function headingText(value: { children?: { text?: string }[] }) {
   return (value?.children || []).map(c => c.text || '').join('')
 }
 
-export const revalidate = 3600
+export const revalidate = 600
 
 export async function generateStaticParams() {
   const posts = await getPosts(100)
   return posts.map((p: { slug: { current: string } }) => ({ slug: p.slug.current }))
 }
 
+const SITE = 'https://endinheirados.cc'
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const post = await getPostBySlug(slug)
   if (!post) return {}
+  const ogImage = post.coverImage?.url
+    ? [{ url: post.coverImage.url, width: 1200, height: 630, alt: post.title }]
+    : []
   return {
     title: post.title,
     description: post.excerpt,
     keywords: post.seoKeywords?.join(', '),
-    alternates: { canonical: `/blog/${slug}` },
+    alternates: { canonical: `${SITE}/blog/${slug}` },
     openGraph: {
       type: 'article',
-      url: `/blog/${slug}`,
+      url: `${SITE}/blog/${slug}`,
       title: post.title,
       description: post.excerpt,
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt || post.publishedAt,
-      images: post.coverImage?.url ? [{ url: post.coverImage.url }] : [],
+      images: ogImage,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: post.coverImage?.url ? [post.coverImage.url] : [],
     },
   }
 }
@@ -216,20 +227,37 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* Comentários (próprios, sem login) */}
       <Comments slug={post.slug.current} />
 
-      {/* JSON-LD: Article + Author */}
+      {/* JSON-LD: Article + BreadcrumbList */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': post.articleType === 'news' ? 'NewsArticle' : 'Article',
+            mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE}/blog/${slug}` },
             headline: post.title,
             description: post.excerpt,
-            image: post.coverImage?.url ? [post.coverImage.url] : undefined,
+            image: post.coverImage?.url
+              ? [{ '@type': 'ImageObject', url: post.coverImage.url, width: 1200, height: 630 }]
+              : undefined,
             datePublished: post.publishedAt,
             dateModified: post.updatedAt || post.publishedAt,
-            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: 'https://endinheirados.cc/autor' },
-            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/icon.png' } },
+            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: `${SITE}/autor` },
+            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: `${SITE}/icon.png` } },
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Início', item: SITE },
+              { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE}/blog` },
+              { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE}/blog/${slug}` },
+            ],
           }),
         }}
       />
