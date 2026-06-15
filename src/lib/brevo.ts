@@ -4,7 +4,7 @@ function key() { return process.env.BREVO_API_KEY! }
 function listId() { return parseInt(process.env.BREVO_LIST_ID || '2') }
 function sender() {
   return {
-    name: 'Endinheirados',
+    name: 'Endinheirados 💸',
     email: process.env.BREVO_SENDER_EMAIL || 'newsletter@endinheirados.cc',
   }
 }
@@ -168,7 +168,7 @@ export async function sendEditionCampaign(p: EditionParams): Promise<void> {
   const contacts = await fetchListContacts()
   if (contacts.length === 0) throw new Error('Lista Brevo vazia — nenhum contacto encontrado')
 
-  const subject = p.punchline || p.title
+  const subject = p.title || p.punchline
   const templateHtml = buildEditionHtml(p)
 
   // Brevo messageVersions: até 1000 destinatários, cada um com params individuais
@@ -265,6 +265,13 @@ function buildEditionHtml(p: EditionParams): string {
   const GREEN = '#16a34a'
   const DARK = '#14532d'
 
+  const previewText = p.stories
+    .slice(0, 3)
+    .map(s => s.headline)
+    .filter(Boolean)
+    .join(' · ')
+    + (p.stories.length > 3 ? ' e mais.' : '.')
+
   const marketHtml = p.marketSnapshot?.length ? `
   <tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 40px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -334,6 +341,8 @@ function buildEditionHtml(p: EditionParams): string {
   <title>${esc(p.title)}</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<!-- Preheader: aparece como preview text na caixa de entrada -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#f3f4f6;">${esc(previewText)}</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;">
 <tr><td align="center" style="padding:32px 16px;">
 <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
