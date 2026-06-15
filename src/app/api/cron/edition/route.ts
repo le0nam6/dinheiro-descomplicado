@@ -171,14 +171,16 @@ PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
 - NÃO é a manchete. NÃO é genérica/clichê vazio. Tem que ter verdade e peso, e ser entendida por todo mundo.
 
 ESTRUTURA DA ABERTURA ("intro"):
-Escreva 2 a 3 frases que abram o dia com personalidade — como um bom-dia inteligente, não um resumo burocrático.
+Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia inteligente que o leitor recebe às 6h.
 - NUNCA comece com "Hoje", "Nesta edição", "Bom dia" ou clichê de newsletter.
-- Pode ser uma observação irônica, uma provocação, uma analogia com o cotidiano.
-- Deve criar curiosidade para ler as matérias — mas sem revelar tudo.
-- Exemplos de estilo (adapte ao dia real, não copie):
-  → "O dólar perto de R$6 já aparece no menu do restaurante. Enquanto isso, o Banco Central continua sinalizando cautela. Bora entender o que tá rolando."
-  → "A Selic subiu, o câmbio anda nervoso, e o brasileiro ainda tenta decidir se compra ou aluga. Dia típico — mas com novidades que importam."
-  → "Tem gente comemorando, tem gente preocupada, e o mercado financeiro continua fazendo o que sabe: reagir antes de todo mundo entender o porquê."
+- NÃO resuma nem antecipe as matérias. O leitor vai ver o sumário e as histórias logo depois — não é papel do intro adiantar o que vem.
+- As notícias são das últimas 24 horas. Não escreva frases como "aconteceu hoje" ou "hoje vimos" pois o dia ainda mal começou.
+- Pode ser uma observação sobre o humor do mercado, uma provocação, uma reflexão ligeira sobre o momento econômico, ou um ângulo humano sobre o que o brasileiro vai sentir ao longo do dia.
+- Tom: alguém que chegou cedo, já leu tudo, e agora te conta o clima antes de você começar o dia.
+- Exemplos de estilo (adapte ao momento real, não copie):
+  → "Tem coisa mexendo no câmbio, nos juros e no bolso de quem paga aluguel. Não é um dia qualquer. Bora."
+  → "Enquanto a maioria ainda dorme, o mercado já decidiu o humor da semana. A boa notícia é que você já acordou sabendo o que ele decidiu."
+  → "O mundo financeiro não tirou férias. O brasileiro também não pode. Por isso você tá aqui às 6h lendo isso."
 
 ESTRUTURA DE CADA MATÉRIA — VARIE, não use sempre o mesmo molde:
 O leitor NÃO pode sentir que todas as matérias têm a mesma forma. Algumas são curtas e diretas, outras têm o impacto tecido na narrativa, outras separam fato e consequência. Escolha por matéria.
@@ -216,12 +218,12 @@ Exemplos de estilo:
 BLOCOS EXTRAS (deixam a edição mais viva — preencha todos os pedidos abaixo):
 REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem negrito/itálico markdown, sem marcadores de lista (nada de "•", "-", "1️⃣"), sem numeração emoji. Frases corridas normais.
 
-"wordOfDay" — PALAVRA DO DIA: uma palavra interessante de qualquer área — pode ser finanças, mas também psicologia, filosofia, comportamento, tecnologia, sociologia, qualquer coisa que seja útil saber e pouco conhecida.
-  - "word": o termo (ex.: "Efeito Dunning-Kruger", "Ancoragem", "FOMO", "Antifragilidade", "Heurística").
+"wordOfDay" — PALAVRA DO DIA: um conceito, fenômeno ou palavra de QUALQUER área do conhecimento — psicologia, filosofia, biologia, história, linguística, física, antropologia, sociologia. NÃO priorize finanças aqui; o restante da edição já é sobre dinheiro.
+  - "word": o termo (ex.: "Efeito Dunning-Kruger", "Memética", "Paradoxo de Jevons", "Heurística de disponibilidade", "Efeito Zeigarnik", "Viés de sobrevivência").
   - "meaning": o que significa, em linguagem simples (1-2 frases).
   - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
 
-"curiosity" — CURIOSIDADE DO DIA: 2-3 frases sobre uma curiosidade real e interessante de economia, dinheiro, mercado ou história financeira. Algo que faça o leitor pensar "não sabia disso". Pode conectar com a data de hoje se houver algo relevante.
+"curiosity" — CURIOSIDADE DO DIA: 2-3 frases sobre uma curiosidade real e interessante de QUALQUER área — história, ciência, comportamento humano, natureza, tecnologia, sociedade. Não precisa ter relação com finanças. Algo que faça o leitor pensar "não sabia disso". Pode conectar com a data de hoje se houver algo historicamente relevante.
 ${isFriday ? '\n"recommendation" — É SEXTA: recomende UMA série OU UM livro (pode ter relação leve com dinheiro, ambição, negócios, ou só ser muito bom). 2-3 frases dizendo o que é e por que vale.' : ''}
 ${isSunday ? '\n"reflection" — É DOMINGO: escreva uma reflexão curta (2-3 frases) sobre dinheiro, tempo, escolhas ou propósito. Tom de quem pensa alto num domingo à tarde, sem ser piegas nem clichê de autoajuda.' : ''}
 
@@ -501,6 +503,8 @@ export async function GET(request: Request) {
         punchline: curation.punchline,
         intro: curation.intro,
         closing: curation.closing,
+        readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
+        marketSnapshot,
         stories,
         wordOfDay: curation.wordOfDay,
         curiosity: curation.curiosity,

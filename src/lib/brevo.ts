@@ -125,6 +125,8 @@ type EditionParams = {
   punchline?: string
   intro?: string
   closing?: string
+  readingTime?: number
+  marketSnapshot?: Array<{ label: string; value: string; changePct: number }>
   stories: Array<{
     emoji?: string
     tag?: string
@@ -263,6 +265,25 @@ function buildEditionHtml(p: EditionParams): string {
   const GREEN = '#16a34a'
   const DARK = '#14532d'
 
+  const marketHtml = p.marketSnapshot?.length ? `
+  <tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      ${p.marketSnapshot.map(q => `
+      <td style="text-align:center;padding:4px 6px;">
+        <p style="margin:0;font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">${esc(q.label)}</p>
+        <p style="margin:3px 0 2px;font-size:13px;font-weight:700;color:#111827;">${esc(q.value)}</p>
+        <p style="margin:0;font-size:11px;font-weight:700;color:${q.changePct >= 0 ? '#16a34a' : '#dc2626'};">${q.changePct >= 0 ? '▲' : '▼'} ${Math.abs(q.changePct).toFixed(2)}%</p>
+      </td>`).join('')}
+    </tr></table>
+  </td></tr>` : ''
+
+  const summaryHtml = p.stories.length > 0 ? `
+  <tr><td style="background:#ffffff;padding:20px 40px 4px;">
+    <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Nesta edição</p>
+    ${p.stories.map(s => `<p style="margin:0 0 5px;font-size:14px;color:#374151;line-height:1.4;">${esc(s.emoji || '•')} <strong style="color:#111827;">${esc(s.tag || '')}</strong>&nbsp; ${esc(s.headline || '')}</p>`).join('')}
+  </td></tr>
+  <tr><td style="height:4px;background:#ffffff;border-bottom:2px solid #f3f4f6;"></td></tr>` : ''
+
   const storiesHtml = p.stories.map(s => {
     // Merge tag não pode ser encodeURIComponent — Brevo substitui depois
     const staticPart = encodeURIComponent(`${s.headline || ''}\n\nLi no Endinheirados:\nhttps://endinheirados.cc/indicacao/`)
@@ -323,14 +344,21 @@ function buildEditionHtml(p: EditionParams): string {
       <img src="https://endinheirados.cc/logo-email.png" alt="Endinheirados" width="220" style="height:auto;display:block;margin:0 auto;" />
     </a>
     <p style="margin:2px 0 1px;font-size:11px;color:#bbf7d0;letter-spacing:.06em;text-transform:uppercase;font-weight:700;">O melhor portal de finanças da nova geração</p>
-    <p style="margin:0;font-size:13px;color:#dcfce7;">${fmtDate(p.date)}</p>
+    <p style="margin:0;font-size:13px;color:#dcfce7;">${fmtDate(p.date)}${p.readingTime ? ` · ${p.readingTime} min de leitura` : ''}</p>
   </td></tr>
 
   <!-- Intro -->
-  <tr><td style="background:#ffffff;padding:32px 40px 8px;">
+  <tr><td style="background:#ffffff;padding:32px 40px 20px;">
+    ${p.title ? `<p style="margin:0 0 10px;font-size:13px;font-weight:700;color:${GREEN};text-transform:uppercase;letter-spacing:.06em;">${esc(p.title)}</p>` : ''}
     ${p.punchline ? `<p style="margin:0 0 14px;font-size:23px;font-weight:800;color:#111827;line-height:1.3;">${esc(p.punchline)}</p>` : ''}
     ${p.intro ? `<p style="margin:0;font-size:16px;color:#4b5563;line-height:1.75;">${esc(p.intro)}</p>` : ''}
   </td></tr>
+
+  <!-- Termômetro do mercado -->
+  ${marketHtml}
+
+  <!-- Sumário das stories -->
+  ${summaryHtml}
 
   <!-- Stories -->
   <tr><td style="background:#ffffff;padding:0 40px;">
@@ -346,8 +374,15 @@ function buildEditionHtml(p: EditionParams): string {
 
   <!-- Closing + CTA -->
   <tr><td style="background:#ffffff;padding:16px 40px 36px;text-align:center;">
-    ${p.closing ? `<p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.7;font-style:italic;">${esc(p.closing)}</p>` : ''}
+    ${p.closing ? `<p style="margin:0 0 8px;font-size:15px;color:#6b7280;line-height:1.7;font-style:italic;">${esc(p.closing)}</p>` : ''}
+    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.7;">Até amanhã. 👋</p>
     <a href="${p.url}" style="display:inline-block;background:${GREEN};color:#ffffff;font-weight:700;font-size:15px;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:.01em;">Leia a edição completa →</a>
+  </td></tr>
+
+  <!-- Sobre nós -->
+  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Sobre o Endinheirados</p>
+    <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.7;">Uma newsletter diária sobre o mercado financeiro e o bolso do brasileiro — explicado de forma simples, rápida e sem enrolação. Publicado todo dia às 6h da manhã.</p>
   </td></tr>
 
   <!-- Spacer -->
