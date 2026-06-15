@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const title    = searchParams.get('title') || 'ENDINHEIRADOS'
   const photoUrl = searchParams.get('photo') || ''
-  const cta      = searchParams.get('cta') || 'LEIA A LEGENDA'
 
   return new ImageResponse(
     (
@@ -96,17 +95,17 @@ export async function GET(req: NextRequest) {
             {title.toUpperCase()}
           </div>
 
-          {/* CTA — Roboto */}
+          {/* endinheirados.cc — rodapé */}
           <div
             style={{
               fontFamily: 'Roboto',
-              fontSize: 30,
-              color: '#CCCCCC',
+              fontSize: 28,
+              color: '#a3c4a8',
               letterSpacing: '3px',
               textTransform: 'uppercase',
             }}
           >
-            {cta}
+            endinheirados.cc
           </div>
         </div>
       </div>

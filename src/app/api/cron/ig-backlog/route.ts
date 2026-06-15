@@ -66,7 +66,7 @@ async function getPhoto(query: string): Promise<string | null> {
 
 async function getNextNewsPost() {
   const news = await sanity.fetch(
-    `*[_type=="post" && articleType=="news" && igQueued != true && publishedAt <= now()]|order(publishedAt desc)[0]{"slug":slug.current,title,excerpt}`
+    `*[_type=="post" && articleType=="news" && igQueued != true && publishedAt <= now()]|order(publishedAt desc)[0]{"slug":slug.current,title,excerpt,"coverImageUrl":coverImage.url}`
   )
   return news ?? null
 }
@@ -129,8 +129,12 @@ export async function GET(request: Request) {
 
     console.log(`[ig-backlog] Enfileirando para o IG: "${post.title}"`)
 
-    const photoQuery = await getPhotoQuery(post.title, post.excerpt)
-    const photoUrl = await getPhoto(photoQuery)
+    // Usa a imagem de capa do post; fallback para Pexels/Unsplash se não tiver
+    let photoUrl = post.coverImageUrl ?? null
+    if (!photoUrl) {
+      const photoQuery = await getPhotoQuery(post.title, post.excerpt)
+      photoUrl = await getPhoto(photoQuery)
+    }
     if (!photoUrl) throw new Error('Nenhuma foto encontrada para o post')
 
     const caption = await buildCaption(post)
@@ -144,7 +148,7 @@ export async function GET(request: Request) {
       igImageUrl,
       `📲 Post para o Instagram\n\n📌 ${post.title}\n\n${blogUrl}`,
     )
-    await tgSendMessage(`📋 LEGENDA (copie e cole no IG):\n\n${caption}`)
+    await tgSendMessage(caption)
 
     await markIgQueued(post.slug)
 
