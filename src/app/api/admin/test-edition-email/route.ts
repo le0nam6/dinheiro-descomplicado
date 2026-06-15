@@ -38,7 +38,8 @@ export async function POST(request: Request) {
 
   const edition = await sanity.fetch(
     `*[_type=="edition" && !(_id in path("drafts.**"))] | order(date desc)[0]{
-      date, title, punchline, intro, closing,
+      date, title, punchline, intro, closing, readingTime,
+      "marketSnapshot": marketSnapshot[]{ label, value, changePct },
       "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
       wordOfDay, curiosity, recommendation, reflection,
       "slug": slug.current
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
     punchline: edition.punchline,
     intro: edition.intro,
     closing: edition.closing,
+    readingTime: edition.readingTime,
+    marketSnapshot: edition.marketSnapshot,
     stories: edition.stories || [],
     wordOfDay: edition.wordOfDay,
     curiosity: edition.curiosity,
