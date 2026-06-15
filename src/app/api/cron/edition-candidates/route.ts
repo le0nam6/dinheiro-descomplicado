@@ -1,13 +1,56 @@
 /**
  * Curadoria humana da edição (noite anterior).
- * Roda ~22h BRT. Busca as notícias publicadas no Endinheirados durante o dia,
- * salva um pendingEdition e manda no Telegram com botões toggle. O editor marca
- * quais entram; o cron das 6h monta a edição só com as escolhidas.
+ * Roda ~22h BRT. Busca o TRIPLO de manchetes candidatas, salva um
+ * pendingEdition e manda no Telegram com botões toggle. O editor marca quais
+ * entram; o cron das 6h monta a edição só com as escolhidas (com fallback
+ * automático se ninguém selecionar).
+ *
+ * Fontes: notícias do portal Endinheirados publicadas hoje (aparecem no topo)
+ * + notícias externas dos feeds RSS do dia.
  */
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgConfigured, tgAlert } from '@/lib/publish-core'
 import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
+
+const FEEDS = [
+  { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
+  { source: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
+  { source: 'G1 Política', url: 'https://g1.globo.com/rss/g1/politica/' },
+  { source: 'Exame', url: 'https://exame.com/feed/' },
+  { source: 'Valor (Brazil Journal)', url: 'https://braziljournal.com/feed/' },
+  { source: 'Reuters Business', url: 'https://feeds.reuters.com/reuters/businessNews' },
+  { source: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147' },
+  { source: 'Investing.com', url: 'https://br.investing.com/rss/news_285.rss' },
+  { source: 'Investing.com Mundo', url: 'https://br.investing.com/rss/news_25.rss' },
+  { source: 'NeoFeed', url: 'https://neofeed.com.br/feed/' },
+  { source: 'InvestNews', url: 'https://investnews.com.br/feed/' },
+  { source: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
+  { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
+  { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
+]
+
+const STOPWORDS = new Set(['de','do','da','dos','das','e','o','a','os','as','em','no','na','nos','nas','por','para','com','que','um','uma','se','ao','à','ou','foi','são','mais','mas','este','esta','esse','essa','pelo','pela','como','está','pelo','num','numa','entre','já','não','isso','isso','sua','seu','suas','seus','também'])
+
+function titleFingerprint(title: string): Set<string> {
+  return new Set(
+    title.toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !STOPWORDS.has(w))
+  )
+}
+
+function isDuplicate(title: string, seen: Set<string>[]): boolean {
+  const fp = titleFingerprint(title)
+  if (fp.size === 0) return false
+  for (const s of seen) {
+    const inter = [...fp].filter(w => s.has(w)).length
+    const sim = inter / Math.min(fp.size, s.size)
+    if (sim >= 0.6) return true
+  }
+  return false
+}
 
 // Meia-noite do dia atual em BRT (America/Sao_Paulo = UTC-3)
 function startOfTodayBRT(): string {
@@ -17,17 +60,54 @@ function startOfTodayBRT(): string {
 
 async function fetchNews(): Promise<Omit<Candidate, '_key' | 'idx' | 'selected'>[]> {
   const since = startOfTodayBRT()
-  const posts: Array<{ title: string; excerpt: string; slug: string; publishedAt: string }> = await sanity.fetch(
+
+  // 1. Notícias do próprio portal publicadas hoje (vão no topo)
+  const ownPosts: Array<{ title: string; excerpt: string; slug: string; publishedAt: string }> = await sanity.fetch(
     `*[_type=="post" && articleType=="news" && publishedAt >= $since] | order(publishedAt desc) { title, excerpt, "slug": slug.current, publishedAt }`,
     { since }
   )
-  return posts.map(p => ({
-    source: 'Endinheirados',
+  const ownItems: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = ownPosts.map(p => ({
+    source: '⭐ Endinheirados',
     title: p.title,
     description: p.excerpt?.slice(0, 220) || '',
     url: `${SITE}/blog/${p.slug}`,
     pubDate: p.publishedAt,
   }))
+
+  // 2. Notícias externas do dia via RSS
+  const sinceMs = new Date(since).getTime()
+  const raw: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
+  await Promise.allSettled(FEEDS.map(async ({ source, url }) => {
+    try {
+      const xml = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7000) }).then(r => r.text())
+      const re = /<item>([\s\S]*?)<\/item>/g
+      let m
+      while ((m = re.exec(xml)) !== null) {
+        const b = m[1]
+        const get = (t: string) => {
+          const x = b.match(new RegExp(`<${t}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${t}>|<${t}[^>]*>([\\s\\S]*?)</${t}>`))
+          return x ? (x[1] || x[2] || '').trim() : ''
+        }
+        const title = get('title'), link = get('link'), pub = get('pubDate')
+        if (!title || !link) continue
+        if (pub && new Date(pub).getTime() < sinceMs) continue
+        raw.push({ source, title, description: get('description').replace(/<[^>]+>/g, '').slice(0, 220), url: link, pubDate: pub || '' })
+      }
+    } catch { /* feed off */ }
+  }))
+
+  // Deduplicação dos itens externos entre si
+  const seen: Set<string>[] = ownItems.map(i => titleFingerprint(i.title))
+  const externalItems: Omit<Candidate, '_key' | 'idx' | 'selected'>[] = []
+  for (const item of raw) {
+    if (!isDuplicate(item.title, seen)) {
+      seen.push(titleFingerprint(item.title))
+      externalItems.push(item)
+    }
+  }
+
+  // Notícias do portal primeiro, depois as externas
+  return [...ownItems, ...externalItems]
 }
 
 // Data BRT do dia da PRÓXIMA edição (a manhã que vem). +8h cobre a virada da noite.
