@@ -2,7 +2,7 @@ import { defineType, defineField } from 'sanity'
 
 /**
  * Edição diária — o compilado curado do mercado (estilo "The News").
- * Publicada todo dia às 6h. No futuro vira newsletter.
+ * Publicada todo dia às 5h. No futuro vira newsletter.
  */
 export const editionSchema = defineType({
   name: 'edition',

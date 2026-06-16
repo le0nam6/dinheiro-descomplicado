@@ -26,7 +26,7 @@ export function candidatesMessage(date: string, candidates: Candidate[]): string
   const header =
     `🗳️ CURADORIA DA EDIÇÃO DE ${dd}\n\n` +
     `Marque as manchetes que devem entrar tocando no número correspondente abaixo. ` +
-    `Quando terminar, toque em "Montar edição". Se não escolher nada, a edição sai automática às 6h.\n\n` +
+    `Quando terminar, toque em "Montar edição". Se não escolher nada, a edição sai automática às 5h.\n\n` +
     `Selecionadas: ${n}\n\n`
   const lines = candidates.map(c => {
     const mark = c.selected ? '✅' : '⬜'

@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Pronto!' })
         await tg('editMessageText', {
           chat_id: cq.message.chat.id, message_id: msgId,
-          text: `✅ Edição montada com ${selected.length} manchete${selected.length > 1 ? 's' : ''} escolhida${selected.length > 1 ? 's' : ''}.\n\nElas serão usadas na edição de ${String(pe.date).split('-').reverse().join('/')}, publicada automaticamente às 6h.`,
+          text: `✅ Edição montada com ${selected.length} manchete${selected.length > 1 ? 's' : ''} escolhida${selected.length > 1 ? 's' : ''}.\n\nElas serão usadas na edição de ${String(pe.date).split('-').reverse().join('/')}, publicada automaticamente às 5h.`,
         })
         return NextResponse.json({ ok: true })
       }

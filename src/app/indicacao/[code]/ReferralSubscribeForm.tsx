@@ -77,7 +77,7 @@ export function ReferralSubscribeForm({ referralCode }: { referralCode: string }
           <>
             <p className="text-3xl">🎉</p>
             <p className="font-black text-gray-900 text-lg">Você está dentro!</p>
-            <p className="text-sm text-gray-600">Próxima edição chega no seu e-mail às 6h.</p>
+            <p className="text-sm text-gray-600">Próxima edição chega no seu e-mail às 5h.</p>
           </>
         ) : (
           <>

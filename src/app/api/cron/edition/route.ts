@@ -1,6 +1,6 @@
 /**
  * Edição diária — o compilado curado do mercado (estilo "The News").
- * Roda todo dia às ~6h (BRT) via GitHub Actions.
+ * Roda todo dia às ~5h (BRT) via GitHub Actions.
  * Curadoria com profundidade das notícias de Brasil e Mundo que impactam o
  * mercado financeiro (inclusive política). Objetivo: o leitor sair mais
  * inteligente em poucos minutos. Publica em /edicao/[data] e avisa no Telegram.
@@ -171,7 +171,7 @@ PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
 - NÃO é a manchete. NÃO é genérica/clichê vazio. Tem que ter verdade e peso, e ser entendida por todo mundo.
 
 ESTRUTURA DA ABERTURA ("intro"):
-Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia inteligente que o leitor recebe às 6h.
+Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia inteligente que o leitor recebe às 5h.
 - NUNCA comece com "Hoje", "Nesta edição", "Bom dia" ou clichê de newsletter.
 - NÃO resuma nem antecipe as matérias. O leitor vai ver o sumário e as histórias logo depois — não é papel do intro adiantar o que vem.
 - As notícias são das últimas 24 horas. Não escreva frases como "aconteceu hoje" ou "hoje vimos" pois o dia ainda mal começou.
@@ -180,7 +180,7 @@ Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia in
 - Exemplos de estilo (adapte ao momento real, não copie):
   → "Tem coisa mexendo no câmbio, nos juros e no bolso de quem paga aluguel. Não é um dia qualquer. Bora."
   → "Enquanto a maioria ainda dorme, o mercado já decidiu o humor da semana. A boa notícia é que você já acordou sabendo o que ele decidiu."
-  → "O mundo financeiro não tirou férias. O brasileiro também não pode. Por isso você tá aqui às 6h lendo isso."
+  → "O mundo financeiro não tirou férias. O brasileiro também não pode. Por isso você tá aqui às 5h lendo isso."
 
 ESTRUTURA DE CADA MATÉRIA — VARIE, não use sempre o mesmo molde:
 O leitor NÃO pode sentir que todas as matérias têm a mesma forma. Algumas são curtas e diretas, outras têm o impacto tecido na narrativa, outras separam fato e consequência. Escolha por matéria.
@@ -457,8 +457,8 @@ export async function GET(request: Request) {
     const thematicTitle = (curation.title && curation.title.length <= 120 && !curation.title.startsWith('Edição de'))
       ? curation.title
       : editionTitle(date)
-    // publishedAt = 6h BRT (UTC-3 = 9h UTC) da data da edição, independente de quando o cron rodou
-    const publishedAt = new Date(`${date}T09:00:00.000Z`).toISOString()
+    // publishedAt = 5h BRT (UTC-3 = 8h UTC) da data da edição, independente de quando o cron rodou
+    const publishedAt = new Date(`${date}T08:00:00.000Z`).toISOString()
     await sanity.create({
       _type: 'edition',
       date,
@@ -515,7 +515,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, preview, date, stories: stories.length, url })
   } catch (err) {
-    await tgAlert('Cron edição diária (6h)', err)
+    await tgAlert('Cron edição diária (5h)', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }

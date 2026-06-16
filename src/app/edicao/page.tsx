@@ -27,12 +27,12 @@ export default async function EditionsPage() {
         <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">🗞️ A Edição</p>
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mt-2">O mercado do dia, sem enrolação</h1>
         <p className="text-gray-600 mt-3 leading-relaxed">
-          Todo dia às 6h, o compilado curado das notícias de Brasil e Mundo que mexem com o seu dinheiro — inclusive política, quando afeta o mercado. Leitura rápida para você começar o dia mais inteligente.
+          Todo dia às 5h, o compilado curado das notícias de Brasil e Mundo que mexem com o seu dinheiro — inclusive política, quando afeta o mercado. Leitura rápida para você começar o dia mais inteligente.
         </p>
       </header>
 
       {!latest && (
-        <p className="text-center text-gray-400 py-16">A primeira edição sai em breve. Volte amanhã às 6h. ☕</p>
+        <p className="text-center text-gray-400 py-16">A primeira edição sai em breve. Volte amanhã às 5h. ☕</p>
       )}
 
       {latest && (

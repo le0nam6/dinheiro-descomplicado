@@ -280,7 +280,7 @@ export function AdminDashboard() {
 
           <section className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
             <h2 className="font-bold text-gray-900">Disparar campanha para todos os inscritos</h2>
-            <p className="text-sm text-gray-500">Envia a última edição publicada como campanha no Brevo para toda a lista. Use quando o disparo automático das 6h falhar.</p>
+            <p className="text-sm text-gray-500">Envia a última edição publicada como campanha no Brevo para toda a lista. Use quando o disparo automático das 5h falhar.</p>
             <button
               onClick={sendEditionCampaign}
               disabled={campaignSending}

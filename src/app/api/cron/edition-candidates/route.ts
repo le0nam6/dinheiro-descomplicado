@@ -2,7 +2,7 @@
  * Curadoria humana da edição (noite anterior).
  * Roda ~22h BRT. Busca o TRIPLO de manchetes candidatas, salva um
  * pendingEdition e manda no Telegram com botões toggle. O editor marca quais
- * entram; o cron das 6h monta a edição só com as escolhidas (com fallback
+ * entram; o cron das 5h monta a edição só com as escolhidas (com fallback
  * automático se ninguém selecionar).
  *
  * Fontes: notícias do portal Endinheirados publicadas hoje (aparecem no topo)

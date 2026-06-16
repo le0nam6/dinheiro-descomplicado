@@ -41,7 +41,7 @@ export default async function ReferralPage({ params }: { params: Promise<{ code:
       <div className="text-center space-y-2">
         <p className="text-4xl">💸</p>
         <h1 className="text-2xl font-black text-gray-900">Alguém que te quer bem<br />mandou esse link</h1>
-        <p className="text-gray-500 text-sm">Receba as notícias de finanças que importam todo dia às 6h — de graça, sem enrolação.</p>
+        <p className="text-gray-500 text-sm">Receba as notícias de finanças que importam todo dia às 5h — de graça, sem enrolação.</p>
       </div>
 
       {/* Formulário de inscrição */}

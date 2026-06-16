@@ -100,7 +100,7 @@ export function ExitIntentPopup() {
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-4 text-center">
-                Todo dia às 6h você recebe as notícias de finanças que realmente importam — em menos de 5 minutos.
+                Todo dia às 5h você recebe as notícias de finanças que realmente importam — em menos de 5 minutos.
               </p>
               <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <input

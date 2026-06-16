@@ -33,7 +33,7 @@ export async function sendWelcomeEmail(email: string, referralCode: string): Pro
     <p style="margin:0 0 8px;font-size:36px;">🎉</p>
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:800;color:#111827;">Bem-vindo(a) ao Endinheirados!</h1>
     <p style="margin:0 0 20px;font-size:16px;color:#4b5563;line-height:1.7;">
-      A partir de agora, todo dia às <strong>6h da manhã</strong> você recebe as principais notícias de finanças — explicadas de forma simples, em menos de 5 minutos.
+      A partir de agora, todo dia às <strong>5h da manhã</strong> você recebe as principais notícias de finanças — explicadas de forma simples, em menos de 5 minutos.
     </p>
     <a href="https://endinheirados.cc" style="display:inline-block;background:#16a34a;color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Explorar o site →</a>
   </td></tr>
@@ -391,7 +391,7 @@ function buildEditionHtml(p: EditionParams): string {
   <!-- Sobre nós -->
   <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
     <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Sobre o Endinheirados</p>
-    <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.7;">Uma newsletter diária sobre o mercado financeiro e o bolso do brasileiro — explicado de forma simples, rápida e sem enrolação. Publicado todo dia às 6h da manhã.</p>
+    <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.7;">Uma newsletter diária sobre o mercado financeiro e o bolso do brasileiro — explicado de forma simples, rápida e sem enrolação. Publicado todo dia às 5h da manhã.</p>
   </td></tr>
 
   <!-- Spacer -->
