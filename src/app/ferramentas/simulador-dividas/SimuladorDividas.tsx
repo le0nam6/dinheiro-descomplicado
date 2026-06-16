@@ -6,29 +6,46 @@ type Divida = { id: number; nome: string; saldo: number; taxa: number; parcela: 
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) }
 
-function simular(dividas: Divida[], extra: number, estrategia: 'avalanche' | 'bola-de-neve') {
+type SimResult = { meses: number; totalJuros: number; impossivel?: boolean }
+
+function simular(dividas: Divida[], extra: number, estrategia: 'avalanche' | 'bola-de-neve'): SimResult {
   let lista = dividas.map(d => ({ ...d }))
   let meses = 0, totalJuros = 0
 
-  while (lista.some(d => d.saldo > 0)) {
+  while (lista.some(d => d.saldo > 0.01)) {
     meses++
-    if (meses > 600) break
 
-    // Juros do mês
-    lista.forEach(d => { if (d.saldo > 0) { const j = d.saldo * d.taxa / 100; totalJuros += j; d.saldo += j } })
+    // Detecta cedo se a dívida total está crescendo (impossível quitar)
+    const jurosMes = lista.reduce((s, d) => s + (d.saldo > 0 ? d.saldo * d.taxa / 100 : 0), 0)
+    const pagamentosMes = lista.reduce((s, d) => s + (d.saldo > 0 ? Math.min(d.parcela, d.saldo) : 0), 0) + extra
+    if (meses > 12 && jurosMes >= pagamentosMes) return { meses: 0, totalJuros: 0, impossivel: true }
+    if (meses > 600) return { meses: 0, totalJuros: 0, impossivel: true }
+
+    // Aplica juros
+    lista.forEach(d => {
+      if (d.saldo > 0) { const j = d.saldo * d.taxa / 100; totalJuros += j; d.saldo += j }
+    })
 
     // Paga parcelas mínimas
-    let extraDisp = extra
-    lista.forEach(d => { if (d.saldo > 0) { const pg = Math.min(d.parcela, d.saldo); d.saldo -= pg; d.saldo = Math.max(0, d.saldo) } })
+    lista.forEach(d => {
+      if (d.saldo > 0) { d.saldo = Math.max(0, d.saldo - Math.min(d.parcela, d.saldo)) }
+    })
 
-    // Aplica extra na dívida prioritária
-    const abertas = lista.filter(d => d.saldo > 0)
-    if (abertas.length === 0) break
-    const alvo = estrategia === 'avalanche'
-      ? abertas.reduce((a, b) => a.taxa > b.taxa ? a : b)
-      : abertas.reduce((a, b) => a.saldo < b.saldo ? a : b)
-    const idx = lista.findIndex(d => d.id === alvo.id)
-    lista[idx].saldo = Math.max(0, lista[idx].saldo - extraDisp)
+    // Aplica extra em cascata na ordem de prioridade
+    const prioridade = lista
+      .filter(d => d.saldo > 0.01)
+      .sort(estrategia === 'avalanche'
+        ? (a, b) => b.taxa - a.taxa
+        : (a, b) => a.saldo - b.saldo)
+
+    let extraDisp = extra
+    for (const alvo of prioridade) {
+      if (extraDisp <= 0) break
+      const idx = lista.findIndex(d => d.id === alvo.id)
+      const pg = Math.min(extraDisp, lista[idx].saldo)
+      lista[idx].saldo = Math.max(0, lista[idx].saldo - pg)
+      extraDisp -= pg
+    }
   }
 
   return { meses, totalJuros }
@@ -99,26 +116,46 @@ export function SimuladorDividas() {
       {aval && bola && (
         <div className="grid grid-cols-2 gap-4">
           {([['avalanche', aval, '🌊', 'Maior juro primeiro'] , ['bola-de-neve', bola, '⛄', 'Menor saldo primeiro']] as const).map(([nome, res, emoji, desc]) => (
-            <div key={nome} className={`rounded-2xl p-5 border-2 transition-all ${melhor === nome ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}>
+            <div key={nome} className={`rounded-2xl p-5 border-2 transition-all ${res.impossivel ? 'border-red-200 bg-red-50' : melhor === nome ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}>
               <div className="text-2xl mb-1">{emoji}</div>
               <p className="font-bold text-gray-900 text-sm capitalize">{nome === 'avalanche' ? 'Avalanche' : 'Bola de Neve'}</p>
               <p className="text-xs text-gray-500 mb-3">{desc}</p>
-              <p className="text-2xl font-black text-gray-900">{res.meses} meses</p>
-              <p className="text-xs text-gray-500">para quitar tudo</p>
-              <p className="font-bold text-red-600 mt-2 text-sm">{fmt(res.totalJuros)} em juros</p>
-              {melhor === nome && <span className="inline-block mt-2 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">✓ Melhor opção</span>}
+              {res.impossivel ? (
+                <>
+                  <p className="text-lg font-black text-red-600">Impossível quitar</p>
+                  <p className="text-xs text-red-400 mt-1">Os juros superam os pagamentos mensais. Aumente o valor extra ou a parcela mínima.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-black text-gray-900">{res.meses} meses</p>
+                  <p className="text-xs text-gray-500">para quitar tudo</p>
+                  <p className="font-bold text-red-600 mt-2 text-sm">{fmt(res.totalJuros)} em juros</p>
+                  {melhor === nome && <span className="inline-block mt-2 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">✓ Melhor opção</span>}
+                </>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {aval && bola && melhor && (
+      {aval && bola && !aval.impossivel && !bola.impossivel && melhor && (
         <div className="bg-gray-900 text-white rounded-2xl p-5 text-sm">
           <p className="font-bold mb-1">💡 Análise</p>
           <p className="text-gray-300">
             A estratégia <strong className="text-white">{melhor === 'avalanche' ? 'Avalanche' : 'Bola de Neve'}</strong> economiza{' '}
             <strong className="text-green-400">{fmt(Math.abs(aval.totalJuros - bola.totalJuros))}</strong> em juros e quita{' '}
             {Math.abs(aval.meses - bola.meses)} meses antes. Total da dívida atual: <strong className="text-white">{fmt(totalSaldo)}</strong>.
+          </p>
+        </div>
+      )}
+      {aval && bola && (aval.impossivel || bola.impossivel) && (
+        <div className="bg-red-900 text-white rounded-2xl p-5 text-sm">
+          <p className="font-bold mb-1">⚠️ Atenção</p>
+          <p className="text-red-200">
+            {aval.impossivel && bola.impossivel
+              ? 'Com os pagamentos atuais, as dívidas nunca serão quitadas — os juros superam tudo que está sendo pago. Aumente o valor extra ou negocie taxas menores.'
+              : `A estratégia ${aval.impossivel ? 'Avalanche' : 'Bola de Neve'} não consegue quitar as dívidas pois os juros superam os pagamentos enquanto foca em outra dívida. Use a outra estratégia ou aumente o valor extra.`
+            }
           </p>
         </div>
       )}
