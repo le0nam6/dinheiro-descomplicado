@@ -112,6 +112,25 @@ export function SimuladorDividas() {
         <input type="range" min={0} max={3000} step={50} value={extra} onChange={e => setExtra(+e.target.value)} className="w-full mt-2 accent-green-500" />
       </div>
 
+      {/* Explicação das estratégias */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 space-y-3">
+        <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">Como funcionam as estratégias?</p>
+        <div className="flex gap-3">
+          <span className="text-xl">🌊</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Avalanche — maior juro primeiro</p>
+            <p className="text-xs text-gray-500 leading-relaxed">Você paga o mínimo em todas as dívidas e coloca o dinheiro extra na que cobra mais juros. Matematicamente é a mais eficiente: você paga menos juros no total.</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <span className="text-xl">⛄</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Bola de Neve — menor saldo primeiro</p>
+            <p className="text-xs text-gray-500 leading-relaxed">Você foca no valor mais baixo primeiro. Quita uma dívida rápido, ganha motivação e usa o dinheiro liberado pra atacar a próxima. Pode custar mais em juros, mas funciona melhor pra quem precisa de resultados rápidos pra não desistir.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Resultados */}
       {aval && bola && (
         <div className="grid grid-cols-2 gap-4">
