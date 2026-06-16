@@ -28,7 +28,7 @@ export async function GET() {
         <news:name>Endinheirados</news:name>
         <news:language>pt</news:language>
       </news:publication>
-      <news:publication_date>${new Date(p.publishedAt).toISOString()}</news:publication_date>
+      <news:publication_date>${new Date(p.publishedAt).toISOString().replace(/\.\d{3}Z$/, 'Z')}</news:publication_date>
       <news:title>${esc(p.title)}</news:title>
     </news:news>
   </url>`).join('')
