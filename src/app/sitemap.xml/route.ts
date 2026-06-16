@@ -1,7 +1,7 @@
 import { getPosts, getEditions } from '@/lib/sanity'
 import { terms } from '@/lib/glossario'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 const BASE = 'https://endinheirados.cc'
 
