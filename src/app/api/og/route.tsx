@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const title    = searchParams.get('title') || 'ENDINHEIRADOS'
   const photoUrl = searchParams.get('photo') || ''
 
-  return new ImageResponse(
+  const img = new ImageResponse(
     (
       <div
         style={{
@@ -119,4 +119,7 @@ export async function GET(req: NextRequest) {
       ],
     }
   )
+  const headers = new Headers(img.headers)
+  headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600')
+  return new Response(img.body, { status: img.status, headers })
 }

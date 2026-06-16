@@ -1,4 +1,5 @@
 import { getPosts, getEditions } from '@/lib/sanity'
+import { terms } from '@/lib/glossario'
 import type { MetadataRoute } from 'next'
 
 const BASE_URL = 'https://endinheirados.cc'
@@ -13,6 +14,7 @@ const staticRoutes = [
   { url: `${BASE_URL}/ferramentas/calculadora-juros`, priority: 0.7, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/ferramentas/calculadora-consignado`, priority: 0.7, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/ferramentas/simulador-dividas`, priority: 0.7, changeFrequency: 'monthly' as const },
+  { url: `${BASE_URL}/glossario`, priority: 0.8, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/autor`, priority: 0.5, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/sobre`, priority: 0.5, changeFrequency: 'monthly' as const },
   { url: `${BASE_URL}/contato`, priority: 0.4, changeFrequency: 'monthly' as const },
@@ -46,6 +48,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'monthly' as const,
   }))
 
+  const glossarioRoutes = terms.map(t => ({
+    url: `${BASE_URL}/glossario/${t.slug}`,
+    lastModified: new Date(),
+    priority: 0.7,
+    changeFrequency: 'yearly' as const,
+  }))
+
   const now = new Date()
-  return [...staticRoutes.map(r => ({ ...r, lastModified: now })), ...editionRoutes, ...postRoutes]
+  return [...staticRoutes.map(r => ({ ...r, lastModified: now })), ...editionRoutes, ...postRoutes, ...glossarioRoutes]
 }

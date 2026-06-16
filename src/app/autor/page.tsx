@@ -41,6 +41,31 @@ export default function AutorPage() {
         <p className="font-bold text-green-900 mb-3">Fale com a equipe</p>
         <Link href="/contato" className="inline-block bg-green-600 hover:bg-green-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">Entrar em contato →</Link>
       </div>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Endinheirados',
+            url: 'https://endinheirados.cc',
+            logo: 'https://endinheirados.cc/icon.png',
+            description: 'Portal brasileiro de educação financeira. Notícias diárias, ferramentas gratuitas e newsletter às 5h.',
+            foundingDate: '2024',
+            knowsAbout: ['finanças pessoais', 'investimentos', 'educação financeira', 'renda extra', 'independência financeira'],
+            sameAs: [
+              'https://www.instagram.com/endinheirados',
+              'https://t.me/endinheirados',
+            ],
+            contactPoint: {
+              '@type': 'ContactPoint',
+              contactType: 'editorial',
+              url: 'https://endinheirados.cc/contato',
+            },
+          }),
+        }}
+      />
     </div>
   )
 }

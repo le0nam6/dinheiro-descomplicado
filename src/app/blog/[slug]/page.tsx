@@ -105,7 +105,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* Imagem */}
       {post.coverImage?.url && (
         <figure className="mb-8">
-          <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-full h-64 object-cover rounded-xl" />
+          <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-full h-64 object-cover rounded-xl" fetchPriority="high" loading="eager" />
           {post.coverImage.credit && (
             <figcaption className="text-xs text-gray-400 mt-2 text-right">Foto: {post.coverImage.credit} · Unsplash</figcaption>
           )}
@@ -119,6 +119,16 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       <div className="prose mt-8">
         {post.body && <PortableText value={post.body} components={{
           types: {
+            image: ({value}: {value: {asset?: {url?: string}; alt?: string; caption?: string}}) => {
+              const url = value?.asset?.url
+              if (!url) return null
+              return (
+                <figure className="my-6">
+                  <img src={url} alt={value.alt || ''} className="w-full rounded-xl object-cover" loading="lazy" />
+                  {value.caption && <figcaption className="text-xs text-gray-400 mt-2 text-center">{value.caption}</figcaption>}
+                </figure>
+              )
+            },
             table: ({value}: {value: {rows?: {cells: string[]}[]}}) => {
               const rows = value?.rows ?? []
               if (!rows.length) return null
