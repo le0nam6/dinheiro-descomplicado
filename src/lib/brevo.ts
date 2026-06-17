@@ -136,6 +136,7 @@ type EditionParams = {
     why?: string
     image?: { url?: string; alt?: string; credit?: string }
   }>
+  featuredPosts?: Array<{ title: string; slug: string; excerpt?: string; category?: string }>
   wordOfDay?: { word?: string; meaning?: string; application?: string }
   curiosity?: string
   recommendation?: string
@@ -315,6 +316,23 @@ function buildEditionHtml(p: EditionParams): string {
     ${p.wordOfDay.application ? `<p style="margin:0;font-size:14px;color:#6b7280;font-style:italic;line-height:1.6;">${esc(p.wordOfDay.application)}</p>` : ''}
   </td></tr><tr><td style="height:12px;"></td></tr>` : ''
 
+  const featuredPostsHtml = p.featuredPosts?.length ? `
+  <tr><td style="background:#fafaf8;border-top:2px solid #e5e7eb;border-bottom:2px solid #e5e7eb;padding:28px 40px;">
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Posts que você não pode deixar de ler</p>
+    <p style="margin:0 0 20px;font-size:13px;color:#6b7280;">Do nosso arquivo — para ir além das notícias de hoje</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      ${p.featuredPosts.slice(0, 3).map((post, i) => `
+      <tr><td style="padding:${i > 0 ? '16px 0 0' : '0'} 0 16px;${i < 2 ? 'border-bottom:1px solid #e5e7eb;' : ''}">
+        ${post.category ? `<p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;color:${GREEN};text-transform:uppercase;">${esc(post.category)}</p>` : ''}
+        <a href="https://endinheirados.cc/blog/${esc(post.slug)}" style="text-decoration:none;">
+          <p style="margin:0 0 6px;font-size:16px;font-weight:800;color:#111827;line-height:1.3;">${esc(post.title)}</p>
+        </a>
+        ${post.excerpt ? `<p style="margin:0 0 8px;font-size:14px;color:#6b7280;line-height:1.6;">${esc(post.excerpt.slice(0, 120))}${post.excerpt.length > 120 ? '…' : ''}</p>` : ''}
+        <a href="https://endinheirados.cc/blog/${esc(post.slug)}" style="font-size:13px;font-weight:700;color:${GREEN};text-decoration:none;">Ler artigo →</a>
+      </td></tr>`).join('')}
+    </table>
+  </td></tr>` : ''
+
   const curiosityHtml = p.curiosity ? `
   <tr><td style="padding:24px;background:#fefce8;border-radius:10px;">
     <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#ca8a04;text-transform:uppercase;">Curiosidade do dia</p>
@@ -373,6 +391,9 @@ function buildEditionHtml(p: EditionParams): string {
   <tr><td style="background:#ffffff;padding:0 40px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">${storiesHtml}</table>
   </td></tr>
+
+  <!-- Posts em destaque -->
+  ${featuredPostsHtml}
 
   <!-- Extras -->
   <tr><td style="background:#ffffff;padding:24px 40px 8px;">

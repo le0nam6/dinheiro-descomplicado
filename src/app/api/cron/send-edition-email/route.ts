@@ -21,15 +21,25 @@ export async function GET(request: Request) {
   }
   try {
     const date = brtDate()
-    const edition = await sanity.fetch(
-      `*[_type=="edition" && !(_id in path("drafts.**")) && date==$date] | order(date desc)[0]{
-        date, title, punchline, intro, closing,
-        "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
-        wordOfDay, curiosity, recommendation, reflection,
-        "slug": slug.current
-      }`,
-      { date }
-    )
+    const [edition, featuredPosts] = await Promise.all([
+      sanity.fetch(
+        `*[_type=="edition" && !(_id in path("drafts.**")) && date==$date] | order(date desc)[0]{
+          date, title, punchline, intro, closing,
+          "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
+          wordOfDay, curiosity, recommendation, reflection,
+          "slug": slug.current
+        }`,
+        { date }
+      ),
+      sanity.fetch(
+        `*[_type=="post" && defined(slug.current) && publishedAt <= now()] | order(publishedAt desc)[0...20]{
+          title, "slug": slug.current, excerpt, category
+        }`
+      ).then((posts: Array<{ title: string; slug: string; excerpt?: string; category?: string; publishedAt?: string }>) => {
+        const shuffled = posts.sort(() => Math.random() - 0.5)
+        return shuffled.slice(0, 3)
+      }).catch(() => [] as Array<{ title: string; slug: string; excerpt?: string; category?: string }>),
+    ])
 
     if (!edition) {
       return NextResponse.json({ ok: false, message: `Nenhuma edição publicada para ${date}` })
@@ -43,6 +53,7 @@ export async function GET(request: Request) {
       intro: edition.intro,
       closing: edition.closing,
       stories: edition.stories || [],
+      featuredPosts,
       wordOfDay: edition.wordOfDay,
       curiosity: edition.curiosity,
       recommendation: edition.recommendation,

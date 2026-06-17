@@ -36,15 +36,24 @@ export async function POST(request: Request) {
   const { email } = await request.json()
   if (!email) return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
 
-  const edition = await sanity.fetch(
-    `*[_type=="edition" && !(_id in path("drafts.**"))] | order(date desc)[0]{
-      date, title, punchline, intro, closing, readingTime,
-      "marketSnapshot": marketSnapshot[]{ label, value, changePct },
-      "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
-      wordOfDay, curiosity, recommendation, reflection,
-      "slug": slug.current
-    }`
-  )
+  const [edition, featuredPosts] = await Promise.all([
+    sanity.fetch(
+      `*[_type=="edition" && !(_id in path("drafts.**"))] | order(date desc)[0]{
+        date, title, punchline, intro, closing, readingTime,
+        "marketSnapshot": marketSnapshot[]{ label, value, changePct },
+        "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
+        wordOfDay, curiosity, recommendation, reflection,
+        "slug": slug.current
+      }`
+    ),
+    sanity.fetch(
+      `*[_type=="post" && defined(slug.current) && publishedAt <= now()] | order(publishedAt desc)[0...20]{
+        title, "slug": slug.current, excerpt, category
+      }`
+    ).then((posts: Array<{ title: string; slug: string; excerpt?: string; category?: string }>) =>
+      posts.sort(() => Math.random() - 0.5).slice(0, 3)
+    ).catch(() => [] as Array<{ title: string; slug: string; excerpt?: string; category?: string }>),
+  ])
 
   if (!edition) return NextResponse.json({ error: 'Nenhuma edição publicada' }, { status: 404 })
 
@@ -58,6 +67,7 @@ export async function POST(request: Request) {
     readingTime: edition.readingTime,
     marketSnapshot: edition.marketSnapshot,
     stories: edition.stories || [],
+    featuredPosts,
     wordOfDay: edition.wordOfDay,
     curiosity: edition.curiosity,
     recommendation: edition.recommendation,
