@@ -10,6 +10,79 @@ const TOOL_MAP: Record<string, { title: string; href: string; emoji: string }> =
   'previdência': { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
 }
 
+// Glossário relevante por categoria
+const GLOSSARIO_MAP: Record<string, { name: string; slug: string }[]> = {
+  'investimentos': [
+    { name: 'Renda fixa', slug: 'renda-fixa' },
+    { name: 'Renda variável', slug: 'renda-variavel' },
+    { name: 'CDI', slug: 'cdi' },
+    { name: 'Selic', slug: 'selic' },
+    { name: 'Liquidez', slug: 'liquidez' },
+    { name: 'Diversificação', slug: 'diversificacao' },
+  ],
+  'educação financeira': [
+    { name: 'Fundo de emergência', slug: 'fundo-de-emergencia' },
+    { name: 'Juros compostos', slug: 'juros-compostos' },
+    { name: 'Rentabilidade líquida', slug: 'rentabilidade-liquida' },
+    { name: 'Score de crédito', slug: 'score-de-credito' },
+  ],
+  'empréstimo': [
+    { name: 'Score de crédito', slug: 'score-de-credito' },
+    { name: 'Nome negativado', slug: 'nome-negativado' },
+    { name: 'Portabilidade de crédito', slug: 'portabilidade-credito' },
+    { name: 'IOF', slug: 'iof' },
+  ],
+  'cartão de crédito': [
+    { name: 'Score de crédito', slug: 'score-de-credito' },
+    { name: 'Cheque especial', slug: 'cheque-especial' },
+    { name: 'IOF', slug: 'iof' },
+    { name: 'Nome negativado', slug: 'nome-negativado' },
+  ],
+  'financiamento': [
+    { name: 'Score de crédito', slug: 'score-de-credito' },
+    { name: 'IPCA', slug: 'ipca' },
+    { name: 'Juros compostos', slug: 'juros-compostos' },
+    { name: 'IOF', slug: 'iof' },
+  ],
+  'previdência': [
+    { name: 'PGBL e VGBL', slug: 'pgbl-vgbl' },
+    { name: 'Diversificação', slug: 'diversificacao' },
+    { name: 'Rentabilidade líquida', slug: 'rentabilidade-liquida' },
+    { name: 'Come-cotas', slug: 'come-cotas' },
+  ],
+  'noticias': [
+    { name: 'Selic', slug: 'selic' },
+    { name: 'IPCA', slug: 'ipca' },
+    { name: 'CDI', slug: 'cdi' },
+  ],
+}
+
+// Guias relevantes por categoria
+const GUIAS_MAP: Record<string, { title: string; href: string }[]> = {
+  'investimentos': [
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+    { title: 'Como montar o fundo de emergência', href: '/guias/fundo-de-emergencia' },
+  ],
+  'educação financeira': [
+    { title: 'Como montar o fundo de emergência', href: '/guias/fundo-de-emergencia' },
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  ],
+  'empréstimo': [
+    { title: 'Como aumentar o score de crédito', href: '/guias/score-de-credito' },
+    { title: 'Como montar o fundo de emergência', href: '/guias/fundo-de-emergencia' },
+  ],
+  'cartão de crédito': [
+    { title: 'Como aumentar o score de crédito', href: '/guias/score-de-credito' },
+  ],
+  'financiamento': [
+    { title: 'Como aumentar o score de crédito', href: '/guias/score-de-credito' },
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  ],
+  'previdência': [
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  ],
+}
+
 type RelatedPost = { title: string; slug: { current: string } }
 
 interface Props {
@@ -19,6 +92,8 @@ interface Props {
 
 export function ArticleCTA({ category, related }: Props) {
   const tool = TOOL_MAP[category]
+  const glossarioTerms = GLOSSARIO_MAP[category] ?? []
+  const guias = GUIAS_MAP[category] ?? []
 
   return (
     <div className="space-y-5 mt-10 pt-8 border-t border-gray-100">
@@ -34,16 +109,34 @@ export function ArticleCTA({ category, related }: Props) {
         </div>
       )}
 
-      {/* Hub de ferramentas */}
-      <div className="border border-gray-200 rounded-2xl p-4 text-sm flex items-center justify-between gap-4">
+      {/* Guias relacionados */}
+      {guias.length > 0 && (
         <div>
-          <p className="font-bold text-gray-900">🧰 Mais ferramentas financeiras</p>
-          <p className="text-gray-500 text-xs mt-0.5">Calculadoras gratuitas de investimentos, dívidas e muito mais.</p>
+          <p className="font-bold text-gray-900 text-sm mb-3">🗺️ Guias relacionados</p>
+          <div className="grid gap-2">
+            {guias.map(g => (
+              <Link key={g.href} href={g.href} className="flex items-center justify-between text-sm border border-gray-200 rounded-xl px-4 py-3 hover:border-green-300 hover:text-green-700 transition-colors group">
+                <span>{g.title}</span>
+                <span className="text-gray-400 group-hover:text-green-600 shrink-0 ml-2">→</span>
+              </Link>
+            ))}
+          </div>
         </div>
-        <Link href="/ferramentas" className="shrink-0 text-xs font-bold text-green-700 border border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors">
-          Ver todas
-        </Link>
-      </div>
+      )}
+
+      {/* Glossário relevante */}
+      {glossarioTerms.length > 0 && (
+        <div>
+          <p className="font-bold text-gray-900 text-sm mb-3">📖 Termos do glossário</p>
+          <div className="flex flex-wrap gap-2">
+            {glossarioTerms.map(t => (
+              <Link key={t.slug} href={`/glossario/${t.slug}`} className="text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-full hover:border-green-400 hover:text-green-700 transition-colors">
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Links internos dinâmicos */}
       {related.length > 0 && (
@@ -59,6 +152,17 @@ export function ArticleCTA({ category, related }: Props) {
           </div>
         </div>
       )}
+
+      {/* Hub de ferramentas */}
+      <div className="border border-gray-200 rounded-2xl p-4 text-sm flex items-center justify-between gap-4">
+        <div>
+          <p className="font-bold text-gray-900">🧰 Mais ferramentas financeiras</p>
+          <p className="text-gray-500 text-xs mt-0.5">Calculadoras gratuitas de investimentos, dívidas e muito mais.</p>
+        </div>
+        <Link href="/ferramentas" className="shrink-0 text-xs font-bold text-green-700 border border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors">
+          Ver todas
+        </Link>
+      </div>
     </div>
   )
 }

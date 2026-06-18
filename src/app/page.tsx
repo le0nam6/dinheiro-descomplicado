@@ -173,31 +173,105 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ── MAIS ARTIGOS (lista compacta) ────────────────────────────── */}
+      {/* ── MAIS ARTIGOS + GUIAS/GLOSSÁRIO ───────────────────────────── */}
       {rest.length > 0 && (
         <section>
-          <h2 className="text-base font-bold text-gray-900 mb-4">Mais artigos</h2>
-          <div className="divide-y divide-gray-100">
-            {rest.map(post => (
-              <Link
-                key={post.slug.current}
-                href={`/blog/${post.slug.current}`}
-                className="flex gap-4 py-4 group hover:bg-gray-50 -mx-3 px-3 rounded-xl transition-colors"
-              >
-                {post.coverImage?.url ? (
-                  <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-20 h-14 object-cover rounded-xl shrink-0" />
-                ) : (
-                  <div className="w-20 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl shrink-0 flex items-center justify-center text-xl">💰</div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <CategoryBadge category={post.category} />
-                  <h3 className="font-bold text-gray-900 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-green-700 transition-colors">
-                    {post.title}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-1">{formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}</p>
+          <div className="grid lg:grid-cols-[1fr_300px] gap-8 items-start">
+
+            {/* Mais artigos */}
+            <div>
+              <h2 className="text-base font-bold text-gray-900 mb-4">Mais artigos</h2>
+              <div className="divide-y divide-gray-100">
+                {rest.map(post => (
+                  <Link
+                    key={post.slug.current}
+                    href={`/blog/${post.slug.current}`}
+                    className="flex gap-4 py-4 group hover:bg-gray-50 -mx-3 px-3 rounded-xl transition-colors"
+                  >
+                    {post.coverImage?.url ? (
+                      <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-20 h-14 object-cover rounded-xl shrink-0" />
+                    ) : (
+                      <div className="w-20 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl shrink-0 flex items-center justify-center text-xl">💰</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <CategoryBadge category={post.category} />
+                      <h3 className="font-bold text-gray-900 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-green-700 transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1">{formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Sidebar: Guias + Glossário */}
+            <div className="space-y-4 lg:sticky lg:top-[148px] lg:max-h-[calc(100vh-165px)] lg:overflow-y-auto lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
+
+              {/* Guias */}
+              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                <div className="bg-gradient-to-br from-green-700 to-green-900 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-green-300 mb-0.5">Educação financeira</p>
+                  <h2 className="text-white font-extrabold text-sm leading-snug">Guias completos</h2>
                 </div>
-              </Link>
-            ))}
+                <div className="divide-y divide-gray-100">
+                  {[
+                    { href: '/guias/como-sair-das-dividas', label: 'Como sair das dívidas', tag: 'Dívidas', tagColor: 'text-red-600' },
+                    { href: '/guias/como-economizar-dinheiro', label: 'Como economizar dinheiro', tag: 'Organização', tagColor: 'text-blue-600' },
+                    { href: '/guias/fundo-de-emergencia', label: 'Fundo de emergência', tag: 'Organização', tagColor: 'text-blue-600' },
+                    { href: '/guias/como-investir-do-zero', label: 'Como investir do zero', tag: 'Investimentos', tagColor: 'text-green-700' },
+                    { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-600' },
+                    { href: '/guias/imposto-de-renda', label: 'Imposto de Renda 2025', tag: 'Impostos', tagColor: 'text-yellow-700' },
+                  ].map(g => (
+                    <Link key={g.href} href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[10px] font-bold uppercase tracking-wide ${g.tagColor} mb-0.5`}>{g.tag}</p>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700 transition-colors leading-snug">{g.label}</p>
+                      </div>
+                      <span className="text-gray-300 group-hover:text-green-500 shrink-0 text-sm">→</span>
+                    </Link>
+                  ))}
+                </div>
+                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
+                  <Link href="/guias" className="text-xs font-semibold text-green-700 hover:underline">Ver todos os guias →</Link>
+                </div>
+              </div>
+
+              {/* Glossário */}
+              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                <div className="bg-gradient-to-br from-slate-700 to-slate-900 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Dicionário financeiro</p>
+                  <h2 className="text-white font-extrabold text-sm leading-snug">Glossário</h2>
+                </div>
+                <div className="px-4 pt-3 pb-2">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Termos populares</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { slug: 'selic', label: 'Selic' },
+                      { slug: 'cdi', label: 'CDI' },
+                      { slug: 'juros-compostos', label: 'Juros compostos' },
+                      { slug: 'score-de-credito', label: 'Score' },
+                      { slug: 'tesouro-direto', label: 'Tesouro Direto' },
+                      { slug: 'renda-fixa', label: 'Renda fixa' },
+                      { slug: 'acoes', label: 'Ações' },
+                      { slug: 'pix', label: 'Pix' },
+                    ].map(t => (
+                      <Link
+                        key={t.slug}
+                        href={`/glossario/${t.slug}`}
+                        className="text-xs font-medium px-2 py-0.5 border border-gray-200 rounded-full text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors"
+                      >
+                        {t.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 mt-2">
+                  <Link href="/glossario" className="text-xs font-semibold text-green-700 hover:underline">Explorar o glossário completo →</Link>
+                </div>
+              </div>
+
+            </div>
           </div>
         </section>
       )}

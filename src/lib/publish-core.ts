@@ -170,6 +170,26 @@ export async function getRecentPhotoUrls(limit = 30): Promise<string[]> {
 }
 
 // --- Busca de imagens via Serper (Google Images) ---
+const BLOCKED_IMAGE_DOMAINS = [
+  // Redes sociais
+  'instagram.com', 'facebook.com', 'twitter.com', 'x.com', 'tiktok.com',
+  'pinterest.com', 'linkedin.com', 'youtube.com', 'reddit.com', 'snapchat.com',
+  'tumblr.com', 'threads.net', 'bsky.app',
+  // Bancos de imagens com marca d'água
+  'dreamstime.com', 'istockphoto.com', 'gettyimages.com', 'shutterstock.com',
+  'alamy.com', 'depositphotos.com', '123rf.com', 'stock.adobe.com',
+  'bigstockphoto.com', 'canstockphoto.com', 'vectorstock.com',
+]
+
+function isBlockedImageUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    return BLOCKED_IMAGE_DOMAINS.some(d => host === d || host.endsWith('.' + d))
+  } catch {
+    return false
+  }
+}
+
 export async function fetchSerperImages(query: string, n = 3): Promise<Photo[]> {
   const key = process.env.SERPER_API_KEY
   if (!key) return []
@@ -177,14 +197,14 @@ export async function fetchSerperImages(query: string, n = 3): Promise<Photo[]> 
     const res = await fetch('https://google.serper.dev/images', {
       method: 'POST',
       headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: query, gl: 'br', hl: 'pt', num: n * 2 }),
+      body: JSON.stringify({ q: query, gl: 'br', hl: 'pt', num: n * 4 }),
       signal: AbortSignal.timeout(6000),
     })
     const d = await res.json()
     return ((d.images ?? []) as Array<{ imageUrl: string; title: string; source: string }>)
+      .filter(img => img.imageUrl && !isBlockedImageUrl(img.imageUrl))
       .slice(0, n)
       .map(img => ({ url: img.imageUrl, alt: img.title || query, credit: `Foto: ${img.source}` }))
-      .filter(p => p.url)
   } catch {
     return []
   }

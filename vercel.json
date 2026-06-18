@@ -9,11 +9,14 @@
     "src/app/api/cron/news/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/publish/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/ig-backlog/route.ts": { "maxDuration": 120 },
-    "src/app/api/cron/weekly-insights/route.ts": { "maxDuration": 300 }
+    "src/app/api/cron/weekly-insights/route.ts": { "maxDuration": 300 },
+    "src/app/api/cron/original/route.ts": { "maxDuration": 300 }
   },
   "crons": [
     { "path": "/api/cron/edition-candidates", "schedule": "0 1 * * *" },
     { "path": "/api/cron/edition", "schedule": "0 9 * * *" },
-    { "path": "/api/cron/send-edition-email", "schedule": "5 8 * * *" }
+    { "path": "/api/cron/send-edition-email", "schedule": "5 8 * * *" },
+    { "path": "/api/cron/original", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/original", "schedule": "0 18 * * *" }
   ]
 }

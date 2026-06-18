@@ -54,9 +54,34 @@ async function fetchNews(): Promise<NewsItem[]> {
   return items
 }
 
-async function generate(news: NewsItem[], recent: string[]): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
-  const top = news.slice(0, 12)
+// Detecta temas saturados nas últimas 12h para forçar diversidade
+function detectSaturatedThemes(recentTitles: string[]): string[] {
+  const themePatterns: Record<string, RegExp> = {
+    'Selic/Copom/juros Brasil': /selic|copom|taxa de juro|taxa básica/i,
+    'Fed/juros EUA': /fed |federal reserve|jerome powell|juros (nos |dos )?eua|fomc/i,
+    'Dólar/câmbio': /\bdólar\b|câmbio|real se|cotação do real/i,
+    'Irã/Ormuz/guerra Oriente Médio': /irã|ormuz|oriente médio|hamas|israel|palestina|hezbollah/i,
+    'Ibovespa/bolsa': /ibovespa|bolsa cai|bolsa sobe|b3 /i,
+  }
+  const saturated: string[] = []
+  for (const [theme, pattern] of Object.entries(themePatterns)) {
+    const hits = recentTitles.filter(t => pattern.test(t)).length
+    if (hits >= 2) saturated.push(theme)
+  }
+  return saturated
+}
+
+async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[]): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
+  // Embaralha as notícias para não pegar sempre as primeiras do mesmo feed
+  const shuffled = [...news].sort(() => Math.random() - 0.5)
+  const top = shuffled.slice(0, 20)
   const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
+
+  const diversityBlock = saturatedThemes.length > 0 ? `
+DIVERSIDADE OBRIGATÓRIA — temas já muito cobertos hoje (evite salvo se for absolutamente a maior notícia do momento):
+${saturatedThemes.map(t => `- ${t}`).join('\n')}
+Prefira manchetes sobre: empresas e negócios, resultados corporativos, IPOs/fusões/aquisições, Copa do Mundo e impacto econômico, consumo e varejo, fintechs e tecnologia financeira, criptomoedas, empreendedorismo, comportamento financeiro do brasileiro, mercado de trabalho, imóveis, agronegócio.
+` : ''
   const prompt = `Você é repórter de finanças do portal Endinheirados (endinheirados.cc). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
 
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
@@ -64,6 +89,7 @@ ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).joi
 
 NÃO repita temas já publicados:
 ${recent.map(t => `- ${t}`).join('\n')}
+${diversityBlock}
 
 IMPARCIALIDADE É MANDATÓRIA:
 - Reporte os FATOS. Sem opinião, sem adjetivos torcedores, sem especulação apresentada como certeza.
@@ -190,8 +216,15 @@ async function processNews() {
     { since: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() }
   )
 
+  // Títulos das últimas 12h para detectar temas saturados e forçar diversidade
+  const recentTitles12h: string[] = await sanity.fetch(
+    `*[_type=="post" && articleType=="news" && publishedAt >= $since]|order(publishedAt desc).title`,
+    { since: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString() }
+  )
+  const saturatedThemes = detectSaturatedThemes(recentTitles12h)
+
   const recent = await getRecentTitles(20)
-  const post = await generate(news, recent)
+  const post = await generate(news, recent, saturatedThemes)
 
   // Descarta se o assunto já foi publicado nas últimas 6h
   if (isTooSimilar(post.title, recentNewsTitles)) {

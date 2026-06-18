@@ -20,12 +20,24 @@ export async function generateMetadata({ params }: { params: Promise<{ termo: st
 
 const SITE = 'https://endinheirados.cc'
 
+const GUIA_MAP: Record<string, { title: string; href: string }> = {
+  'fundo-de-emergencia': { title: 'Como montar o fundo de emergência — guia completo', href: '/guias/fundo-de-emergencia' },
+  'score-de-credito': { title: 'Como aumentar o score de crédito — guia completo', href: '/guias/score-de-credito' },
+  'renda-fixa': { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  'renda-variavel': { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  'tesouro-direto': { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  'diversificacao': { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  'liquidez': { title: 'Como montar o fundo de emergência — guia completo', href: '/guias/fundo-de-emergencia' },
+  'nome-negativado': { title: 'Como aumentar o score de crédito', href: '/guias/score-de-credito' },
+}
+
 export default async function TermPage({ params }: { params: Promise<{ termo: string }> }) {
   const { termo } = await params
   const term = getTermBySlug(termo)
   if (!term) notFound()
 
   const related = terms.filter(t => term.related.includes(t.slug))
+  const guia = GUIA_MAP[term.slug]
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -81,6 +93,19 @@ export default async function TermPage({ params }: { params: Promise<{ termo: st
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Guia relacionado */}
+      {guia && (
+        <div className="mb-6">
+          <Link href={guia.href} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-2xl px-5 py-4 hover:border-green-400 transition-colors group">
+            <div>
+              <p className="text-xs font-bold text-green-600 uppercase tracking-wide mb-1">Guia completo</p>
+              <p className="text-sm font-semibold text-gray-900 group-hover:text-green-700">{guia.title}</p>
+            </div>
+            <span className="text-green-600 text-lg shrink-0 ml-3 group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
         </div>
       )}
 
