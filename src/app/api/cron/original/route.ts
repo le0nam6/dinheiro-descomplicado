@@ -33,16 +33,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-type Series = 'numero' | 'copa' | 'setor' | 'preco' | 'bolsa' | 'emprego' | 'governo' | 'dolar' | 'fundo' | 'fintech' | 'renda'
-
-// ─── Copa 2026 ────────────────────────────────────────────────────────────────
-
-const COPA_START = new Date('2026-06-11T00:00:00-03:00')
-const COPA_END   = new Date('2026-07-19T23:59:59-03:00')
-function isCopaActive(): boolean {
-  const now = new Date()
-  return now >= COPA_START && now <= COPA_END
-}
+type Series = 'numero' | 'setor' | 'preco' | 'emprego' | 'dolar' | 'fundo' | 'fintech' | 'renda'
 
 // ─── Setores semanais ─────────────────────────────────────────────────────────
 
@@ -66,16 +57,14 @@ function getSetorOfWeek() {
 // ─── Rotação de séries por slot/dia ──────────────────────────────────────────
 
 const MORNING_ROTATION: Series[] = [
-  'numero', 'bolsa', 'setor', 'dolar', 'emprego',
-  'governo', 'preco', 'fundo', 'fintech', 'renda',
-  'numero', 'bolsa', 'setor', 'dolar',
+  'numero', 'setor', 'dolar', 'emprego',
+  'preco', 'fundo', 'fintech', 'renda',
 ]
 
 function selectSeries(slot: 'morning' | 'afternoon', dayOfYear: number): Series {
   if (slot === 'afternoon') {
-    if (isCopaActive()) return 'copa'
     const morning = MORNING_ROTATION[dayOfYear % MORNING_ROTATION.length]
-    const afternoon: Series[] = ['preco', 'setor', 'governo', 'emprego', 'bolsa', 'fundo', 'fintech', 'renda', 'dolar', 'numero']
+    const afternoon: Series[] = ['preco', 'setor', 'emprego', 'fundo', 'fintech', 'renda', 'dolar', 'numero']
     return afternoon.find(s => s !== morning) ?? 'preco'
   }
   return MORNING_ROTATION[dayOfYear % MORNING_ROTATION.length]
@@ -164,49 +153,6 @@ async function fetchDadosNumero() {
   }
 }
 
-async function fetchDadosBolsa() {
-  // brapi.dev — gratuito, limite de 3 símbolos por chamada
-  type Quote = { ticker: string; change: number; price: number }
-  const BATCHES = [
-    ['PETR4', 'VALE3', 'ITUB4'],
-    ['BBDC4', 'ABEV3', 'WEGE3'],
-    ['RENT3', 'SUZB3', 'BPAC11'],
-  ]
-
-  let ibovPts: { date: string; close: number } | null = null as { date: string; close: number } | null
-  let quotes: Quote[] = []
-
-  const results = await Promise.allSettled(
-    BATCHES.map(batch =>
-      fetch(`https://brapi.dev/api/quote/${batch.join(',')}?fundamental=false`, { signal: AbortSignal.timeout(8000) })
-        .then(r => r.json())
-    )
-  )
-
-  for (const r of results) {
-    if (r.status !== 'fulfilled' || r.value?.error) continue
-    for (const s of (r.value.results ?? [])) {
-      if (s.regularMarketChangePercent != null && s.regularMarketPrice != null) {
-        quotes.push({ ticker: s.symbol, change: Number(s.regularMarketChangePercent.toFixed(2)), price: Number(s.regularMarketPrice.toFixed(2)) })
-      }
-    }
-  }
-  quotes.sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-
-  const news = await fetchRss(FINANCE_FEEDS, 8, ['b3', 'bolsa', 'ações', 'ibovespa', 'mercado', 'pregão'])
-  return { ibovPts, quotes, news }
-}
-
-async function fetchDadosCopa() {
-  // Busca em feeds esportivos E financeiros para ter ângulo econômico real
-  const newsEsporte = await fetchRss(
-    ['https://ge.globo.com/rss/ge/futebol/copa-do-mundo/', 'https://www.espn.com.br/rss/futebol/'],
-    15, ['copa', 'brasil', 'world cup', 'mundial', 'economia', 'mercado', 'ingresso', 'turismo', 'apostas', 'patrocinador', 'transmissão']
-  )
-  const newsFinancas = await fetchRss(FINANCE_FEEDS, 10, ['copa', 'world cup', 'turismo', 'apostas', 'ambev', 'globo', 'patrocinador', 'infraestrutura', 'investimento'])
-  const news = [...new Set([...newsFinancas, ...newsEsporte])]
-  return { news, stockContext: 'Empresas com exposição Copa: Ambev (ABEV3), Grupo Soma, operadoras de apostas (Bet365/Betano/Superbet), Globo/GLBG3, redes fast food, hotelaria, companhias aéreas.' }
-}
 
 async function fetchDadosSetor() {
   const setor = getSetorOfWeek()
@@ -269,16 +215,6 @@ async function fetchDadosEmprego() {
   return { rendimento: rend, desocupacao: desemp, news }
 }
 
-async function fetchDadosGoverno() {
-  const [divBruta, divLiq, primario, jurosPagos] = await Promise.all([
-    fetchBacenSeries(13762, 6),  // Dívida bruta governo geral (% PIB)
-    fetchBacenSeries(4513, 6),   // Dívida líquida setor público (% PIB)
-    fetchBacenSeries(5793, 12),  // Resultado primário acumulado 12 meses (R$ bi)
-    fetchBacenSeries(4179, 6),   // Juros pagos (% PIB)
-  ])
-  const news = await fetchRss(FINANCE_FEEDS, 8, ['fiscal', 'dívida pública', 'resultado primário', 'tesouro', 'déficit', 'superávit', 'gastos governo'])
-  return { divBruta, divLiq, primario, jurosPagos, news }
-}
 
 async function fetchDadosFundo() {
   const FUNDOS = [
@@ -374,59 +310,6 @@ ${jsonSchema('educação financeira')}`
   return { ...p, funnel: 'mofu', articleType: 'news' }
 }
 
-async function generateBolsa(recent: string[]): Promise<GeneratedPost> {
-  const d = await fetchDadosBolsa()
-  type Quote = { ticker: string; change: number; price: number }
-  const ibovStr = d.ibovPts ? `${d.ibovPts.close.toLocaleString('pt-BR')} pts (${d.ibovPts.date})` : '(sem dado)'
-  const quotesStr = d.quotes.slice(0, 6).map((q: Quote) => `${q.ticker}: ${q.change > 0 ? '+' : ''}${q.change}% (R$ ${q.price})`).join(' | ')
-  if (!quotesStr && !d.ibovPts) throw new Error('Sem dados de bolsa — abortando geração para evitar dado inventado')
-  const prompt = `Você é analista de mercado do Endinheirados. Escreva "Bolsa em Foco" — análise do pregão mais recente da B3.
-
-DADOS (use SOMENTE estes números — não invente cotações, percentuais ou preços):
-Ibovespa: ${ibovStr}
-Destaques: ${quotesStr || '(sem cotações disponíveis — baseie-se apenas nas manchetes abaixo)'}
-Manchetes: ${d.news.join('\n')}
-
-${recentBlock(recent)}
-
-Baseado SOMENTE nos dados e manchetes acima, escolha UM evento ou UM ativo que teve o movimento mais significativo. Escreva inteiramente sobre ele. Não invente preços ou percentuais que não estejam nos dados. 10-12 parágrafos. Não tente resumir o pregão inteiro.
-${jsonSchema('investimentos')}`
-  const p = await callClaude(prompt)
-  return { ...p, funnel: 'mofu', articleType: 'news' }
-}
-
-async function generateCopa(recent: string[]): Promise<GeneratedPost> {
-  const d = await fetchDadosCopa()
-  const prompt = `Você é repórter de FINANÇAS do Endinheirados. Sua editoria é dinheiro — não esporte.
-
-NOTÍCIAS DISPONÍVEIS:
-${d.news.join('\n')}
-
-CONTEXTO DE MERCADO: ${d.stockContext}
-
-${recentBlock(recent)}
-
-REGRA DE OURO: só escreva se houver um ângulo FINANCEIRO concreto. Ângulos válidos:
-- Quanto uma empresa específica (Ambev, Globo, operadora de apostas, hotel, aérea) está ganhando ou perdendo com a Copa
-- Gastos reais do torcedor: quanto sai uma viagem, ingresso, hospedagem — com números
-- Impacto no PIB, turismo ou consumo — com dado real citado na fonte
-- Apostas esportivas: mercado, regulação, receita das bets
-- Direitos de transmissão: quem pagou quanto, o que isso significa pra Globo/CazéTV/etc.
-- Infraestrutura: quanto o governo gastou, quem ganhou as obras, retorno esperado
-
-ÂNGULOS PROIBIDOS — se só houver isso nas notícias, abort e escreva sobre o tema financeiro mais próximo que tiver nas manchetes:
-- Polêmicas, confusões ou controvérsias com jogadores (Ronaldo, Vini Jr., etc.) sem impacto financeiro direto
-- Resultados de jogos, escalações, táticas
-- Lesões, suspensões, dramas de bastidores
-- Qualquer notícia que seria mais adequada no caderno de esportes do que no de economia
-
-Se as notícias acima forem predominantemente esportivas sem ângulo financeiro, escolha o tema do CONTEXTO DE MERCADO e escreva sobre o impacto econômico geral da Copa de forma concreta.
-
-Escolha UM ângulo e vá fundo: 10-12 parágrafos conectados ao bolso do leitor, com números reais.
-${jsonSchema('notícias')}`
-  const p = await callClaude(prompt)
-  return { ...p, funnel: 'tofu', articleType: 'news' }
-}
 
 async function generateSetor(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosSetor()
@@ -499,24 +382,6 @@ ${jsonSchema('educação financeira')}`
   return { ...p, funnel: 'mofu', articleType: 'news' }
 }
 
-async function generateGoverno(recent: string[]): Promise<GeneratedPost> {
-  const d = await fetchDadosGoverno()
-  const prompt = `Você é analista fiscal do Endinheirados. Escreva "A Conta do Governo" — finanças públicas e o que significam para o investidor.
-
-DADOS (BACEN):
-Dívida bruta (% PIB): ${d.divBruta.map((p: BacenPoint) => `${p.data}: ${p.valor}%`).join(' | ')}
-Dívida líquida (% PIB): ${d.divLiq.slice(-3).map((p: BacenPoint) => `${p.data}: ${p.valor}%`).join(' | ')}
-Resultado primário (acum. 12m): ${d.primario.slice(-6).map((p: BacenPoint) => `${p.data}: R$ ${p.valor} bi`).join(' | ')}
-Juros pagos (% PIB): ${d.jurosPagos.slice(-3).map((p: BacenPoint) => `${p.data}: ${p.valor}%`).join(' | ')}
-Manchetes: ${d.news.join('\n')}
-
-${recentBlock(recent)}
-
-Olhando os dados fiscais, identifique UM número ou UM movimento que merece atenção agora — pode ser uma mudança no resultado primário, a dívida cruzando um limiar simbólico, ou o impacto de um gasto específico. Escreva inteiramente sobre isso: o que o número significa na prática, como afeta o Tesouro Direto, os juros e o câmbio, e o que o investidor deve considerar. 10-12 parágrafos com raciocínio real, não inventário de indicadores.
-${jsonSchema('investimentos')}`
-  const p = await callClaude(prompt)
-  return { ...p, funnel: 'mofu', articleType: 'news' }
-}
 
 async function generateFundo(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosFundo()
@@ -575,12 +440,9 @@ type SeriesConfig = {
 
 const SERIES_MAP: Record<Series, SeriesConfig> = {
   numero:  { label: 'O Número do Dia',     emoji: '📊', fetchData: fetchDadosNumero,  generate: generateNumero,  coverQuery: 'Brazil economy central bank data' },
-  copa:    { label: 'Copa 2026',            emoji: '⚽', fetchData: fetchDadosCopa,    generate: generateCopa,    coverQuery: 'World Cup 2026 stadium Brazil' },
   setor:   { label: 'Setor na Lupa',        emoji: '🔬', fetchData: fetchDadosSetor,   generate: generateSetor,   coverQuery: 'Brazil industry sector economy' },
   preco:   { label: 'Preço do Brasileiro',  emoji: '🛒', fetchData: fetchDadosPreco,   generate: generatePreco,   coverQuery: 'Brazil supermarket inflation prices' },
-  bolsa:   { label: 'Bolsa em Foco',        emoji: '📈', fetchData: fetchDadosBolsa,   generate: generateBolsa,   coverQuery: 'Brazil stock market B3 trading floor' },
   emprego: { label: 'O Emprego em Números', emoji: '💼', fetchData: fetchDadosEmprego, generate: generateEmprego, coverQuery: 'Brazil job market employment workers' },
-  governo: { label: 'A Conta do Governo',   emoji: '🏛️', fetchData: fetchDadosGoverno, generate: generateGoverno, coverQuery: 'Brazil government fiscal debt economy' },
   dolar:   { label: 'Dólar e Você',         emoji: '💵', fetchData: fetchDadosDolar,   generate: generateDolar,   coverQuery: 'dollar exchange rate Brazil currency' },
   fundo:   { label: 'Fundo no Microscópio', emoji: '🔍', fetchData: fetchDadosFundo,   generate: generateFundo,   coverQuery: 'investment fund portfolio Brazil finance' },
   fintech: { label: 'Fintech da Semana',    emoji: '📱', fetchData: fetchDadosFintech, generate: generateFintech, coverQuery: 'Brazilian fintech digital bank app' },
