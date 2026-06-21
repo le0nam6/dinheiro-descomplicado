@@ -7,6 +7,8 @@ import { TableOfContents } from '@/components/TableOfContents'
 import { ImpartialityMeter } from '@/components/ImpartialityMeter'
 import { NewsTrustBar } from '@/components/NewsTrustBar'
 import { Comments } from '@/components/Comments'
+import { ReferralBanner } from '@/components/ReferralBanner'
+import { ReferralInline } from '@/components/ReferralInline'
 import { extractHeadings, extractFaqs, slugifyHeading } from '@/lib/postStructure'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -117,7 +119,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* Conteúdo */}
       <div className="prose mt-8">
-        {post.body && <PortableText value={post.body} components={{
+        {post.body && (() => {
+          const body = post.body as unknown[]
+          const mid = Math.max(3, Math.floor(body.length / 2))
+          const first = body.slice(0, mid)
+          const second = body.slice(mid)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ptComponents: any = {
           types: {
             image: ({value}: {value: {asset?: {url?: string}; alt?: string; caption?: string}}) => {
               const url = value?.asset?.url
@@ -158,40 +166,40 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             },
           },
           block: {
-            h2: ({children, value}) => {
+            h2: ({children, value}: any) => {
               const id = slugifyHeading(headingText(value as { children?: { text?: string }[] }))
               return <h2 id={id} className="text-2xl font-bold mt-10 mb-4 text-gray-900 border-b border-gray-100 pb-2 scroll-mt-24">{children}</h2>
             },
-            h3: ({children}) => <h3 className="text-xl font-bold mt-8 mb-3 text-gray-800">{children}</h3>,
-            h4: ({children}) => (
+            h3: ({children}: any) => <h3 className="text-xl font-bold mt-8 mb-3 text-gray-800">{children}</h3>,
+            h4: ({children}: any) => (
               <div className="flex items-start gap-2 mt-8 mb-2">
                 <span className="text-green-600 font-black text-lg leading-tight mt-0.5">?</span>
                 <h4 className="text-base font-bold text-gray-900 leading-snug">{children}</h4>
               </div>
             ),
-            normal: ({children}) => <p className="text-gray-700 leading-relaxed mb-4 text-[17px]">{children}</p>,
-            blockquote: ({children}) => (
+            normal: ({children}: any) => <p className="text-gray-700 leading-relaxed mb-4 text-[17px]">{children}</p>,
+            blockquote: ({children}: any) => (
               <blockquote className="border-l-4 border-green-500 bg-green-50 pl-4 pr-4 py-3 my-6 rounded-r-xl italic text-gray-700 text-base">
                 {children}
               </blockquote>
             ),
           },
           list: {
-            bullet: ({children}) => <ul className="list-none space-y-2 my-4">{children}</ul>,
-            number: ({children}) => <ol className="list-decimal list-inside space-y-2 my-4 text-gray-700">{children}</ol>,
+            bullet: ({children}: any) => <ul className="list-none space-y-2 my-4">{children}</ul>,
+            number: ({children}: any) => <ol className="list-decimal list-inside space-y-2 my-4 text-gray-700">{children}</ol>,
           },
           listItem: {
-            bullet: ({children}) => (
+            bullet: ({children}: any) => (
               <li className="flex items-start gap-2 text-gray-700 text-[17px]">
                 <span className="text-green-500 font-bold mt-1 shrink-0">✓</span>
                 <span>{children}</span>
               </li>
             ),
-            number: ({children}) => <li className="text-gray-700 text-[17px] leading-relaxed">{children}</li>,
+            number: ({children}: any) => <li className="text-gray-700 text-[17px] leading-relaxed">{children}</li>,
           },
           marks: {
-            strong: ({children}) => <strong className="font-bold text-gray-900">{children}</strong>,
-            em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+            strong: ({children}: any) => <strong className="font-bold text-gray-900">{children}</strong>,
+            em: ({children}: any) => <em className="italic text-gray-600">{children}</em>,
             link: ({children, value}: {children: React.ReactNode; value?: {href?: string}}) => {
               const href = value?.href || '#'
               const internal = href.startsWith('/')
@@ -206,7 +214,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               )
             },
           },
-        }} />}
+        }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return (<>
+            <PortableText value={first as any} components={ptComponents} />
+            <ReferralInline seed={slug} />
+            <PortableText value={second as any} components={ptComponents} />
+          </>)
+        })()}
       </div>
 
       {/* Fontes (apenas notícias) */}
@@ -233,6 +248,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* CTA: Ferramentas + Links internos */}
       <ArticleCTA category={post.category ?? ''} related={related} />
+
+      {/* Sorteio / indicação */}
+      <ReferralBanner />
 
       {/* Comentários (próprios, sem login) */}
       <Comments slug={post.slug.current} />

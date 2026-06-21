@@ -1,5 +1,6 @@
 import { getEditionByDate, getEditions } from '@/lib/sanity'
 import { ShareStory } from '@/components/ShareStory'
+import { ReferralInline } from '@/components/ReferralInline'
 import { IconClock, IconExternalLink, IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -114,7 +115,7 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
 
       {/* Matérias */}
       <div className="space-y-12">
-        {stories.map(s => {
+        {stories.map((s, idx) => {
           const id = slugifyHeadline(s.headline)
           return (
             <section key={s._key} id={id} className="scroll-mt-24">
@@ -164,6 +165,9 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
               </div>
 
               <hr className="mt-10 border-gray-100" />
+
+              {/* CTA de indicação após a 2ª story (índice 1) */}
+              {idx === 1 && <ReferralInline seed={date} />}
             </section>
           )
         })}

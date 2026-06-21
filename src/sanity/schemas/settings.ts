@@ -7,6 +7,8 @@ export const settingsSchema = defineType({
   fields: [
     defineField({ name: 'subscriberGoal', title: 'Meta de inscritos', type: 'number', initialValue: 100 }),
     defineField({ name: 'subscriberGoalReward', title: 'Recompensa ao bater a meta', type: 'string', initialValue: 'faremos uma live exclusiva de finanças ao vivo com Q&A' }),
+    defineField({ name: 'referralPrizeName', title: 'Nome do prêmio do sorteio', type: 'string', initialValue: 'Psicologia Financeira' }),
+    defineField({ name: 'referralPrizeImage', title: 'Imagem do prêmio (URL)', type: 'url', description: 'Cole a URL da foto do livro/prêmio' }),
     defineField({
       name: 'referralMilestones',
       title: 'Metas de indicação',

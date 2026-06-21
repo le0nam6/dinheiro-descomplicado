@@ -25,7 +25,8 @@ import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls,
-  fetchPhoto, fetchSerperImages, tgAlert, tgConfigured,
+  fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
+  humanizePostBody, blogApprovalKeyboard,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -197,11 +198,14 @@ async function fetchDadosBolsa() {
 }
 
 async function fetchDadosCopa() {
-  const news = await fetchRss(
+  // Busca em feeds esportivos E financeiros para ter ângulo econômico real
+  const newsEsporte = await fetchRss(
     ['https://ge.globo.com/rss/ge/futebol/copa-do-mundo/', 'https://www.espn.com.br/rss/futebol/'],
-    10, ['copa', 'brasil', 'world cup', 'mundial']
+    15, ['copa', 'brasil', 'world cup', 'mundial', 'economia', 'mercado', 'ingresso', 'turismo', 'apostas', 'patrocinador', 'transmissão']
   )
-  return { news, stockContext: 'Empresas com exposição Copa: Ambev (ABEV3), Grupo Soma, operadoras de apostas (Bet365/Betano/Superbet), Globo, redes fast food.' }
+  const newsFinancas = await fetchRss(FINANCE_FEEDS, 10, ['copa', 'world cup', 'turismo', 'apostas', 'ambev', 'globo', 'patrocinador', 'infraestrutura', 'investimento'])
+  const news = [...new Set([...newsFinancas, ...newsEsporte])]
+  return { news, stockContext: 'Empresas com exposição Copa: Ambev (ABEV3), Grupo Soma, operadoras de apostas (Bet365/Betano/Superbet), Globo/GLBG3, redes fast food, hotelaria, companhias aéreas.' }
 }
 
 async function fetchDadosSetor() {
@@ -312,10 +316,30 @@ async function fetchDadosRenda() {
 
 // ─── Geradores de artigo ──────────────────────────────────────────────────────
 
-const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional.'
+const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional. JAMAIS invente números, cotações, percentuais, datas ou nomes de empresas que não estejam explicitamente nos DADOS acima. Se um dado não foi fornecido, não estime nem aproxime — omita ou escreva "dados não disponíveis".'
 
 function jsonSchema(category: string) {
-  return `\n\n${PROHIBICOES}\n\nRetorne SOMENTE JSON válido:\n{\n  "title": "título max 75 chars",\n  "slug": "slug-sem-acento",\n  "excerpt": "resumo max 155 chars",\n  "category": "${category}",\n  "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],\n  "readingTime": 7,\n  "coverQuery": "termo inglês para imagem",\n  "body": ["parágrafo.", "## Subtítulo", "parágrafo.", "..."],\n  "igCaption": "legenda 3 parágrafos\\n\\n🔗 endinheirados.cc/blog/SLUG\\n\\n#hashtags #endinheirados",\n  "igTitle": "TÍTULO CAIXA ALTA"\n}`
+  return `\n\n${PROHIBICOES}
+
+DADOS: use SOMENTE os números da seção DADOS acima. Nunca extrapole, estime ou cite valores históricos que não estejam nos dados fornecidos.
+
+TÍTULO: jornalístico, factual, sem o nome da série. Use os números reais dos DADOS. Exemplos do que NÃO fazer: "Bolsa em Foco: ...", "Dólar e Você: ...", "A Conta do Governo: ...". Exemplos do que fazer: "Por que a Petrobras caiu 3% e o que isso diz sobre o mercado", "Dívida pública bate 90% do PIB — o que isso muda para quem investe no Tesouro".
+
+PARÁGRAFOS: curtos. Máximo 2-3 frases por parágrafo. Quebre parágrafos longos em vários curtos. Cada elemento do array "body" deve ter no máximo 3 frases. Prefira frases diretas sem subordinadas encadeadas.
+
+Retorne SOMENTE JSON válido:
+{
+  "title": "título jornalístico sem nome da série, max 80 chars",
+  "slug": "slug-sem-acento",
+  "excerpt": "resumo factual com o dado central, max 155 chars",
+  "category": "${category}",
+  "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],
+  "readingTime": 7,
+  "coverQuery": "termo inglês para imagem",
+  "body": ["parágrafo curto (max 3 frases).", "## Subtítulo", "parágrafo curto.", "..."],
+  "igCaption": "legenda 3 parágrafos\\n\\n🔗 endinheirados.cc/blog/SLUG\\n\\n#hashtags #endinheirados",
+  "igTitle": "TÍTULO CAIXA ALTA"
+}`
 }
 
 async function callClaude(prompt: string): Promise<GeneratedPost> {
@@ -344,7 +368,7 @@ ${d.inadimplencia ? `Inadimplência PF: ${d.inadimplencia}` : ''}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: lead com dado surpreendente → contexto histórico (6 e 12 meses) → causas reais → impacto concreto no bolso com exemplos e números → o que monitorar. 10-14 parágrafos. Tom de analista que fala como gente.
+Baseado nos dados acima, identifique o número MAIS SURPREENDENTE ou a TENDÊNCIA MAIS RELEVANTE e escreva um artigo inteiramente sobre isso. Um ângulo, uma história, 10-12 parágrafos de profundidade real. Não tente cobrir tudo. Tom de analista que fala como gente — o dado é o gancho, mas a análise é o produto.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -355,16 +379,17 @@ async function generateBolsa(recent: string[]): Promise<GeneratedPost> {
   type Quote = { ticker: string; change: number; price: number }
   const ibovStr = d.ibovPts ? `${d.ibovPts.close.toLocaleString('pt-BR')} pts (${d.ibovPts.date})` : '(sem dado)'
   const quotesStr = d.quotes.slice(0, 6).map((q: Quote) => `${q.ticker}: ${q.change > 0 ? '+' : ''}${q.change}% (R$ ${q.price})`).join(' | ')
+  if (!quotesStr && !d.ibovPts) throw new Error('Sem dados de bolsa — abortando geração para evitar dado inventado')
   const prompt = `Você é analista de mercado do Endinheirados. Escreva "Bolsa em Foco" — análise do pregão mais recente da B3.
 
-DADOS:
+DADOS (use SOMENTE estes números — não invente cotações, percentuais ou preços):
 Ibovespa: ${ibovStr}
-Destaques: ${quotesStr || '(use contexto de mercado e manchetes)'}
+Destaques: ${quotesStr || '(sem cotações disponíveis — baseie-se apenas nas manchetes abaixo)'}
 Manchetes: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: o que moveu o mercado → maiores altas e quedas com análise do motivo real → o que o investidor PF deve observar → perspectiva para os próximos dias. 10-12 parágrafos.
+Baseado SOMENTE nos dados e manchetes acima, escolha UM evento ou UM ativo que teve o movimento mais significativo. Escreva inteiramente sobre ele. Não invente preços ou percentuais que não estejam nos dados. 10-12 parágrafos. Não tente resumir o pregão inteiro.
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -372,14 +397,32 @@ ${jsonSchema('investimentos')}`
 
 async function generateCopa(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosCopa()
-  const prompt = `Você é repórter de finanças do Endinheirados cobrindo a Copa 2026 com ângulo FINANCEIRO.
+  const prompt = `Você é repórter de FINANÇAS do Endinheirados. Sua editoria é dinheiro — não esporte.
 
-NOTÍCIAS DA COPA: ${d.news.join('\n')}
-CONTEXTO ECONÔMICO: ${d.stockContext}
+NOTÍCIAS DISPONÍVEIS:
+${d.news.join('\n')}
+
+CONTEXTO DE MERCADO: ${d.stockContext}
 
 ${recentBlock(recent)}
 
-Escolha UM ângulo: resultado+mercado / economia do evento / empresa em foco / gasto do torcedor / bastidores do dinheiro. Conecte sempre ao bolso do leitor. 10-14 parágrafos.
+REGRA DE OURO: só escreva se houver um ângulo FINANCEIRO concreto. Ângulos válidos:
+- Quanto uma empresa específica (Ambev, Globo, operadora de apostas, hotel, aérea) está ganhando ou perdendo com a Copa
+- Gastos reais do torcedor: quanto sai uma viagem, ingresso, hospedagem — com números
+- Impacto no PIB, turismo ou consumo — com dado real citado na fonte
+- Apostas esportivas: mercado, regulação, receita das bets
+- Direitos de transmissão: quem pagou quanto, o que isso significa pra Globo/CazéTV/etc.
+- Infraestrutura: quanto o governo gastou, quem ganhou as obras, retorno esperado
+
+ÂNGULOS PROIBIDOS — se só houver isso nas notícias, abort e escreva sobre o tema financeiro mais próximo que tiver nas manchetes:
+- Polêmicas, confusões ou controvérsias com jogadores (Ronaldo, Vini Jr., etc.) sem impacto financeiro direto
+- Resultados de jogos, escalações, táticas
+- Lesões, suspensões, dramas de bastidores
+- Qualquer notícia que seria mais adequada no caderno de esportes do que no de economia
+
+Se as notícias acima forem predominantemente esportivas sem ângulo financeiro, escolha o tema do CONTEXTO DE MERCADO e escreva sobre o impacto econômico geral da Copa de forma concreta.
+
+Escolha UM ângulo e vá fundo: 10-12 parágrafos conectados ao bolso do leitor, com números reais.
 ${jsonSchema('notícias')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -387,14 +430,15 @@ ${jsonSchema('notícias')}`
 
 async function generateSetor(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosSetor()
+  if (!d.news.length) throw new Error('Sem manchetes para o setor — abortando geração para evitar dado inventado')
   const prompt = `Você é analista setorial do Endinheirados. Escreva "Setor na Lupa" sobre ${d.setor}.
 
-MANCHETES: ${d.news.join('\n') || '(use conhecimento do setor)'}
+MANCHETES: ${d.news.join('\n') || '(sem manchetes disponíveis — não gere artigo com dados inventados)'}
 ${d.cambio ? `Câmbio: R$ ${d.cambio}/US$` : ''}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: tendência dominante → números do setor → pressões/impulsos → empresas B3 com tickers → impacto para investidor PF e consumidor → o que monitorar. 12-16 parágrafos.
+Baseado SOMENTE nas manchetes acima, identifique a questão mais relevante do setor AGORA — uma empresa específica, uma mudança regulatória, uma tendência de preço, uma disputa de mercado. Escreva inteiramente sobre essa questão. Não faça um panorama geral do setor. 10-13 parágrafos com análise real, não superficial.
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -413,7 +457,7 @@ Concessões crédito PF: R$ ${d.conc[0]?.valor ?? '?'} bi
 
 ${recentBlock(recent)}
 
-ESTRUTURA: número mais impactante → mais caro vs mais barato com dados → comparação histórica → impacto em família de R$5k/mês → causas reais → dicas práticas. 10-12 parágrafos. Concreto com números.
+Olhando os dados, escolha UM item de consumo ou UM indicador que está tendo a variação mais impactante na vida real das pessoas. Escreva inteiramente sobre isso: por que esse preço está assim, quem é afetado, quanto custa na prática, o que explica, o que a pessoa pode fazer. 10-12 parágrafos. Concreto com números reais — não generalidades.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -421,17 +465,18 @@ ${jsonSchema('educação financeira')}`
 
 async function generateDolar(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosDolar()
+  if (!d.cambio5d.length) throw new Error('BACEN sem dados de câmbio — abortando geração para evitar dado inventado')
   const prompt = `Você é repórter do Endinheirados. Escreva "Dólar e Você" — como a variação cambial afeta o dia a dia do brasileiro.
 
-DADOS:
-Dólar (5 pregões): ${d.cambio5d.map((p: BacenPoint) => `${p.data}: R$ ${p.valor}`).join(' | ')}
+DADOS (use SOMENTE estes números — não invente nenhum outro):
+Dólar (últimos pregões): ${d.cambio5d.map((p: BacenPoint) => `${p.data}: R$ ${p.valor}`).join(' | ')}
 Euro: ${d.euroLast ? `R$ ${d.euroLast.valor} (${d.euroLast.data})` : 'n/d'}
 Selic: ${d.selic[0]?.valor ?? '?'}% a.d.
 Manchetes: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: o que aconteceu com o câmbio → por quê (fatores reais) → impacto concreto: combustível, passagem, importados, remessas, eletrônicos → quem ganha e quem perde → o que fazer com a carteira. 10-13 parágrafos. Exemplos com preços reais.
+Baseado SOMENTE nos dados de câmbio acima e nas manchetes, escolha UM impacto concreto para aprofundar — pode ser combustível, passagem aérea, um produto importado específico, ou o efeito nos investimentos. Escreva inteiramente sobre esse impacto usando apenas os números fornecidos acima. Não invente cotações, não cite valores históricos que não estejam nos dados, não extrapole. 10-12 parágrafos. Não tente cobrir todos os efeitos do câmbio ao mesmo tempo.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -448,7 +493,7 @@ Manchetes: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: número mais relevante → tendência do emprego → quais setores contratam vs demitem → o que o salário médio revela → impacto para empregado, para quem busca emprego e para quem empreende → perspectiva. 10-14 parágrafos. Dados concretos.
+Olhando os dados de rendimento e desocupação, identifique o movimento mais significativo e escreva inteiramente sobre ele. Pode ser a queda do desemprego num setor específico, a estagnação do salário real, ou uma tendência nova no mercado de trabalho. Um ângulo, profundidade real, 10-12 parágrafos. Não tente cobrir o mercado de trabalho inteiro.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -467,7 +512,7 @@ Manchetes: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: número fiscal mais relevante agora → o que a dívida brasileira significa em termos práticos → como resultado primário impacta juros e câmbio → impacto no Tesouro Direto, fundos e ações → riscos e oportunidades. 11-14 parágrafos.
+Olhando os dados fiscais, identifique UM número ou UM movimento que merece atenção agora — pode ser uma mudança no resultado primário, a dívida cruzando um limiar simbólico, ou o impacto de um gasto específico. Escreva inteiramente sobre isso: o que o número significa na prática, como afeta o Tesouro Direto, os juros e o câmbio, e o que o investidor deve considerar. 10-12 parágrafos com raciocínio real, não inventário de indicadores.
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -483,7 +528,7 @@ Manchetes do setor: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: o que é esse fundo e o que faz → histórico de rentabilidade esperado para o tipo → taxas de administração e performance — vale o custo? → para qual perfil serve → comparação com Tesouro Direto, CDB e outros → como investir: mínimo, liquidez, tributação. 12-15 parágrafos.
+Escolha UM aspecto desse fundo que é genuinamente interessante ou contraintuitivo — pode ser a taxa que come o retorno, uma característica de liquidez que a maioria ignora, ou um cenário específico em que ele bate o Tesouro Direto. Escreva inteiramente sobre isso com números reais. Não faça um guia completo do fundo — escolha o ponto mais revelador e vá fundo. 10-12 parágrafos honestos.
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -497,7 +542,7 @@ MANCHETES: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: o que é ${d.fintech} e o que a diferencia → produtos principais (conta, cartão, crédito, investimentos) → taxas, rendimentos e limites vs bancos tradicionais → para quem faz sentido e para quem NÃO faz → pontos fracos reais que usuários reclamam → como abrir conta e o que saber antes. 11-14 parágrafos. Opinião embasada, não press release.
+Identifique o ponto mais relevante sobre ${d.fintech} agora — pode ser um produto novo, uma mudança de taxa, uma vantagem pouco conhecida, ou uma limitação real que os usuários descobrem tarde demais. Escreva inteiramente sobre isso. Não faça um review completo da fintech — escolha o ângulo mais útil para quem considera (ou já usa) ela hoje. 10-12 parágrafos com opinião embasada, não press release.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -512,7 +557,7 @@ Manchetes relacionadas: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-ESTRUTURA: quanto dá para ganhar de verdade (faixa realista, não promessa) → o que é necessário: tempo, capital, habilidade → custos ocultos e riscos reais que ninguém fala → quanto tempo até o primeiro real → comparação: vale mais que a Selic? → passo a passo para começar esta semana. 10-13 parágrafos. Honesto — se superestimado, diga.
+Escolha UM aspecto dessa oportunidade de renda extra que a maioria não sabe ou subestima — pode ser o tempo real até o primeiro rendimento, um custo oculto que come a margem, ou a comparação honesta com simplesmente deixar na Selic. Escreva inteiramente sobre isso com números reais. Não faça um guia de como começar — aprofunde o ângulo mais revelador, especialmente se for contraintuitivo. 10-12 parágrafos. Honesto acima de tudo.
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -573,19 +618,26 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
   const recent = await getRecentTitles(30)
   const post = await config.generate(recent)
 
+  // Humaniza o corpo antes de salvar
+  if (Array.isArray(post.body)) {
+    post.body = await humanizePostBody(post.body)
+  }
+
   const recentPhotos = await getRecentPhotoUrls(30)
   const serperPics = await fetchSerperImages(post.title || config.coverQuery, 2)
   const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || config.coverQuery, recentPhotos)
 
   const doc = await createSanityPost(post, photo)
   const slug = (doc.slug as { current: string }).current
+  const docId = (doc as { _id: string })._id
   const url = `${SITE}/blog/${slug}`
 
   if (tgConfigured()) {
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `${config.emoji} ${config.label} publicado\n\n${post.title}\n${url}` }),
-    }).catch(() => {})
+    const tgRes = await tgSendMessage(
+      `${config.emoji} ${config.label} para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n🔗 ${url}`,
+      blogApprovalKeyboard(docId),
+    )
+    if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
   }
 
   return { ok: true, series, label: config.label, url }

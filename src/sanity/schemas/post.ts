@@ -47,12 +47,25 @@ export const postSchema = defineType({
         { name: 'url', title: 'URL', type: 'url' },
       ], preview: { select: { title: 'name', subtitle: 'url' } } },
     ] }),
+    defineField({
+      name: 'status',
+      title: 'Status editorial',
+      type: 'string',
+      options: { list: [
+        { title: '📝 Rascunho (não publica)', value: 'rascunho' },
+        { title: '✅ Aprovado (publica)', value: 'aprovado' },
+      ], layout: 'radio' },
+      initialValue: 'rascunho',
+      validation: r => r.required(),
+      description: 'Apenas posts com status "Aprovado" aparecem no site.',
+    }),
   ],
   preview: {
-    select: { title: 'title', subtitle: 'funnel', media: 'coverImage' },
-    prepare({ title, subtitle }) {
-      const emoji = subtitle === 'tofu' ? '🟢' : subtitle === 'mofu' ? '🟡' : '🔴'
-      return { title, subtitle: `${emoji} ${subtitle?.toUpperCase()}` }
+    select: { title: 'title', subtitle: 'funnel', status: 'status' },
+    prepare({ title, subtitle, status }) {
+      const funnel = subtitle === 'tofu' ? '🟢' : subtitle === 'mofu' ? '🟡' : '🔴'
+      const st = status === 'aprovado' ? '✅' : '📝'
+      return { title, subtitle: `${st} ${funnel} ${subtitle?.toUpperCase()}` }
     },
   },
 })

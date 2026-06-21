@@ -7,6 +7,7 @@ import { QuotesTicker } from '@/components/QuotesTicker'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ExitIntentPopup } from '@/components/ExitIntentPopup'
 import { SubscriberMilestone } from '@/components/SubscriberMilestone'
+import { ReferralBanner } from '@/components/ReferralBanner'
 import { SubscriberGoalBadge } from '@/components/SubscriberGoalBadge'
 import { IconTool, IconNews } from '@tabler/icons-react'
 import './globals.css'
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://endinheirados.cc'),
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
-  verification: { google: 'anSq3ftdvYVOnIJvtePaBPVD6sbcmn7GosnaisjOmcY' },
+  verification: { google: 'j8L6BZiAKRU9noO_zNgiSlrxfT45Mefj5t76wUrd-_Q' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -115,10 +116,10 @@ function Footer() {
         <p className="text-lg font-bold text-gray-900 mb-1">O melhor portal de finanças da nova geração 💰</p>
         <p className="text-sm text-gray-500 mb-4">Receba as principais notícias do mercado financeiro todo dia às 5h — direto no seu e-mail, sem enrolação.</p>
         <Newsletter />
-        <div className="mt-6 max-w-md mx-auto">
-          <SubscriberMilestone />
+        <div className="mt-6 max-w-lg mx-auto">
+          <ReferralBanner />
         </div>
-        <p className="mt-4 text-xs text-gray-400">
+        <p className="mt-3 text-xs text-gray-400">
           Já inscrito?{' '}
           <a href="/painel" className="text-green-600 hover:underline">Acessar meu painel de indicações</a>
         </p>

@@ -8,7 +8,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
-  createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, fetchSerperImages, tgAlert, tgConfigured,
+  createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, fetchSerperImages,
+  tgAlert, tgConfigured, tgSendMessage, humanizePostBody, blogApprovalKeyboard,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -202,10 +203,12 @@ function isTooSimilar(newTitle: string, existingTitles: string[]): boolean {
 }
 
 // Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
-async function processNews() {
+async function processNews(skipRecencyLock = false) {
   // Trava de recência: se já saiu notícia nos últimos 50 min, não publica.
-  const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
-  if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
+  if (!skipRecencyLock) {
+    const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
+    if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
+  }
 
   const news = await fetchNews()
   if (!news.length) return
@@ -232,6 +235,11 @@ async function processNews() {
     return
   }
 
+  // Humaniza o corpo antes de salvar
+  if (Array.isArray(post.body)) {
+    post.body = await humanizePostBody(post.body)
+  }
+
   const articleImg = post.newsSources[0]?.imageUrl
   const recentPhotos = await getRecentPhotoUrls(30)
 
@@ -239,7 +247,6 @@ async function processNews() {
   if (articleImg) {
     photo = { url: articleImg, alt: post.title, credit: `Foto: ${post.newsSources[0].source}` }
   } else {
-    // Tenta Serper (Google Images) com o título real da notícia; fallback para Pexels/Unsplash
     const serperPics = await fetchSerperImages(post.title || post.coverQuery || 'mercado financeiro brasil', 1)
     photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || 'stock market news', recentPhotos)
   }
@@ -249,13 +256,15 @@ async function processNews() {
     photo,
   )
   const finalSlug = (doc.slug as { current: string }).current
+  const docId = (doc as { _id: string })._id
   const blogUrl = `${SITE}/blog/${finalSlug}`
 
   if (tgConfigured()) {
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📰 Notícia publicada\n\n${post.title}\n${blogUrl}\n\nFontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}` }),
-    }).catch(() => {})
+    const tgRes = await tgSendMessage(
+      `📰 Notícia para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n🔗 ${blogUrl}\n\n📌 Fontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}`,
+      blogApprovalKeyboard(docId),
+    )
+    if (!tgRes?.ok) console.error('[news] Telegram falhou:', JSON.stringify(tgRes))
   }
 }
 
@@ -263,6 +272,19 @@ export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const force = new URL(request.url).searchParams.get('force') === 'true'
+
+  // Em dev com force=true, roda síncrono para facilitar testes
+  if (force && process.env.NODE_ENV === 'development') {
+    try {
+      await processNews(true)
+      return NextResponse.json({ ok: true, forced: true })
+    } catch (err) {
+      return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
+  }
+
   // Responde NA HORA e gera em background. A geração leva mais que os 30s de
   // timeout de alguns agendadores (cron-job.org free) — por isso o trabalho
   // pesado roda em after(), enquanto o agendador recebe um 200 imediato.

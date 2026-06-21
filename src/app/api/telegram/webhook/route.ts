@@ -140,9 +140,39 @@ export async function POST(request: Request) {
       }
       const d: PendingData = JSON.parse(pending.data)
 
+      // --- Aprovar post do blog (ba:) ---
+      if (action === 'ba') {
+        const post = await sanity.fetch('*[_id==$id][0]{_id, title, slug}', { id })
+        if (!post) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Post não encontrado.' })
+          return NextResponse.json({ ok: true })
+        }
+        await sanity.patch(id).set({ status: 'aprovado' }).commit()
+        const slug = post.slug?.current ?? ''
+        try { revalidatePath(`/blog/${slug}`); revalidatePath('/') } catch { /* ISR */ }
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Post aprovado e no ar!' })
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: { inline_keyboard: [[{ text: `✅ Aprovado — ${post.title?.slice(0, 40)}`, callback_data: 'noop' }]] },
+        })
+        return NextResponse.json({ ok: true, approved: id })
+      }
+
+      // --- Rejeitar/deletar post do blog (br:) ---
+      if (action === 'br') {
+        const post = await sanity.fetch('*[_id==$id][0]{_id, title}', { id })
+        await sanity.delete(id)
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🗑 Post deletado.' })
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: { inline_keyboard: [[{ text: `❌ Rejeitado — ${post?.title?.slice(0, 40) ?? id}`, callback_data: 'noop' }]] },
+        })
+        return NextResponse.json({ ok: true, deleted: id })
+      }
+
       if (action === 'ap') {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Publicando…' })
-        const doc = await createSanityPost(d.post, d.photo)
+        const doc = await createSanityPost(d.post, d.photo, 'aprovado')
         const finalSlug = (doc.slug as { current: string }).current
         const blogUrl = `${SITE}/blog/${finalSlug}`
         // Se o slug foi renomeado por colisão, corrige o link na legenda

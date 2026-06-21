@@ -1,5 +1,6 @@
 import { getPosts, getLatestEdition } from '@/lib/sanity'
 import { AdUnit } from '@/components/AdUnit'
+import { ReferralBanner } from '@/components/ReferralBanner'
 import Link from 'next/link'
 
 export const revalidate = 60
@@ -141,6 +142,9 @@ export default async function Home() {
       </section>
 
       <AdUnit slot="1234567890" format="horizontal" />
+
+      {/* ── SORTEIO / INDICAÇÃO ───────────────────────────────────────── */}
+      <ReferralBanner />
 
       {/* ── GRID DE ARTIGOS ───────────────────────────────────────────── */}
       {grid.length > 0 && (

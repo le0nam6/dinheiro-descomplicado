@@ -3,8 +3,32 @@
  */
 import { createClient } from '@sanity/client'
 import { nanoid } from 'nanoid'
+import { GoogleAuth } from 'google-auth-library'
+import Anthropic from '@anthropic-ai/sdk'
 
 export const SITE = 'https://endinheirados.cc'
+
+async function notifyGoogleIndexing(url: string) {
+  const privateKey = process.env.GOOGLE_INDEXING_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const clientEmail = process.env.GOOGLE_INDEXING_CLIENT_EMAIL
+  if (!privateKey || !clientEmail) return
+
+  try {
+    const auth = new GoogleAuth({
+      credentials: { client_email: clientEmail, private_key: privateKey },
+      scopes: ['https://www.googleapis.com/auth/indexing'],
+    })
+    const client = await auth.getClient()
+    const token = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken()
+    await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.token}` },
+      body: JSON.stringify({ url, type: 'URL_UPDATED' }),
+    })
+  } catch {
+    // não bloqueia a publicação se a indexação falhar
+  }
+}
 
 export const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
@@ -84,7 +108,7 @@ function toBlocks(lines: string[]): Block[] {
 }
 
 /** Cria o post publicado no Sanity. Se o slug já existir, gera um sufixo único. */
-export async function createSanityPost(post: GeneratedPost, photo: Photo) {
+export async function createSanityPost(post: GeneratedPost, photo: Photo, status: 'rascunho' | 'aprovado' = 'rascunho') {
   let slug = post.slug
   for (let n = 2; n <= 20; n++) {
     const existing = await sanity.fetch('*[_type=="post" && slug.current==$s][0]._id', { s: slug })
@@ -117,7 +141,7 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
     }
   }
 
-  return sanity.create({
+  const created = await sanity.create({
     _type: 'post',
     title: post.title,
     slug: { _type: 'slug', current: slug },
@@ -130,8 +154,70 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo) {
     seoKeywords: post.seoKeywords,
     readingTime: post.readingTime,
     articleType: post.articleType || 'evergreen',
+    status,
     ...(post.sources?.length ? { sources: post.sources.map(s => ({ _type: 'source', _key: nanoid(6), name: s.name, url: s.url })) } : {}),
   })
+
+  notifyGoogleIndexing(`${SITE}/blog/${slug}`)
+
+  return created
+}
+
+// --- Humanizer (segunda passagem anti-IA) ---
+
+const HUMANIZER_SYSTEM = `Você é um editor de copy especializado em remover marcas de texto gerado por IA e reescrever em português brasileiro coloquial, natural e com profundidade. Sua função é fazer o texto soar como um humano brasileiro escrevendo com personalidade.
+
+REGRAS ABSOLUTAS:
+1. ZERO travessão (—) em qualquer contexto. Se a frase depende dele, reescreva inteira.
+2. Frases telegráficas empilhadas são proibidas: 3+ frases seguidas com menos de 6 palavras cada. Junte num raciocínio completo.
+3. Paralelismo negativo ("Não é X. É Y.") máximo 1x por texto. Nunca repetido.
+4. Vocabulário proibido: "crucial", "fundamental" (no sentido vago), "delve", "highlight" (verbo), "adicionalmente", "no mundo atual", "em um cenário onde", "é fundamental que", "isso se traduz em", "evidencia"/"ressalta" como gerúndio, "inovador"/"revolucionário"/"transformador", "adicionalmente". Substitua sempre por alternativas diretas.
+5. Sem atribuições vagas: "especialistas afirmam", "pesquisas mostram" sem fonte real são proibidos.
+6. Sem gerúndio superficial no fim de frase: "evidenciando a importância de X", "demonstrando como Y" são proibidos.
+7. Sem conclusões genéricas motivacionais: "o futuro é promissor para quem abraça a mudança" e variações.
+8. Use contrações naturais do português falado: "pra"/"pro", "tá", "né", "num", "numa" quando soam naturais.
+9. Varie o ritmo organicamente: frases curtas para pontos diretos, mais longas para desenvolvimento. Nunca todas iguais.
+10. Preserve 100% do conteúdo, dados e profundidade. Humanizar nunca é cortar.
+11. Preserve subtítulos (## e ###) exatamente como estão.
+12. Preserve listas com "- " no início.
+13. Preserve os dados, fontes e fatos do original.
+
+Retorne APENAS o texto humanizado, sem comentários, sem explicações, sem prefácio. Só o texto.`
+
+export async function humanizePostBody(lines: string[]): Promise<string[]> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return lines
+
+  const client = new Anthropic({ apiKey })
+  const rawText = lines.join('\n\n')
+
+  try {
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      system: HUMANIZER_SYSTEM,
+      messages: [{ role: 'user', content: rawText }],
+    })
+
+    const humanized = (msg.content[0] as { type: string; text: string }).text?.trim()
+    if (!humanized) return lines
+
+    // Divide de volta em linhas preservando marcadores de subtítulo e listas
+    return humanized.split(/\n\n+/).map(l => l.trim()).filter(Boolean)
+  } catch {
+    return lines
+  }
+}
+
+// --- Teclado de aprovação de post do blog ---
+
+export function blogApprovalKeyboard(sanityId: string) {
+  return {
+    inline_keyboard: [[
+      { text: '✅ Aprovar', callback_data: `ba:${sanityId}` },
+      { text: '❌ Rejeitar', callback_data: `br:${sanityId}` },
+    ]],
+  }
 }
 
 // --- Alertas de falha no Telegram (#1) ---
