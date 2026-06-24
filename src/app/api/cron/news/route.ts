@@ -1,8 +1,10 @@
 /**
- * Vercel Cron (a cada 2h): vertical jornalística.
+ * Cron jornalístico. O agendador (cron-job.org) bate de hora em hora, mas a
+ * rota só gera notícia em 4 janelas por dia: 8h, 12h, 16h e 20h (horário de
+ * Brasília). Fora desses slots, qualquer disparo é ignorado.
  * Publica uma notícia do mercado financeiro BR + mundo, com IMPARCIALIDADE
  * mandatória, fontes discriminadas e termômetro de imparcialidade (no front).
- * Auto-publica no blog e notifica no Telegram.
+ * Cada notícia entra como rascunho e vai pro Telegram para aprovação manual.
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse, after } from 'next/server'
@@ -10,6 +12,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, fetchSerperImages,
   tgAlert, tgConfigured, tgSendMessage, humanizePostBody, blogApprovalKeyboard,
+  nextQueueItem, markQueueUsed,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -27,6 +30,10 @@ const FEEDS = [
   { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
   { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
+
+// Janelas de publicação (hora de Brasília). O agendador bate de hora em hora,
+// mas só geramos notícia nesses horários — 4 por dia.
+const PUBLISH_SLOTS = [8, 12, 16, 20]
 
 type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
 
@@ -72,7 +79,7 @@ function detectSaturatedThemes(recentTitles: string[]): string[] {
   return saturated
 }
 
-async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[]): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
+async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[], editorBrief?: string): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
   // Embaralha as notícias para não pegar sempre as primeiras do mesmo feed
   const shuffled = [...news].sort(() => Math.random() - 0.5)
   const top = shuffled.slice(0, 20)
@@ -83,8 +90,13 @@ DIVERSIDADE OBRIGATÓRIA — temas já muito cobertos hoje (evite salvo se for a
 ${saturatedThemes.map(t => `- ${t}`).join('\n')}
 Prefira manchetes sobre: empresas e negócios, resultados corporativos, IPOs/fusões/aquisições, Copa do Mundo e impacto econômico, consumo e varejo, fintechs e tecnologia financeira, criptomoedas, empreendedorismo, comportamento financeiro do brasileiro, mercado de trabalho, imóveis, agronegócio.
 ` : ''
+  const editorBlock = editorBrief ? `
+PAUTA OBRIGATÓRIA DO EDITOR-CHEFE (prioridade máxima, acima de tudo abaixo):
+"${editorBrief}"
+Escreva a notícia SOBRE essa pauta. Se houver manchetes na lista relacionadas, use-as como fonte e cite. Se não houver nenhuma relacionada, escreva com base em conhecimento factual e atual do tema, mantendo imparcialidade e SEM inventar números, datas ou falas específicas. O título e o ângulo devem refletir a pauta do editor, não outra manchete.
+` : ''
   const prompt = `Você é repórter de finanças do portal Endinheirados (endinheirados.cc). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
-
+${editorBlock}
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
 ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
 
@@ -115,7 +127,7 @@ PROFUNDIDADE — esta é uma matéria de verdade, não uma nota:
 - O corpo deve ter de 8 a 14 parágrafos (não conte os subtítulos). Notícia rasa de 3 parágrafos é REJEITADA.
 - Vá ALÉM da manchete: traga contexto que o leitor não tem (histórico, comparação com casos parecidos, o que está por trás, o que pode acontecer depois).
 - Se a fonte traz dados, explore-os. Se traz uma decisão, explique o porquê e as consequências em cadeia.
-- Inclua uma seção que conecta a notícia ao bolso do brasileiro comum — mas SEM o rótulo mecânico "por que importa".
+- O fechamento da matéria deve seguir a notícia, não um template. Se o desdobramento natural é político, feche com o que vem a seguir. Se é de mercado, com o que os dados indicam. Conectar ao cotidiano do leitor só quando essa ligação é genuína e acrescenta algo real — não como seção obrigatória de encerramento.
 - Quando fizer sentido, use uma seção em formato de lista (cada item começa com "- ") para enumerar pontos, etapas ou critérios. Isso quebra o ritmo visual.
 
 RITMO E ESTRUTURA do corpo (body):
@@ -160,7 +172,7 @@ CACOETES DE IA — PROIBIÇÕES ABSOLUTAS:
 - Frases telegráficas empilhadas: 3+ frases seguidas com menos de 6 palavras cada são proibidas. Junte num raciocínio completo. Errado: "Não é volume. É clareza. Não é frequência. É posicionamento." Certo: "O problema não é quantidade: é se o que você manda faz sentido pra quem recebe."
 - Paralelismo negativo ("Não é X. É Y.") máximo 1 vez por texto. Nunca repetido.
 - Vocabulário proibido — substitua sempre: "crucial" → importante/decisivo | "fundamental" → básico/essencial | "delve"/"aprofundar" → entrar em/olhar mais de perto | "highlight" (verbo) → apontar/mostrar | "adicionalmente" → além disso/também | "no mundo atual"/"em um cenário onde" → hoje/quando | "é fundamental que" → é importante/faz sentido | "isso se traduz em" → ou seja/na prática | "evidencia"/"ressalta"/"demonstra" como gerúndio de análise → mostra/indica/deixa claro | "inovador"/"revolucionário"/"transformador" → descreva o que realmente muda
-- Atribuições vagas: "especialistas afirmam", "pesquisas mostram" sem fonte real são proibidos. Se não tem dado concreto, use raciocínio direto.
+- Atribuições vagas: "especialistas afirmam", "pesquisas mostram", "analistas consultados", "especialistas ouvidos pelo Endinheirados" sem fonte real são PROIBIDOS. Não existem. Se não tem dado concreto com nome e origem, use raciocínio direto.
 - Gerúndio superficial no fim de frase: "evidenciando a importância de X", "demonstrando como Y", "reforçando a necessidade de Z" são proibidos. Quebre em frases separadas.
 - Conclusões genéricas motivacionais: "o futuro é promissor para quem abraça a mudança" e variações são proibidas. Termine com algo concreto.
 - Títulos de seção sem Title Case: "## Estratégias de posicionamento", não "## Estratégias De Posicionamento"
@@ -175,7 +187,7 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
   "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],
   "readingTime": 6,
   "coverQuery": "termo em inglês específico ao tema real da notícia, para busca no Pexels",
-  "body": ["lead direto e completo, sem subtítulo antes.", "## Subtítulo específico e instigante", "parágrafo desenvolvido.", "parágrafo curto de ênfase.", "## Outra seção", "- item de lista um", "- item de lista dois", "parágrafo que amarra.", "## O que isso muda no seu bolso", "parágrafo de impacto sem rótulo mecânico.", "parágrafo de fechamento com o que observar a seguir."],
+  "body": ["lead direto e completo, sem subtítulo antes.", "## Subtítulo específico ao fato (não genérico)", "parágrafo desenvolvido.", "parágrafo curto de ênfase.", "## Outro subtítulo específico", "- item de lista um", "- item de lista dois", "parágrafo que amarra.", "## Subtítulo que fecha com o ângulo natural desta notícia", "parágrafo de fechamento concreto — o que vem a seguir, o que os dados indicam, ou o que o leitor deveria observar."],
   "igCaption": "legenda instagram informativa e neutra, 3 parágrafos, termina com \\n\\n🔗 Leia no site: endinheirados.cc/blog/SLUG\\n\\n#mercadofinanceiro #economia #noticias #investimentos #endinheirados",
   "igTitle": "título CAIXA ALTA p/ card, max 3 linhas",
   "sourceIndexes": [1, 2]
@@ -183,7 +195,7 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
 sourceIndexes = índices das manchetes da lista usadas como fonte.`
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 8000,
+    model: 'claude-haiku-4-5-20251001', max_tokens: 4096,
     messages: [{ role: 'user', content: prompt }],
   })
   const text = (msg.content[0] as { text: string }).text.trim()
@@ -204,10 +216,14 @@ function isTooSimilar(newTitle: string, existingTitles: string[]): boolean {
 
 // Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
 async function processNews(skipRecencyLock = false) {
-  // Trava de recência: se já saiu notícia nos últimos 50 min, não publica.
+  // Gate de janela + trava de recência. Em dev/force, ambos são ignorados.
   if (!skipRecencyLock) {
+    // Só publica nos slots de 8h, 12h, 16h e 20h (horário de Brasília).
+    const spNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+    if (!PUBLISH_SLOTS.includes(spNow.getHours())) return
+    // Trava de recência: se já saiu notícia na última hora, não duplica o slot.
     const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
-    if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
+    if (last && Date.now() - new Date(last).getTime() < 90 * 60 * 1000) return
   }
 
   const news = await fetchNews()
@@ -226,11 +242,14 @@ async function processNews(skipRecencyLock = false) {
   )
   const saturatedThemes = detectSaturatedThemes(recentTitles12h)
 
-  const recent = await getRecentTitles(20)
-  const post = await generate(news, recent, saturatedThemes)
+  // Pauta do editor tem prioridade sobre a escolha automática
+  const queued = await nextQueueItem('noticia')
 
-  // Descarta se o assunto já foi publicado nas últimas 6h
-  if (isTooSimilar(post.title, recentNewsTitles)) {
+  const recent = await getRecentTitles(20)
+  const post = await generate(news, recent, saturatedThemes, queued?.brief)
+
+  // Descarta se o assunto já foi publicado nas últimas 6h (exceto pauta do editor, que sempre vale)
+  if (!queued && isTooSimilar(post.title, recentNewsTitles)) {
     console.log(`[news] Assunto já coberto nas últimas 6h, pulando: "${post.title}"`)
     return
   }
@@ -259,9 +278,12 @@ async function processNews(skipRecencyLock = false) {
   const docId = (doc as { _id: string })._id
   const blogUrl = `${SITE}/blog/${finalSlug}`
 
+  // Marca a pauta do editor como usada
+  if (queued) await markQueueUsed(queued._id, finalSlug)
+
   if (tgConfigured()) {
     const tgRes = await tgSendMessage(
-      `📰 Notícia para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n🔗 ${blogUrl}\n\n📌 Fontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ')}`,
+      `📰 Notícia para revisão${queued ? ' (sua pauta)' : ''}\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n🔗 ${blogUrl}\n\n📌 Fontes: ${post.newsSources.map((s: NewsItem) => s.source).join(', ') || '—'}`,
       blogApprovalKeyboard(docId),
     )
     if (!tgRes?.ok) console.error('[news] Telegram falhou:', JSON.stringify(tgRes))
@@ -290,9 +312,9 @@ export async function GET(request: Request) {
   // pesado roda em after(), enquanto o agendador recebe um 200 imediato.
   after(async () => {
     try {
-      await processNews()
+      await processNews(force)
     } catch (err) {
-      await tgAlert('Cron notícias (1h)', err)
+      await tgAlert('Cron notícias (slots 8/12/16/20h)', err)
     }
   })
   return NextResponse.json({ ok: true, queued: true })

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
         { date }
       ),
       sanity.fetch(
-        `*[_type=="post" && defined(slug.current) && publishedAt <= now()] | order(publishedAt desc)[0...20]{
+        `*[_type=="post" && defined(slug.current) && publishedAt <= now() && articleType != "news"] | order(publishedAt desc)[0...20]{
           title, "slug": slug.current, excerpt, category
         }`
       ).then((posts: Array<{ title: string; slug: string; excerpt?: string; category?: string; publishedAt?: string }>) => {

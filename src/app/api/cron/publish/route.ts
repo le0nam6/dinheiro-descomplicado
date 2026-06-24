@@ -4,11 +4,12 @@
  * Configurado em vercel.json
  */
 import Anthropic from '@anthropic-ai/sdk'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
   tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
+  adminToken,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -218,7 +219,6 @@ function getSchedule() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
   const hour = now.getHours()
   const day  = now.getDay()
-  if (hour === 9 || hour === 15) return { type: 'news', funnel: 'tofu', hour }
   const funnel = EVERGREEN_FUNNEL[day]?.[hour] ?? 'mofu'
   return { type: 'evergreen', funnel, hour }
 }
@@ -331,7 +331,7 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
       }
 
       articleImageUrl = picked?.imageUrl || undefined
-      context = `Com base nesta notícia financeira recente do mercado brasileiro:\nTítulo: ${picked?.title}\nDescrição: ${picked?.description}\nURL: ${picked?.url}\n\nCrie um post educativo que explica o impacto dessa notícia para o brasileiro comum.`
+      context = `Com base nesta notícia financeira recente do mercado brasileiro:\nTítulo: ${picked?.title}\nDescrição: ${picked?.description}\nURL: ${picked?.url}\n\nCrie um post educativo sobre esse tema. O ângulo deve emergir da própria notícia — pode ser uma análise de contexto, uma explicação do mecanismo, o histórico do tema, as implicações para o setor. Só conecte ao cotidiano do leitor se essa ligação for genuína e acrescentar algo real ao texto.`
     } catch {
       context = `Com base nestas notícias financeiras recentes:\n${news}\n\nEscolha a mais relevante.`
     }
@@ -411,31 +411,88 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
     "## Outra seção",
     "Parágrafo puro continuando o conteúdo."
   ],
-  "igCaption": "legenda instagram com 3 parágrafos de 4-5 linhas cada, tom informal genZ, sem emojis no corpo, finaliza com: \\n\\n🔗 Acesse o guia completo em endinheirados.cc/blog/SLUG\\n\\n#finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados",
-  "igTitle": "título em CAIXA ALTA para o card do Instagram, max 3 linhas de 25 chars",
-  "carousel": [
-    { "title": "headline curto do slide 2, max 40 chars CAIXA ALTA", "body": "explicação de 1 a 2 frases, linguagem genZ, max 180 chars" },
-    { "title": "slide 3", "body": "..." },
-    { "title": "slide 4", "body": "..." }
+  "body": [
+    "## Subtítulo da primeira seção",
+    "Parágrafo com texto puro, sem asteriscos nem markdown inline.",
+    "## Outra seção",
+    "Parágrafo puro continuando o conteúdo."
   ]
-}
+}`
 
-REGRAS DO CARROSSEL (campo carousel):
-- Gere de 3 a 4 slides de conteúdo (eles virão DEPOIS do slide de capa e ANTES do slide final de CTA, que são gerados automaticamente).
-- Cada slide ensina UMA ideia: um passo, um dado, uma dica prática. Nada de encher linguiça.
-- title: manchete curtíssima e impactante. body: explicação clara e direta, tom de amigo.
-- O carrossel deve fazer a pessoa entender o tema mesmo sem ler o blog — é conteúdo de valor, não teaser vazio.
-- NUNCA soar como publi. Se citar empresa, mantenha neutralidade.`
-
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const articleMsg = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = (msg.content[0] as { type: string; text: string }).text.trim()
-  const parsed = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
-  // Injeta imageUrl do artigo original se existir
+  const articleText = (articleMsg.content[0] as { type: string; text: string }).text.trim()
+  const article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+
+  // Segunda call: Sonnet gera o copy do Instagram (caption, título do card, slides).
+  // Esses são os únicos textos que o seguidor lê no feed — qualidade aqui é tudo.
+  const igPrompt = `Você é copywriter sênior de Instagram para o Endinheirados (endinheirados.cc), canal de finanças pessoais para a Geração Z brasileira.
+
+Com base neste artigo do blog, crie o material completo para o carrossel do Instagram:
+
+TÍTULO DO ARTIGO: ${article.title}
+RESUMO: ${article.excerpt}
+CORPO DO ARTIGO:
+${(article.body as string[]).join('\n')}
+
+---
+
+PÚBLICO: brasileiros de 20-35 anos, curiosos sobre dinheiro mas não especialistas. Tom: amigo que entende de finanças, direto, sem enrolação, sem termos técnicos sem explicação, sem ser corporativo.
+
+REGRAS DE COPY — CRÍTICO:
+- Linguagem coloquial brasileira real: "pra", "tá", "né", "num", "numa" quando soa natural. NUNCA forçado.
+- ZERO travessão (—). Se precisar, use vírgula ou reescreva a frase.
+- Sem frases telegráficas empilhadas: "Não é X. É Y. Não é A. É B." — proibido.
+- Sem vocabulário de IA: "crucial", "fundamental", "evidencia", "ressalta", "adicionalmente".
+- Sem atribuições vagas: "especialistas dizem", "pesquisas mostram" sem fonte real.
+- Personalidade e opinião: não só relate, reaja. "Isso me parece..." ou "A lógica é direta:" funcionam.
+
+REGRA DO igTitle: máximo 3 linhas de 25 caracteres cada. CAIXA ALTA. Deve ser a frase de parar o scroll — impactante, direto, que faz quem está rolando o feed querer ler mais. Não repita o título do artigo palavra por palavra.
+
+REGRA DO igCaption (legenda do Instagram):
+- 3 blocos separados por linha em branco, cada um com 3-5 linhas
+- Bloco 1: gancho — a pergunta ou provocação que fisgou quem parou no post
+- Bloco 2: o núcleo do conteúdo — o que a pessoa precisa saber, com a sua voz
+- Bloco 3: feche com algo concreto, acionável ou com uma virada de perspectiva
+- Sem emojis no corpo dos parágrafos
+- Finaliza EXATAMENTE com esta linha no final: 🔗 Acesse o guia completo em endinheirados.cc/blog/${article.slug}
+
+seguida de linha em branco e: #finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
+(substitua HASHTAG2-4 por hashtags reais e relevantes para o tema)
+
+REGRA DOS SLIDES (carousel):
+- 3 a 4 slides de conteúdo que ensinam o tema passo a passo
+- Cada slide: UMA ideia clara. Não misture dois conceitos no mesmo slide.
+- title: manchete de impacto, CAIXA ALTA, máximo 40 chars. Deve funcionar sozinho sem contexto.
+- body: 1 a 2 frases. Máximo 180 chars. Concreto, com número ou comparação sempre que possível.
+- O carrossel inteiro deve funcionar como conteúdo autônomo — quem vê só os slides aprende algo real.
+- NUNCA soar como publi. Se citar empresa ou produto, neutralidade total.
+
+Retorne SOMENTE um JSON válido (sem texto fora do JSON):
+{
+  "igTitle": "TÍTULO\\nEM ATÉ\\n3 LINHAS",
+  "igCaption": "legenda completa aqui",
+  "carousel": [
+    { "title": "HEADLINE DO SLIDE", "body": "explicação direta em 1-2 frases" },
+    { "title": "SLIDE 2", "body": "..." },
+    { "title": "SLIDE 3", "body": "..." }
+  ]
+}`
+
+  const igMsg = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: igPrompt }],
+  })
+
+  const igText = (igMsg.content[0] as { type: string; text: string }).text.trim()
+  const igAssets = JSON.parse(igText.replace(/^```json\n?|\n?```$/g, ''))
+
+  const parsed = { ...article, ...igAssets }
   if (articleImageUrl) parsed.articleImageUrl = articleImageUrl
   return parsed
 }
@@ -452,19 +509,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
+  // Extrai todos os params ANTES do after() — request não está disponível dentro do callback
+  const reqUrl = new URL(request.url)
+  const forceSync = reqUrl.searchParams.get('force') === 'true' && process.env.NODE_ENV === 'development'
+  const rejectedTitle = reqUrl.searchParams.get('rejected') ? decodeURIComponent(reqUrl.searchParams.get('rejected')!) : null
+  const forceTopic    = reqUrl.searchParams.get('force_topic') ? decodeURIComponent(reqUrl.searchParams.get('force_topic')!) : null
+  const injectTitle   = reqUrl.searchParams.get('inject_title') ? decodeURIComponent(reqUrl.searchParams.get('inject_title')!) : null
+  const injectUrl     = reqUrl.searchParams.get('inject_url') ? decodeURIComponent(reqUrl.searchParams.get('inject_url')!) : null
+  const injectDesc    = reqUrl.searchParams.get('inject_desc') ? decodeURIComponent(reqUrl.searchParams.get('inject_desc')!) : null
+
+  // O trabalho pesado (Claude + fotos) passa dos 30s de timeout do cron-job.org.
+  // Responde 200 imediatamente e processa em background com after().
+  const work = async () => {
+    try {
     const schedule = getSchedule()
-    const url = new URL(request.url)
-    const rejectedTitle = url.searchParams.get('rejected')
-      ? decodeURIComponent(url.searchParams.get('rejected')!)
-      : null
-    const forceTopic = url.searchParams.get('force_topic')
-      ? decodeURIComponent(url.searchParams.get('force_topic')!)
-      : null
-    // Injeta notícia específica via query params (bypassa RSS)
-    const injectTitle = url.searchParams.get('inject_title') ? decodeURIComponent(url.searchParams.get('inject_title')!) : null
-    const injectUrl   = url.searchParams.get('inject_url')   ? decodeURIComponent(url.searchParams.get('inject_url')!)   : null
-    const injectDesc  = url.searchParams.get('inject_desc')  ? decodeURIComponent(url.searchParams.get('inject_desc')!)  : null
 
     // 1. Buscar notícias
     let news: string
@@ -538,6 +596,7 @@ export async function GET(request: Request) {
     const header = rejectedTitle ? `🔄 Alternativa ao rejeitado\n\n${tipo}` : `🆕 Post pronto pra revisão\n\n${tipo}`
 
     // Envia o preview principal com os botões de aprovação
+    const previewUrl = `${SITE}/admin/preview/${id}?token=${adminToken()}&type=pending`
     await tgSendPhoto(
       slideUrls[0],
       `${header}\n📌 ${post.title}\n\n${(post.excerpt as string)}\n\nAprovar publica no blog + manda o carrossel aqui.`,
@@ -549,6 +608,8 @@ export async function GET(request: Request) {
           { text: '✏️ Título', callback_data: `ed:${id}` },
           { text: '📝 Legenda', callback_data: `ec:${id}` },
           { text: '🖼 Mais fotos', callback_data: `ph:${id}` },
+        ], [
+          { text: '👁 Ver conteúdo completo', url: previewUrl },
         ]],
       }
     )
@@ -581,4 +642,12 @@ export async function GET(request: Request) {
     await tgAlert(`Cron publish (${new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })})`, err)
     return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
+  }
+
+  if (forceSync) {
+    await work()
+    return NextResponse.json({ ok: true, forced: true })
+  }
+  after(work)
+  return NextResponse.json({ ok: true, queued: true })
 }

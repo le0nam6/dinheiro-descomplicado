@@ -3,6 +3,7 @@
  */
 import { createClient } from '@sanity/client'
 import { nanoid } from 'nanoid'
+import { createHmac } from 'crypto'
 import { GoogleAuth } from 'google-auth-library'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -211,13 +212,27 @@ export async function humanizePostBody(lines: string[]): Promise<string[]> {
 
 // --- Teclado de aprovação de post do blog ---
 
+function adminPreviewToken(): string {
+  const password = process.env.ADMIN_PASSWORD || ''
+  const secret = process.env.CRON_SECRET || 'fallback-dev-secret'
+  return createHmac('sha256', secret).update(password).digest('hex')
+}
+
 export function blogApprovalKeyboard(sanityId: string) {
+  const previewUrl = `${SITE}/admin/preview/${sanityId}?token=${adminPreviewToken()}`
   return {
-    inline_keyboard: [[
-      { text: '✅ Aprovar', callback_data: `ba:${sanityId}` },
-      { text: '❌ Rejeitar', callback_data: `br:${sanityId}` },
-    ]],
+    inline_keyboard: [
+      [
+        { text: '✅ Aprovar', callback_data: `ba:${sanityId}` },
+        { text: '❌ Rejeitar', callback_data: `br:${sanityId}` },
+      ],
+      [{ text: '👁 Ver conteúdo completo', url: previewUrl }],
+    ],
   }
+}
+
+export function adminToken(): string {
+  return adminPreviewToken()
 }
 
 // --- Alertas de falha no Telegram (#1) ---
@@ -370,20 +385,72 @@ export async function tgSendPhoto(photoUrl: string, caption: string, replyMarkup
 }
 
 export async function tgSendAlbum(slideUrls: string[], firstCaption: string) {
+  // Pré-aquece os slides OG antes de chamar o Telegram.
+  // Os slides são gerados dinamicamente pelo /api/og — sem pre-warm, o Telegram
+  // faz download deles simultaneamente e pode timeout no cold start da Vercel,
+  // causando falha silenciosa do sendMediaGroup enquanto o caption ainda chega.
+  await Promise.allSettled(
+    slideUrls.map(url => fetch(url, { signal: AbortSignal.timeout(12000) }))
+  )
+
   const media = slideUrls.slice(0, 10).map((url, i) => ({
     type: 'photo',
     media: url,
     ...(i === 0 ? { caption: firstCaption } : {}),
   }))
-  return fetch(`https://api.telegram.org/bot${TG_TOKEN()}/sendMediaGroup`, {
+  const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN()}/sendMediaGroup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: TG_CHAT(), media }),
   }).then(r => r.json())
+
+  if (!res.ok) {
+    console.error('[tgSendAlbum] sendMediaGroup falhou:', JSON.stringify(res))
+    throw new Error(`sendMediaGroup falhou: ${res.description ?? JSON.stringify(res)}`)
+  }
+  return res
 }
 
 /** Entrega final: carrossel + legenda pronta no Telegram (para postagem manual com música). */
 export async function deliverCarousel(slideUrls: string[], caption: string, blogUrl: string) {
-  await tgSendAlbum(slideUrls, `🎠 Carrossel pronto pra postar (adicione a música no app)\n\n${blogUrl}`)
+  try {
+    await tgSendAlbum(slideUrls, `🎠 Carrossel pronto pra postar (adicione a música no app)\n\n${blogUrl}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    await tgSendMessage(`⚠️ Carrossel falhou ao ser enviado. Erro: ${msg}\n\nTente novamente via "🖼 Trocar foto e refazer carrossel" ou refaz o post.`)
+  }
   await tgSendMessage(`📋 LEGENDA (copie e cole):\n\n${caption}`)
+}
+
+// ─── Fila editorial: pautas sugeridas pelo admin (Telegram ou /admin) ──────────
+export type QueueKind = 'noticia' | 'materia' | 'curiosidade'
+export type QueueItem = { _id: string; kind: QueueKind; brief: string; priority: number; status: string; createdAt?: string; usedRef?: string }
+
+/** Próximo item da fila de um tipo (maior prioridade, depois mais antigo). null se vazia. */
+export async function nextQueueItem(kind: QueueKind): Promise<{ _id: string; brief: string } | null> {
+  return sanity.fetch(
+    `*[_type=="editorialQueue" && status=="fila" && kind==$kind]|order(priority desc, createdAt asc)[0]{_id, brief}`,
+    { kind }
+  )
+}
+
+/** Marca um item da fila como usado, guardando o que saiu dele. */
+export async function markQueueUsed(id: string, usedRef?: string) {
+  await sanity.patch(id).set({ status: 'usado', usedAt: new Date().toISOString(), ...(usedRef ? { usedRef } : {}) }).commit()
+}
+
+/** Adiciona uma pauta à fila. */
+export async function addQueueItem(kind: QueueKind, brief: string, source: 'telegram' | 'admin', priority = 0) {
+  return sanity.create({
+    _type: 'editorialQueue',
+    kind, brief, priority, status: 'fila', source,
+    createdAt: new Date().toISOString(),
+  })
+}
+
+/** Lista a fila ativa (status "fila"), ordenada por prioridade. */
+export async function listQueue(): Promise<QueueItem[]> {
+  return sanity.fetch(
+    `*[_type=="editorialQueue" && status=="fila"]|order(priority desc, createdAt asc){_id, kind, brief, priority, status, createdAt}`
+  )
 }

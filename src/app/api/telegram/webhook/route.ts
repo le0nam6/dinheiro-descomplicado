@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
+  addQueueItem, listQueue, type QueueKind,
 } from '@/lib/publish-core'
 import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
 
@@ -287,7 +288,12 @@ export async function POST(request: Request) {
           `🤖 *Endinheirados Bot*\n\n` +
           `📊 /status — visão geral do sistema\n` +
           `📋 /pendentes — posts aguardando aprovação\n` +
-          `📰 /gerar — gera uma notícia agora\n` +
+          `📰 /gerar — gera uma notícia agora\n\n` +
+          `*Fila editorial*\n` +
+          `📰 /pauta <ideia> — tema pra próxima notícia\n` +
+          `📝 /materia <ideia> — matéria própria\n` +
+          `💡 /curiosidade <ideia> — curiosidade da edição\n` +
+          `📋 /fila — ver a fila de pautas\n\n` +
           `💱 /cotacao <ativo> — cotação atual (ex: /cotacao dolar)\n` +
           `🔔 /alerta <ativo> <acima|abaixo> <valor> — cria alerta\n` +
           `🔔 /alertas — lista alertas ativos`,
@@ -401,6 +407,38 @@ export async function POST(request: Request) {
         const value = parseFloat(m[3].replace(/\./g, '').replace(',', '.'))
         await sanity.create({ _type: 'priceAlert', symbol: sym, condition, value, active: true })
         await tg('sendMessage', { chat_id: chatId, text: `✅ Alerta criado: ${sym} ${condition === 'above' ? 'acima de' : 'abaixo de'} ${value}\n\nVou te avisar aqui quando bater.` })
+        return NextResponse.json({ ok: true })
+      }
+
+      // ─── Fila editorial: adicionar pauta ───
+      const QUEUE_CMD: Record<string, { kind: QueueKind; label: string }> = {
+        '/pauta':       { kind: 'noticia',     label: '📰 Notícia' },
+        '/materia':     { kind: 'materia',     label: '📝 Matéria própria' },
+        '/matéria':     { kind: 'materia',     label: '📝 Matéria própria' },
+        '/curiosidade': { kind: 'curiosidade', label: '💡 Curiosidade' },
+      }
+      if (QUEUE_CMD[cmd]) {
+        const { kind, label } = QUEUE_CMD[cmd]
+        const brief = text.slice(cmd.length).trim()
+        if (!brief) {
+          await tg('sendMessage', { chat_id: chatId, text: `Uso: ${cmd} <sua ideia>\nEx: ${cmd} Como funciona o Tesouro IPCA+ na prática` })
+          return NextResponse.json({ ok: true })
+        }
+        await addQueueItem(kind, brief, 'telegram')
+        await tg('sendMessage', { chat_id: chatId, text: `✅ Adicionado à fila — ${label}\n\n"${brief}"\n\nVer fila: /fila` })
+        return NextResponse.json({ ok: true })
+      }
+
+      // ─── Fila editorial: listar ───
+      if (cmd === '/fila') {
+        const items = await listQueue()
+        if (!items.length) {
+          await tg('sendMessage', { chat_id: chatId, text: '🟢 Fila editorial vazia. Adicione com /pauta, /materia ou /curiosidade.' })
+          return NextResponse.json({ ok: true })
+        }
+        const EMOJI: Record<string, string> = { noticia: '📰', materia: '📝', curiosidade: '💡' }
+        const lines = items.map((i, n) => `${n + 1}. ${EMOJI[i.kind] || '•'} ${i.brief.slice(0, 80)}${i.brief.length > 80 ? '…' : ''}`)
+        await tg('sendMessage', { chat_id: chatId, text: `📋 Fila editorial (${items.length})\n\n${lines.join('\n')}\n\nGerencie em ${SITE}/admin` })
         return NextResponse.json({ ok: true })
       }
 

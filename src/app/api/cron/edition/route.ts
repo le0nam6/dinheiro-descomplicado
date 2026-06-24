@@ -6,10 +6,10 @@
  * inteligente em poucos minutos. Publica em /edicao/[data] e avisa no Telegram.
  */
 import Anthropic from '@anthropic-ai/sdk'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
-import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto } from '@/lib/publish-core'
+import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto, nextQueueItem, markQueueUsed } from '@/lib/publish-core'
 import { sendEditionCampaign } from '@/lib/brevo'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -105,7 +105,7 @@ type Curation = {
   reflection?: string
 }
 
-async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false): Promise<{ curation: Curation; news: NewsItem[] }> {
+async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false, recentWords: string[] = []): Promise<{ curation: Curation; news: NewsItem[] }> {
   // No modo curado (forced), o editor já escolheu — usa TODAS as manchetes recebidas.
   const pool = forced ? news : news.slice(0, 70)
   const isFriday = weekday === 'sexta-feira'
@@ -218,8 +218,9 @@ Exemplos de estilo:
 BLOCOS EXTRAS (deixam a edição mais viva — preencha todos os pedidos abaixo):
 REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem negrito/itálico markdown, sem marcadores de lista (nada de "•", "-", "1️⃣"), sem numeração emoji. Frases corridas normais.
 
-"wordOfDay" — PALAVRA DO DIA: um conceito, fenômeno ou palavra de QUALQUER área do conhecimento — psicologia, filosofia, biologia, história, linguística, física, antropologia, sociologia. NÃO priorize finanças aqui; o restante da edição já é sobre dinheiro.
-  - "word": o termo (ex.: "Efeito Dunning-Kruger", "Memética", "Paradoxo de Jevons", "Heurística de disponibilidade", "Efeito Zeigarnik", "Viés de sobrevivência").
+"wordOfDay" — PALAVRA DO DIA: um conceito, fenômeno ou palavra de QUALQUER área do conhecimento — psicologia, filosofia, biologia, história, linguística, física, antropologia, sociologia, economia comportamental, neurociência. NÃO priorize finanças; o restante da edição já é sobre dinheiro.
+  - "word": escolha um termo DIFERENTE e ORIGINAL. Evite os mais óbvios e famosos (Dunning-Kruger, Zeigarnik, viés de confirmação). Prefira conceitos menos conhecidos que sejam genuinamente interessantes.
+${recentWords.length ? `  - PROIBIDO repetir — já usados nas últimas edições: ${recentWords.join(', ')}` : ''}
   - "meaning": o que significa, em linguagem simples (1-2 frases).
   - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
 
@@ -378,7 +379,15 @@ export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  try {
+
+  const reqUrl = new URL(request.url)
+  const previewMode = reqUrl.searchParams.get('preview') === '1'
+  const forceSync = previewMode || (reqUrl.searchParams.get('force') === 'true' && process.env.NODE_ENV === 'development')
+
+  // A geração da edição (Claude) passa dos 30s de timeout do cron-job.org.
+  // Modo normal: responde 200 na hora e gera em background. Preview/force: roda síncrono.
+  const work = async () => {
+    try {
     const date = brtDate()
     // Modo rascunho: gera uma edição de teste com slug próprio, sem tocar na
     // edição publicada do dia, sem Telegram e sem invalidar a home.
@@ -424,8 +433,11 @@ export async function GET(request: Request) {
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
+    const recentWords: string[] = (await sanity.fetch(
+      '*[_type=="edition" && defined(wordOfDay.word)] | order(date desc)[0...30].wordOfDay.word'
+    )).filter(Boolean)
     const [{ curation, news: pool }, marketSnapshot, lastNumber] = await Promise.all([
-      curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated),
+      curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated, recentWords),
       fetchMarketSnapshot(),
       sanity.fetch<number | null>('*[_type=="edition" && defined(number)] | order(number desc)[0].number'),
     ])
@@ -452,6 +464,10 @@ export async function GET(request: Request) {
       })
     }
 
+    // Curiosidade da fila editorial tem prioridade sobre a gerada pela IA (só em edição real)
+    const queuedCuriosity = preview ? null : await nextQueueItem('curiosidade')
+    if (queuedCuriosity) curation.curiosity = queuedCuriosity.brief
+
     const wod = curation.wordOfDay
     const slugValue = preview ? previewSlug : date
     const thematicTitle = (curation.title && curation.title.length <= 120 && !curation.title.startsWith('Edição de'))
@@ -477,6 +493,8 @@ export async function GET(request: Request) {
       ...(curation.recommendation ? { recommendation: curation.recommendation } : {}),
       ...(curation.reflection ? { reflection: curation.reflection } : {}),
     })
+
+    if (queuedCuriosity) await markQueueUsed(queuedCuriosity._id, slugValue)
 
     const url = `${SITE}/edicao/${slugValue}`
 
@@ -518,4 +536,11 @@ export async function GET(request: Request) {
     await tgAlert('Cron edição diária (5h)', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
+  }
+
+  if (forceSync) {
+    return (await work()) ?? NextResponse.json({ ok: true })
+  }
+  after(work)
+  return NextResponse.json({ ok: true, queued: true })
 }

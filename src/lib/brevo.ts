@@ -118,7 +118,7 @@ export async function addContact(email: string, attributes: Record<string, strin
   }).catch(() => {})
 }
 
-type EditionParams = {
+export type EditionParams = {
   date: string
   title: string
   url: string
@@ -262,7 +262,7 @@ function fmtDate(iso: string): string {
   } catch { return iso }
 }
 
-function buildEditionHtml(p: EditionParams): string {
+export function buildEditionHtml(p: EditionParams): string {
   const GREEN = '#16a34a'
   const DARK = '#14532d'
 
@@ -274,47 +274,72 @@ function buildEditionHtml(p: EditionParams): string {
     + (p.stories.length > 3 ? ' e mais.' : '.')
 
   const marketHtml = p.marketSnapshot?.length ? `
-  <tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:14px 40px;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      ${p.marketSnapshot.map(q => `
-      <td style="text-align:center;padding:4px 6px;">
-        <p style="margin:0;font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">${esc(q.label)}</p>
-        <p style="margin:3px 0 2px;font-size:13px;font-weight:700;color:#111827;">${esc(q.value)}</p>
-        <p style="margin:0;font-size:11px;font-weight:700;color:${q.changePct >= 0 ? '#16a34a' : '#dc2626'};">${q.changePct >= 0 ? '▲' : '▼'} ${Math.abs(q.changePct).toFixed(2)}%</p>
-      </td>`).join('')}
-    </tr></table>
+  <tr><td style="background:#ffffff;padding:8px 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111827;border-radius:16px;">
+      <tr><td style="padding:18px 20px 6px;">
+        <p style="margin:0;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Termômetro do mercado</p>
+      </td></tr>
+      <tr><td style="padding:4px 12px 16px;text-align:center;font-size:0;">
+        ${p.marketSnapshot.map(q => `<div style="display:inline-block;width:25%;min-width:108px;vertical-align:top;padding:8px 4px;box-sizing:border-box;text-align:center;">
+          <p style="margin:0;font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap;">${esc(q.label)}</p>
+          <p style="margin:4px 0 2px;font-size:14px;font-weight:700;color:#ffffff;white-space:nowrap;">${esc(q.value)}</p>
+          <p style="margin:0;font-size:11px;font-weight:700;color:${q.changePct >= 0 ? '#4ade80' : '#f87171'};white-space:nowrap;">${q.changePct >= 0 ? '▲' : '▼'} ${Math.abs(q.changePct).toFixed(2)}%</p>
+        </div>`).join('')}
+      </td></tr>
+    </table>
   </td></tr>` : ''
 
   const summaryHtml = p.stories.length > 0 ? `
-  <tr><td style="background:#ffffff;padding:20px 40px 4px;">
-    <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ca3af;text-transform:uppercase;">Nesta edição</p>
-    ${p.stories.map(s => `<p style="margin:0 0 5px;font-size:14px;color:#374151;line-height:1.4;">${esc(s.emoji || '•')} ${esc(s.headline || '')}</p>`).join('')}
-  </td></tr>
-  <tr><td style="height:4px;background:#ffffff;border-bottom:2px solid #f3f4f6;"></td></tr>` : ''
+  <tr><td style="background:#ffffff;padding:4px 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:16px;">
+      <tr><td style="padding:18px 20px;">
+        <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#6b7280;text-transform:uppercase;">Nesta edição</p>
+        ${p.stories.map(s => `<p style="margin:0 0 6px;font-size:14px;color:#374151;line-height:1.45;">${esc(s.emoji || '•')} ${esc(s.headline || '')}</p>`).join('')}
+      </td></tr>
+    </table>
+  </td></tr>` : ''
 
-  const storiesHtml = p.stories.map(s => {
+  // Ativação do programa de indicação inserida no meio do e-mail (após a 2ª matéria), como no site
+  const midReferralHtml = `
+  <tr><td style="padding:8px 0 28px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;">
+      <tr><td style="padding:22px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:24px;">💸</p>
+        <p style="margin:0 0 6px;font-size:17px;font-weight:800;color:#111827;line-height:1.3;">Curtindo a edição? Indica pra um amigo.</p>
+        <p style="margin:0 0 16px;font-size:14px;color:#4b5563;line-height:1.6;">Cada amigo que assinar pelo seu link conta como indicação. No topo da trilha tem uma consultoria financeira 1:1 de graça.</p>
+        <a href="https://endinheirados.cc/indicacao/{{ contact.REFERRAL_CODE }}" style="display:inline-block;background:#16a34a;color:#fff;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">Pegar meu link de indicação →</a>
+      </td></tr>
+    </table>
+  </td></tr>`
+
+  const storiesHtml = p.stories.map((s, idx) => {
     // Merge tag não pode ser encodeURIComponent — Brevo substitui depois
     const staticPart = encodeURIComponent(`${s.headline || ''}\n\nLi no Endinheirados:\nhttps://endinheirados.cc/indicacao/`)
     const waUrl = `https://wa.me/?text=${staticPart}{{ contact.REFERRAL_CODE }}`
-    return `
+    const story = `
   <tr><td style="padding:28px 0;border-bottom:1px solid #e5e7eb;">
-    ${s.tag ? `<p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.08em;color:${GREEN};text-transform:uppercase;">${esc(s.emoji || '')} ${esc(s.tag)}</p>` : ''}
-    ${s.headline ? `<h2 style="margin:0 0 10px;font-size:20px;font-weight:800;color:#111827;line-height:1.3;">${esc(s.headline)}</h2>` : ''}
-    ${s.image?.url ? `<img src="${s.image.url}" alt="${esc(s.image.alt || s.headline || '')}" width="520" style="width:100%;max-width:520px;height:220px;object-fit:cover;border-radius:8px;display:block;margin:0 0 14px;" />` : ''}
-    ${s.hook ? `<p style="margin:0 0 12px;font-size:16px;font-style:italic;color:#374151;line-height:1.6;">${esc(s.hook)}</p>` : ''}
-    ${s.what ? `<p style="margin:0 0 10px;font-size:15px;color:#374151;line-height:1.65;">${esc(s.what)}</p>` : ''}
-    ${s.why ? `<p style="margin:0 0 14px;font-size:15px;color:#374151;line-height:1.65;">${esc(s.why)}</p>` : ''}
+    ${(s.emoji || s.tag) ? `<p style="margin:0 0 10px;font-size:0;">${s.emoji ? `<span style="font-size:22px;vertical-align:middle;">${esc(s.emoji)}</span>` : ''}${s.tag ? `<span style="display:inline-block;vertical-align:middle;margin-left:${s.emoji ? '8px' : '0'};background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px;border-radius:999px;">${esc(s.tag)}</span>` : ''}</p>` : ''}
+    ${s.headline ? `<h2 style="margin:0 0 12px;font-size:21px;font-weight:800;color:#111827;line-height:1.3;">${esc(s.headline)}</h2>` : ''}
+    ${s.hook ? `<p style="margin:0 0 14px;font-size:17px;color:#6b7280;line-height:1.6;">${esc(s.hook)}</p>` : ''}
+    ${s.image?.url ? `<img src="${s.image.url}" alt="${esc(s.image.alt || s.headline || '')}" width="520" style="width:100%;max-width:520px;height:220px;object-fit:cover;border-radius:12px;display:block;margin:0 0 14px;" />` : ''}
+    ${s.what ? `<p style="margin:0 0 12px;font-size:16px;color:#1f2937;line-height:1.7;">${esc(s.what)}</p>` : ''}
+    ${s.why ? `<p style="margin:0 0 14px;font-size:15px;font-style:italic;color:#4b5563;line-height:1.7;">${esc(s.why)}</p>` : ''}
     <a href="${waUrl}" style="display:inline-block;background:#25d366;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:7px;text-decoration:none;">📲 Compartilhar no WhatsApp</a>
   </td></tr>`
+    return idx === 1 ? story + midReferralHtml : story
   }).join('')
 
   const wordHtml = p.wordOfDay?.word ? `
-  <tr><td style="padding:24px;background:#f0fdf4;border-radius:10px;margin-top:16px;">
-    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:${GREEN};text-transform:uppercase;">Palavra do dia</p>
-    <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#111827;">${esc(p.wordOfDay.word)}</p>
-    ${p.wordOfDay.meaning ? `<p style="margin:0 0 8px;font-size:15px;color:#374151;line-height:1.6;">${esc(p.wordOfDay.meaning)}</p>` : ''}
-    ${p.wordOfDay.application ? `<p style="margin:0;font-size:14px;color:#6b7280;font-style:italic;line-height:1.6;">${esc(p.wordOfDay.application)}</p>` : ''}
-  </td></tr><tr><td style="height:12px;"></td></tr>` : ''
+  <tr><td style="padding:0 0 14px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:16px;">
+      <tr><td style="padding:20px 22px;">
+        <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;color:${GREEN};text-transform:uppercase;">📚 Palavra do dia</p>
+        <p style="margin:0 0 6px;font-size:18px;font-weight:800;color:#111827;">${esc(p.wordOfDay.word)}</p>
+        ${p.wordOfDay.meaning ? `<p style="margin:0 0 8px;font-size:15px;color:#4b5563;line-height:1.6;">${esc(p.wordOfDay.meaning)}</p>` : ''}
+        ${p.wordOfDay.application ? `<p style="margin:0;font-size:15px;color:#374151;line-height:1.6;">${esc(p.wordOfDay.application)}</p>` : ''}
+      </td></tr>
+    </table>
+  </td></tr>` : ''
 
   const featuredPostsHtml = p.featuredPosts?.length ? `
   <tr><td style="background:#fafaf8;border-top:2px solid #e5e7eb;border-bottom:2px solid #e5e7eb;padding:28px 40px;">
@@ -322,7 +347,7 @@ function buildEditionHtml(p: EditionParams): string {
     <p style="margin:0 0 20px;font-size:13px;color:#6b7280;">Do nosso arquivo — para ir além das notícias de hoje</p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       ${p.featuredPosts.slice(0, 3).map((post, i) => `
-      <tr><td style="padding:${i > 0 ? '16px 0 0' : '0'} 0 16px;${i < 2 ? 'border-bottom:1px solid #e5e7eb;' : ''}">
+      <tr><td style="padding-top:${i > 0 ? '20px' : '0'};padding-bottom:20px;${i < 2 ? 'border-bottom:1px solid #e5e7eb;' : ''}">
         ${post.category ? `<p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;color:${GREEN};text-transform:uppercase;">${esc(post.category)}</p>` : ''}
         <a href="https://endinheirados.cc/blog/${esc(post.slug)}" style="text-decoration:none;">
           <p style="margin:0 0 6px;font-size:16px;font-weight:800;color:#111827;line-height:1.3;">${esc(post.title)}</p>
@@ -334,22 +359,34 @@ function buildEditionHtml(p: EditionParams): string {
   </td></tr>` : ''
 
   const curiosityHtml = p.curiosity ? `
-  <tr><td style="padding:24px;background:#fefce8;border-radius:10px;">
-    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#ca8a04;text-transform:uppercase;">Curiosidade do dia</p>
-    <p style="margin:0;font-size:15px;color:#374151;line-height:1.65;">${esc(p.curiosity)}</p>
-  </td></tr><tr><td style="height:12px;"></td></tr>` : ''
+  <tr><td style="padding:0 0 14px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffbeb;border:1px solid #fef3c7;border-radius:16px;">
+      <tr><td style="padding:20px 22px;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#b45309;text-transform:uppercase;">💡 Curiosidade do dia</p>
+        <p style="margin:0;font-size:15px;color:#1f2937;line-height:1.65;">${esc(p.curiosity)}</p>
+      </td></tr>
+    </table>
+  </td></tr>` : ''
 
   const recommendationHtml = p.recommendation ? `
-  <tr><td style="padding:24px;background:#eff6ff;border-radius:10px;">
-    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#2563eb;text-transform:uppercase;">Recomendação da semana</p>
-    <p style="margin:0;font-size:15px;color:#374151;line-height:1.65;">${esc(p.recommendation)}</p>
-  </td></tr><tr><td style="height:12px;"></td></tr>` : ''
+  <tr><td style="padding:0 0 14px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef2ff;border:1px solid #e0e7ff;border-radius:16px;">
+      <tr><td style="padding:20px 22px;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#4338ca;text-transform:uppercase;">🍿 Recomendação de sexta</p>
+        <p style="margin:0;font-size:15px;color:#1f2937;line-height:1.65;">${esc(p.recommendation)}</p>
+      </td></tr>
+    </table>
+  </td></tr>` : ''
 
   const reflectionHtml = p.reflection ? `
-  <tr><td style="padding:24px;background:#faf5ff;border-radius:10px;">
-    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#7c3aed;text-transform:uppercase;">Reflexão do domingo</p>
-    <p style="margin:0;font-size:15px;color:#374151;line-height:1.65;">${esc(p.reflection)}</p>
-  </td></tr><tr><td style="height:12px;"></td></tr>` : ''
+  <tr><td style="padding:0 0 14px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111827;border-radius:16px;">
+      <tr><td style="padding:20px 22px;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#4ade80;text-transform:uppercase;">🌅 Reflexão de domingo</p>
+        <p style="margin:0;font-size:15px;color:#f3f4f6;line-height:1.65;">${esc(p.reflection)}</p>
+      </td></tr>
+    </table>
+  </td></tr>` : ''
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -358,7 +395,7 @@ function buildEditionHtml(p: EditionParams): string {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${esc(p.title)}</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;text-size-adjust:100%;">
 <!-- Preheader: aparece como preview text na caixa de entrada -->
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#f3f4f6;">${esc(previewText)}</div>
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;">
@@ -377,7 +414,7 @@ function buildEditionHtml(p: EditionParams): string {
   <!-- Intro -->
   <tr><td style="background:#ffffff;padding:32px 40px 20px;">
     ${p.title ? `<p style="margin:0 0 10px;font-size:13px;font-weight:700;color:${GREEN};text-transform:uppercase;letter-spacing:.06em;">${esc(p.title)}</p>` : ''}
-    ${p.punchline ? `<p style="margin:0 0 14px;font-size:23px;font-weight:800;color:#111827;line-height:1.3;">${esc(p.punchline)}</p>` : ''}
+    ${p.punchline ? `<p style="margin:0 0 14px;padding-left:16px;border-left:4px solid #22c55e;font-size:23px;font-weight:800;color:#111827;line-height:1.3;">${esc(p.punchline)}</p>` : ''}
     ${p.intro ? `<p style="margin:0;font-size:16px;color:#4b5563;line-height:1.75;">${esc(p.intro)}</p>` : ''}
   </td></tr>
 
@@ -397,6 +434,7 @@ function buildEditionHtml(p: EditionParams): string {
 
   <!-- Extras -->
   <tr><td style="background:#ffffff;padding:24px 40px 8px;">
+    ${(p.wordOfDay?.word || p.curiosity || p.recommendation || p.reflection) ? `<p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#9ca3af;text-transform:uppercase;">Para fechar com estilo</p>` : ''}
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       ${wordHtml}${curiosityHtml}${recommendationHtml}${reflectionHtml}
     </table>

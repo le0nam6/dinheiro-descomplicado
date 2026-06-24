@@ -26,7 +26,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls,
   fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
-  humanizePostBody, blogApprovalKeyboard,
+  blogApprovalKeyboard, nextQueueItem, markQueueUsed,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -288,6 +288,20 @@ function recentBlock(recent: string[]) {
   return `NÃO repita temas: ${recent.slice(0, 10).join(' | ')}`
 }
 
+// Matéria própria a partir de uma pauta livre do editor (fila editorial)
+async function generateFromBrief(brief: string, recent: string[]): Promise<GeneratedPost> {
+  const prompt = `Você é redator de finanças pessoais do Endinheirados. O editor-chefe pediu uma matéria sobre esta pauta:
+
+PAUTA DO EDITOR: "${brief}"
+
+Escreva um artigo próprio, didático e aprofundado (10-12 parágrafos) que entregue exatamente o que a pauta pede. Tom de quem entende do assunto e explica como gente, sem juridiquês. Explique todo termo técnico na hora. Quando usar números para ilustrar, deixe explícito que é exemplo hipotético ("imagine que você guarda R$ 100 por mês"), nunca apresente exemplo como dado real de mercado.
+
+${recentBlock(recent)}
+${jsonSchema('educação financeira')}`
+  const p = await callClaude(prompt)
+  return { ...p, funnel: 'mofu', articleType: 'news' }
+}
+
 async function generateNumero(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosNumero()
   if (!d) throw new Error('BACEN sem dados')
@@ -478,31 +492,34 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
   }
 
   const recent = await getRecentTitles(30)
-  const post = await config.generate(recent)
 
-  // Humaniza o corpo antes de salvar
-  if (Array.isArray(post.body)) {
-    post.body = await humanizePostBody(post.body)
-  }
+  // Pauta do editor (fila editorial) tem prioridade sobre a série automática
+  const queued = await nextQueueItem('materia')
+  const post = queued ? await generateFromBrief(queued.brief, recent) : await config.generate(recent)
+  const label = queued ? 'Matéria da sua pauta' : config.label
+  const emoji = queued ? '📝' : config.emoji
+  const coverFallback = queued ? 'Brazil personal finance money planning' : config.coverQuery
 
   const recentPhotos = await getRecentPhotoUrls(30)
-  const serperPics = await fetchSerperImages(post.title || config.coverQuery, 2)
-  const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || config.coverQuery, recentPhotos)
+  const serperPics = await fetchSerperImages(post.title || coverFallback, 2)
+  const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || coverFallback, recentPhotos)
 
   const doc = await createSanityPost(post, photo)
   const slug = (doc.slug as { current: string }).current
   const docId = (doc as { _id: string })._id
   const url = `${SITE}/blog/${slug}`
 
+  if (queued) await markQueueUsed(queued._id, slug)
+
   if (tgConfigured()) {
     const tgRes = await tgSendMessage(
-      `${config.emoji} ${config.label} para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n🔗 ${url}`,
+      `${emoji} ${label}${queued ? ' (sua pauta)' : ''} para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n🔗 ${url}`,
       blogApprovalKeyboard(docId),
     )
     if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
   }
 
-  return { ok: true, series, label: config.label, url }
+  return { ok: true, series: queued ? 'pauta' : series, label, url }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
