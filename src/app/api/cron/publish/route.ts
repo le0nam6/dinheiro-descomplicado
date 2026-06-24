@@ -571,10 +571,11 @@ export async function GET(request: Request) {
     const slides = Array.isArray(post.carousel)
       ? (post.carousel as Array<{ title: string; body: string }>).filter(s => s?.title && s?.body).slice(0, 4)
       : []
+    const slideTag = ((post.category as string) || 'ENDINHEIRADOS').toUpperCase()
     const slideUrls =
       slides.length >= 2
-        ? buildSlideUrls(coverTitle, photo.url, slides)
-        : [`${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}&cta=${encodeURIComponent('LEIA A LEGENDA')}`]
+        ? buildSlideUrls(coverTitle, photo.url, slides, slideTag)
+        : [`${SITE}/api/og/slide?kind=cover&title=${encodeURIComponent(coverTitle)}&tag=${encodeURIComponent(slideTag)}&total=1`]
 
     if (!tgConfigured()) {
       // Sem Telegram: fallback publica direto (comportamento antigo)

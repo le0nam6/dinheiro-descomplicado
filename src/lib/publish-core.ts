@@ -332,20 +332,23 @@ export async function fetchPhoto(query: string, excludeUrls: string[] = []): Pro
   return { url: u?.urls?.regular ?? '', alt: u?.alt_description ?? query, credit: `Foto: ${u?.user?.name ?? 'Unsplash'} via Unsplash` }
 }
 
-/** Monta as URLs dos slides do carrossel: capa (foto) + conteúdo + CTA. */
-export function buildSlideUrls(coverTitle: string, photoUrl: string, slides: Array<{ title: string; body: string }>) {
+/** Monta as URLs dos slides do carrossel: capa flat + conteúdo + CTA. */
+export function buildSlideUrls(
+  coverTitle: string,
+  _photoUrl: string,
+  slides: Array<{ title: string; body: string }>,
+  tag = 'ENDINHEIRADOS',
+) {
   const enc = encodeURIComponent
   const total = slides.length + 2
-  // Token único por post: o slide CTA tem texto fixo e URL idêntica em todo post,
-  // o que faz Telegram/CDN reusarem uma imagem cacheada (tamanho antigo). O token
-  // muda a URL a cada post e fura o cache, garantindo a geração 1080x1350.
   const k = enc(coverTitle.slice(0, 48))
   const urls: string[] = []
-  urls.push(`${SITE}/api/og?title=${enc(coverTitle)}&photo=${enc(photoUrl)}&cta=${enc('ARRASTA PRO LADO →')}`)
+  // Cover flat (estilo minimalista)
+  urls.push(`${SITE}/api/og/slide?kind=cover&title=${enc(coverTitle)}&tag=${enc(tag)}&index=1&total=${total}`)
   slides.forEach((s, i) => {
-    urls.push(`${SITE}/api/og/slide?title=${enc(s.title)}&body=${enc(s.body)}&index=${i + 2}&total=${total}&kind=content`)
+    urls.push(`${SITE}/api/og/slide?title=${enc(s.title)}&body=${enc(s.body)}&index=${i + 2}&total=${total}&kind=content&tag=${enc(tag)}`)
   })
-  urls.push(`${SITE}/api/og/slide?title=${enc('QUER O GUIA COMPLETO?')}&body=${enc('Toca no link da bio e leia o conteúdo completo no nosso site. É de graça!')}&index=${total}&total=${total}&kind=cta&k=${k}`)
+  urls.push(`${SITE}/api/og/slide?title=${enc('GOSTOU?')}&body=${enc('Segue @endinheirados e leia o conteúdo completo no link da bio. É de graça!')}&kind=cta&k=${k}`)
   return urls
 }
 

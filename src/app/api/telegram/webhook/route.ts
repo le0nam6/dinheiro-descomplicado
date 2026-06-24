@@ -41,9 +41,10 @@ type PendingData = { post: GeneratedPost; photo: Photo; slideUrls: string[]; cap
 function buildSlides(post: GeneratedPost, photo: Photo) {
   const coverTitle = post.igTitle || post.title
   const slides = Array.isArray(post.carousel) ? post.carousel.filter(s => s?.title && s?.body).slice(0, 4) : []
+  const slideTag = (post.category || 'ENDINHEIRADOS').toUpperCase()
   return slides.length >= 2
-    ? buildSlideUrls(coverTitle, photo.url, slides)
-    : [`${SITE}/api/og?title=${encodeURIComponent(coverTitle)}&photo=${encodeURIComponent(photo.url)}&cta=${encodeURIComponent('LEIA A LEGENDA')}`]
+    ? buildSlideUrls(coverTitle, photo.url, slides, slideTag)
+    : [`${SITE}/api/og/slide?kind=cover&title=${encodeURIComponent(coverTitle)}&tag=${encodeURIComponent(slideTag)}&total=1`]
 }
 
 export async function POST(request: Request) {
