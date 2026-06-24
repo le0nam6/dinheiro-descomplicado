@@ -464,16 +464,7 @@ export async function GET(request: Request) {
       })
     }
 
-    // Curiosidade da fila editorial tem prioridade sobre a gerada pela IA (só em edição real)
-    const queuedCuriosity = preview ? null : await nextQueueItem('curiosidade')
-    if (queuedCuriosity) {
-      // Usa o brief como pauta para GERAR o conteúdo (não copiar a instrução)
-      const curMsg = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001', max_tokens: 300,
-        messages: [{ role: 'user', content: `Você é jornalista. Com base nesta pauta, escreva a CURIOSIDADE DO DIA em exatamente 2-3 frases diretas, com dados/números reais, em português informal. Sem título, sem asterisco, sem emoji — só o texto corrido.\n\nPAUTA: ${queuedCuriosity.brief}` }],
-      })
-      curation.curiosity = (curMsg.content[0] as { text: string }).text.trim()
-    }
+    const queuedCuriosity = null // fila editorial é para conteúdo separado, não para a edição
 
     const wod = curation.wordOfDay
     const slugValue = preview ? previewSlug : date
