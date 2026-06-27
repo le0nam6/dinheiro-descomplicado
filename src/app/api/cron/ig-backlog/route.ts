@@ -1,13 +1,15 @@
 /**
- * Vercel Cron: para cada notícia nova, gera legenda IG e manda foto + legenda pro Telegram.
- * Admin salva a foto do Telegram e posta no Instagram manualmente.
+ * Vercel Cron: para cada notícia nova, gera imagem via Canva + legenda IG e manda pro Telegram.
+ * Admin salva do Telegram e posta no Instagram manualmente.
  */
 import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
+import { getToken, uploadAssetFromUrl, createIgDesign } from '@/lib/canva-api'
 import Anthropic from '@anthropic-ai/sdk'
 
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!
+const TG_CAPTION_LIMIT = 1024
 
 async function getNextPost() {
   return sanity.fetch<{
@@ -34,20 +36,21 @@ Resumo: ${post.excerpt}
 
 Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
 
-[PARÁGRAFO 1 — 4-5 linhas: contexto do tema, por que importa, situação cotidiana que o leitor reconhece. Tom casual, sem enrolação]
+[PARÁGRAFO 1 — 4-5 linhas: contexto, por que importa. Tom casual]
 
-[PARÁGRAFO 2 — 4-5 linhas: o que a matéria conta de concreto, o impacto real no bolso ou na vida do leitor]
+[PARÁGRAFO 2 — 4-5 linhas: o que a matéria conta de concreto]
 
-[PARÁGRAFO 3 — 4-5 linhas: gancho final, desperta curiosidade, convida a acessar]
+[PARÁGRAFO 3 — 3-4 linhas: gancho final, convida a acessar]
 
-🔗 Leia a matéria completa: endinheirados.cc/blog/${post.slug}
+🔗 endinheirados.cc/blog/${post.slug}
 
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
-Regras: português BR coloquial, ZERO travessão, sem "crucial"/"fundamental"/"adicionalmente", sem emojis no corpo, exatamente 5 hashtags minúsculas sem acento. Retorne APENAS a legenda.`,
+Regras: português BR coloquial, ZERO travessão, sem emojis no corpo, 5 hashtags minúsculas sem acento. Máximo 900 caracteres. Retorne APENAS a legenda.`,
     }],
   })
-  return (msg.content[0] as { text: string }).text.trim()
+  const text = (msg.content[0] as { text: string }).text.trim()
+  return text.slice(0, TG_CAPTION_LIMIT)
 }
 
 async function tgSendPhoto(photoUrl: string, caption: string) {
@@ -57,6 +60,14 @@ async function tgSendPhoto(photoUrl: string, caption: string) {
     body: JSON.stringify({ chat_id: CHAT_ID, photo: photoUrl, caption, parse_mode: 'Markdown' }),
   })
   if (!res.ok) throw new Error(`Telegram sendPhoto failed: ${await res.text()}`)
+}
+
+async function tgSendMessage(text: string) {
+  await fetch(`${BOT}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: 'Markdown' }),
+  })
 }
 
 export async function GET(request: Request) {
@@ -72,13 +83,34 @@ export async function GET(request: Request) {
       ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
     if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
+    const pub = new Date(post.publishedAt)
+    const date = `${String(pub.getDate()).padStart(2, '0')}/${String(pub.getMonth() + 1).padStart(2, '0')} • ${String(pub.getHours()).padStart(2, '0')}:${String(pub.getMinutes()).padStart(2, '0')}`
+
+    // 1. Token Canva (obtido uma vez — rotaciona o refresh_token)
+    const canvaToken = await getToken()
+
+    // 2. Upload foto → Canva
+    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`, canvaToken)
+
+    // 3. Autofill template + exportar imagem
+    const { exportUrl } = await createIgDesign({
+      title: post.title.toUpperCase(),
+      excerpt: post.excerpt.slice(0, 120),
+      date,
+      assetId,
+      token: canvaToken,
+    })
+
+    // 4. Gerar legenda
     const caption = await buildCaption(post)
 
-    await tgSendPhoto(photoUrl, `📲 *Post para o Instagram*\n\n${caption}`)
+    // 5. Mandar imagem gerada + legenda pro Telegram
+    await tgSendPhoto(exportUrl, `📲 *Post para o Instagram*`)
+    await tgSendMessage(`📝 *Legenda:*\n\n${caption}`)
 
     await sanity.patch(post._id).set({ igQueued: true }).commit()
 
-    return NextResponse.json({ ok: true, title: post.title })
+    return NextResponse.json({ ok: true, title: post.title, exportUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await tgAlert('Cron IG backlog', err)
