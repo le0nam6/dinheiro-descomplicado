@@ -1,24 +1,23 @@
 /**
- * Vercel Cron: para cada notícia nova, gera imagem via Canva + legenda IG e manda pro Telegram.
+ * Vercel Cron: para cada notícia nova, gera imagem via /api/og + legenda IG e manda pro Telegram.
  * Admin salva do Telegram e posta no Instagram manualmente.
  */
 import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
-import { getToken, uploadAssetFromUrl, createIgDesign } from '@/lib/canva-api'
 import Anthropic from '@anthropic-ai/sdk'
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!
-const TG_CAPTION_LIMIT = 1024
 
 async function getNextPost() {
   return sanity.fetch<{
-    _id: string; slug: string; title: string; excerpt: string; publishedAt: string
+    _id: string; slug: string; title: string; excerpt: string
     coverImageUrl: string | null
   } | null>(
     `*[_type=="post" && articleType=="news" && igQueued!=true && publishedAt<=now()]
      | order(publishedAt desc)[0]
-     { _id, "slug": slug.current, title, excerpt, publishedAt, "coverImageUrl": coverImage.asset->url }`
+     { _id, "slug": slug.current, title, excerpt, "coverImageUrl": coverImage.asset->url }`
   )
 }
 
@@ -34,7 +33,7 @@ async function buildCaption(post: { title: string; excerpt: string; slug: string
 Título: ${post.title}
 Resumo: ${post.excerpt}
 
-Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
+Formato (3 parágrafos + link + hashtags):
 
 [PARÁGRAFO 1 — 4-5 linhas: contexto, por que importa. Tom casual]
 
@@ -46,28 +45,10 @@ Formato OBRIGATÓRIO (3 parágrafos + link + hashtags):
 
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
-Regras: português BR coloquial, ZERO travessão, sem emojis no corpo, 5 hashtags minúsculas sem acento. Máximo 900 caracteres. Retorne APENAS a legenda.`,
+Regras: português BR coloquial, ZERO travessão, sem emojis no corpo, 5 hashtags minúsculas sem acento. Máximo 850 caracteres. Retorne APENAS a legenda.`,
     }],
   })
-  const text = (msg.content[0] as { text: string }).text.trim()
-  return text.slice(0, TG_CAPTION_LIMIT)
-}
-
-async function tgSendPhoto(photoUrl: string, caption: string) {
-  const res = await fetch(`${BOT}/sendPhoto`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID, photo: photoUrl, caption, parse_mode: 'Markdown' }),
-  })
-  if (!res.ok) throw new Error(`Telegram sendPhoto failed: ${await res.text()}`)
-}
-
-async function tgSendMessage(text: string) {
-  await fetch(`${BOT}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: 'Markdown' }),
-  })
+  return (msg.content[0] as { text: string }).text.trim().slice(0, 1024)
 }
 
 export async function GET(request: Request) {
@@ -83,34 +64,28 @@ export async function GET(request: Request) {
       ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
     if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
-    const pub = new Date(post.publishedAt)
-    const date = `${String(pub.getDate()).padStart(2, '0')}/${String(pub.getMonth() + 1).padStart(2, '0')} • ${String(pub.getHours()).padStart(2, '0')}:${String(pub.getMinutes()).padStart(2, '0')}`
+    // Gera URL da imagem via /api/og (1080x1350, glassmorphism, logo)
+    const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}`
 
-    // 1. Token Canva (obtido uma vez — rotaciona o refresh_token)
-    const canvaToken = await getToken()
-
-    // 2. Upload foto → Canva
-    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`, canvaToken)
-
-    // 3. Autofill template + exportar imagem
-    const { exportUrl } = await createIgDesign({
-      title: post.title.toUpperCase(),
-      excerpt: post.excerpt.slice(0, 120),
-      date,
-      assetId,
-      token: canvaToken,
-    })
-
-    // 4. Gerar legenda
     const caption = await buildCaption(post)
 
-    // 5. Mandar imagem gerada + legenda pro Telegram
-    await tgSendPhoto(exportUrl, `📲 *Post para o Instagram*`)
-    await tgSendMessage(`📝 *Legenda:*\n\n${caption}`)
+    // Manda imagem gerada + legenda separada pro Telegram
+    const photoRes = await fetch(`${BOT}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, photo: ogUrl, caption: `📲 *${post.title}*`, parse_mode: 'Markdown' }),
+    })
+    if (!photoRes.ok) throw new Error(`Telegram sendPhoto: ${await photoRes.text()}`)
+
+    await fetch(`${BOT}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, text: `📝 *Legenda IG:*\n\n${caption}`, parse_mode: 'Markdown' }),
+    })
 
     await sanity.patch(post._id).set({ igQueued: true }).commit()
 
-    return NextResponse.json({ ok: true, title: post.title, exportUrl })
+    return NextResponse.json({ ok: true, title: post.title, ogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await tgAlert('Cron IG backlog', err)
