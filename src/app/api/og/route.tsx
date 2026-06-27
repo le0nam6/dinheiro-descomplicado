@@ -1,10 +1,7 @@
 /**
  * Gera imagem 1080x1350 (4:5) para notícias no Instagram.
- * Layout idêntico ao template Canva do Endinheirados:
- * fundo preto · frame branco na foto · logo sobreposta ao topo ·
- * badge de data verde · card balão branco com título + excerpt ·
- * rodapé escuro "Leia mais em endinheirados.cc"
- *
+ * Layout inspirado no template Canva do Endinheirados:
+ * logo topo · foto arredondada com badge de data · card branco com título + excerpt · rodapé
  * GET /api/og?title=...&photo=...&excerpt=...&date=...
  */
 import { ImageResponse } from 'next/og'
@@ -16,11 +13,12 @@ export const runtime = 'nodejs'
 
 const nunitoBold  = readFileSync(join(process.cwd(), 'public/fonts/NunitoExtraBold.ttf'))
 const lexendDeca  = readFileSync(join(process.cwd(), 'public/fonts/LexendDeca.ttf'))
-const logoData    = readFileSync(join(process.cwd(), 'public/logo-og.png'))
+const logoData    = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
 const logoBase64  = `data:image/png;base64,${logoData.toString('base64')}`
 
-const GREEN = '#4ADE80'
-const BLACK = '#0a0a0a'
+const GREEN  = '#4ADE80'
+const DARK   = '#0D2B14'
+const RADIUS = 48
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -31,8 +29,8 @@ export async function GET(req: NextRequest) {
 
   const trunc = (s: string, max: number) =>
     s.length > max ? s.slice(0, max).replace(/\s+\S*$/, '') + '…' : s
-  const titleTrunc   = trunc(title, 60)
-  const excerptTrunc = trunc(excerpt, 130)
+  const titleTrunc   = trunc(title, 70)
+  const excerptTrunc = trunc(excerpt, 140)
 
   const img = new ImageResponse(
     (
@@ -40,25 +38,32 @@ export async function GET(req: NextRequest) {
         style={{
           width: 1080,
           height: 1350,
-          backgroundColor: BLACK,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: '40px 44px 36px',
-          position: 'relative',
+          backgroundColor: '#f7f8f6',
+          padding: '52px 56px 44px',
         }}
       >
-        {/* Frame da foto com borda branca arredondada */}
+        {/* Logo — 15% maior que o original */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoBase64}
+          alt="Endinheirados"
+          style={{ width: 345, height: 101, objectFit: 'contain', marginBottom: 36 }}
+        />
+
+        {/* Frame da foto com bordas arredondadas */}
         <div
           style={{
             width: '100%',
-            height: 640,
-            borderRadius: 52,
-            border: '5px solid rgba(255,255,255,0.80)',
+            height: 580,
+            borderRadius: RADIUS,
             overflow: 'hidden',
             position: 'relative',
+            border: '3px solid rgba(0,0,0,0.08)',
+            marginBottom: 24,
             display: 'flex',
-            flexShrink: 0,
           }}
         >
           {photoUrl ? (
@@ -69,31 +74,23 @@ export async function GET(req: NextRequest) {
               style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', backgroundColor: '#1a2e1a', display: 'flex' }} />
+            // Placeholder com mesmo border radius do frame
+            <div style={{ width: '100%', height: '100%', backgroundColor: '#d1fae5', borderRadius: RADIUS, display: 'flex' }} />
           )}
-
-          {/* Gradiente escuro na base da foto */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0, left: 0, right: 0,
-              height: 220,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 100%)',
-            }}
-          />
 
           {/* Badge de data */}
           <div
             style={{
               position: 'absolute',
-              bottom: 24,
-              left: 24,
+              bottom: 20,
+              left: 20,
               backgroundColor: GREEN,
               borderRadius: 100,
               padding: '10px 28px',
               fontSize: 28,
               fontFamily: 'LexendDeca',
-              color: BLACK,
+              fontWeight: 700,
+              color: DARK,
               display: 'flex',
               alignItems: 'center',
             }}
@@ -102,67 +99,37 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* Logo centralizada sobrepondo o topo do frame */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoBase64}
-          alt="Endinheirados"
-          style={{
-            position: 'absolute',
-            top: 4,
-            width: 480,
-            height: 160,
-            objectFit: 'contain',
-          }}
-        />
-
-        {/* Card balão branco */}
+        {/* Card branco com título + excerpt */}
         <div
           style={{
-            width: '96%',
+            width: '100%',
             backgroundColor: '#ffffff',
-            borderRadius: 44,
+            borderRadius: RADIUS,
             padding: '44px 52px 40px',
             display: 'flex',
             flexDirection: 'column',
-            marginTop: 20,
-            position: 'relative',
+            boxShadow: '0 8px 48px rgba(0,0,0,0.10)',
+            marginBottom: 28,
             flex: 1,
           }}
         >
-          {/* Pontinha do balão (triângulo) */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: -22,
-              left: '50%',
-              width: 44,
-              height: 44,
-              backgroundColor: '#ffffff',
-              transform: 'translateX(-50%) rotate(45deg)',
-            }}
-          />
-
-          {/* Título */}
           <div
             style={{
               fontFamily: 'NunitoBold',
-              fontSize: 58,
-              color: BLACK,
+              fontSize: 64,
+              color: DARK,
               lineHeight: 1.08,
               marginBottom: 20,
             }}
           >
             {titleTrunc}
           </div>
-
-          {/* Excerpt */}
           {excerptTrunc && (
             <div
               style={{
                 fontFamily: 'LexendDeca',
                 fontSize: 30,
-                color: '#4a4a4a',
+                color: '#444',
                 lineHeight: 1.45,
               }}
             >
@@ -172,14 +139,7 @@ export async function GET(req: NextRequest) {
         </div>
 
         {/* Rodapé */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginTop: 28,
-          }}
-        >
-          {/* Seta em círculo verde */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <div
             style={{
               width: 52,
@@ -189,32 +149,18 @@ export async function GET(req: NextRequest) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginRight: 18,
+              marginRight: 16,
               fontSize: 26,
-              color: BLACK,
+              color: DARK,
               fontFamily: 'NunitoBold',
             }}
           >
             →
           </div>
-          <span
-            style={{
-              fontFamily: 'LexendDeca',
-              fontSize: 28,
-              color: 'rgba(255,255,255,0.6)',
-              fontStyle: 'italic',
-              marginRight: 10,
-            }}
-          >
+          <span style={{ fontFamily: 'LexendDeca', fontSize: 28, color: '#666', marginRight: 10 }}>
             Leia mais em
           </span>
-          <span
-            style={{
-              fontFamily: 'NunitoBold',
-              fontSize: 28,
-              color: '#ffffff',
-            }}
-          >
+          <span style={{ fontFamily: 'NunitoBold', fontSize: 28, color: DARK }}>
             endinheirados.cc
           </span>
         </div>
