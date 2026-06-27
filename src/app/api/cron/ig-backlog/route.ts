@@ -75,9 +75,10 @@ export async function GET(request: Request) {
     // 3. Token Canva (obtido uma vez — Canva rotaciona refresh_token)
     const canvaToken = await getToken()
 
-    // 4. Upload foto para o Canva
-    console.log('[ig-backlog] Fazendo upload da foto para o Canva...')
-    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`, canvaToken)
+    // 4. Upload foto para o Canva (teste com URL pública conhecida)
+    const testUrl = 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1080&q=80'
+    console.log('[ig-backlog] Fazendo upload da foto para o Canva...', testUrl)
+    const assetId = await uploadAssetFromUrl(testUrl, `ig-${post.slug}`, canvaToken)
 
     // 5. Autofill + exportar design
     console.log('[ig-backlog] Gerando design via autofill...')
