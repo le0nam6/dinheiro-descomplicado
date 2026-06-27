@@ -90,17 +90,25 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
   const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) })
   if (!imgRes.ok) throw new Error(`Falha ao buscar foto: ${photoUrl}`)
   const imgBuffer = Buffer.from(await imgRes.arrayBuffer())
-  const nameB64 = Buffer.from(name + '.jpg').toString('base64')
+  // Detecta formato real pelos magic bytes
+  const sig = imgBuffer.subarray(0, 4)
+  let mime = 'image/jpeg'
+  let ext = 'jpg'
+  if (sig[0] === 0x89 && sig[1] === 0x50) { mime = 'image/png';  ext = 'png' }
+  else if (sig[0] === 0x52 && sig[1] === 0x49) { mime = 'image/webp'; ext = 'webp' }
+  else if (sig[0] === 0x47 && sig[1] === 0x49) { mime = 'image/gif';  ext = 'gif' }
+
+  const nameB64 = Buffer.from(`${name}.${ext}`).toString('base64')
   const metaJson = JSON.stringify({ name_base64: nameB64 })
   const metadataB64 = Buffer.from(metaJson).toString('base64url')
 
-  console.log('[canva] upload size:', imgBuffer.byteLength, 'meta:', metaJson)
+  console.log('[canva] upload size:', imgBuffer.byteLength, 'mime:', mime, 'meta:', metaJson)
   const uploadRes = await fetch(`${API}/asset-uploads`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Asset-Upload-Metadata': metadataB64,
-      'Content-Type': 'image/jpeg',
+      'Content-Type': mime,
     },
     body: imgBuffer,
   })
