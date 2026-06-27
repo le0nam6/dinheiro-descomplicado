@@ -1,0 +1,127 @@
+/**
+ * Canva Connect REST API — helpers para pipeline de posts do Instagram.
+ * Template: DAHNyFwG8KY (campos autofill: photo, title, excerpt, date)
+ */
+
+const API = 'https://api.canva.com/rest/v1'
+
+export const CANVA_IG_TEMPLATE_ID = process.env.CANVA_IG_TEMPLATE_ID || 'DAHNyFwG8KY'
+
+async function getToken(): Promise<string> {
+  const credentials = Buffer.from(
+    `${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`
+  ).toString('base64')
+
+  const res = await fetch(`${API}/oauth/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${credentials}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: process.env.CANVA_REFRESH_TOKEN!,
+    }),
+  })
+  if (!res.ok) throw new Error(`Canva token refresh failed: ${await res.text()}`)
+  const d = await res.json()
+  return d.access_token as string
+}
+
+async function poll<T>(
+  fn: () => Promise<{ status: string; result?: T }>,
+  tries = 30,
+  intervalMs = 2000,
+): Promise<T> {
+  for (let i = 0; i < tries; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, intervalMs))
+    const { status, result } = await fn()
+    if (status === 'success') return result as T
+    if (status === 'failed') throw new Error('Canva job failed')
+  }
+  throw new Error('Canva job timeout')
+}
+
+/** Faz upload de uma imagem (via URL) para a biblioteca do Canva. Retorna o asset_id. */
+export async function uploadAssetFromUrl(photoUrl: string, name: string): Promise<string> {
+  const token = await getToken()
+
+  const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) })
+  if (!imgRes.ok) throw new Error(`Falha ao buscar foto: ${photoUrl}`)
+  const imgBuffer = await imgRes.arrayBuffer()
+  const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+
+  const metadataB64 = Buffer.from(JSON.stringify({ name_base64: Buffer.from(name).toString('base64') })).toString('base64')
+
+  const uploadRes = await fetch(`${API}/asset-uploads`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Asset-Upload-Metadata': metadataB64,
+      'Content-Type': contentType,
+      'Content-Length': String(imgBuffer.byteLength),
+    },
+    body: imgBuffer,
+  })
+  if (!uploadRes.ok) throw new Error(`Canva upload failed: ${await uploadRes.text()}`)
+  const { job } = await uploadRes.json()
+
+  const assetId = await poll(async () => {
+    const r = await fetch(`${API}/asset-uploads/${job.id}`, { headers: { Authorization: `Bearer ${token}` } })
+    const d = await r.json()
+    return { status: d.job?.status ?? 'pending', result: d.job?.asset?.id as string }
+  })
+
+  return assetId
+}
+
+/** Cria um post do Instagram via autofill do template. Retorna { designId, exportUrl }. */
+export async function createIgDesign(data: {
+  title: string
+  excerpt: string
+  date: string
+  assetId: string
+}): Promise<{ designId: string; exportUrl: string }> {
+  const token = await getToken()
+
+  // 1. Autofill
+  const autofillRes = await fetch(`${API}/autofills`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      brand_template_id: CANVA_IG_TEMPLATE_ID,
+      title: data.title.slice(0, 50),
+      data: {
+        title:   { type: 'text',  text: data.title },
+        excerpt: { type: 'text',  text: data.excerpt },
+        date:    { type: 'text',  text: data.date },
+        photo:   { type: 'image', asset_id: data.assetId },
+      },
+    }),
+  })
+  if (!autofillRes.ok) throw new Error(`Canva autofill failed: ${await autofillRes.text()}`)
+  const { job: afJob } = await autofillRes.json()
+
+  const designId = await poll<string>(async () => {
+    const r = await fetch(`${API}/autofills/${afJob.id}`, { headers: { Authorization: `Bearer ${token}` } })
+    const d = await r.json()
+    return { status: d.job?.status ?? 'pending', result: d.job?.result?.design?.id as string }
+  })
+
+  // 2. Export
+  const exportRes = await fetch(`${API}/exports`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ design_id: designId, format: 'jpg', export_quality: 'regular' }),
+  })
+  if (!exportRes.ok) throw new Error(`Canva export failed: ${await exportRes.text()}`)
+  const { job: expJob } = await exportRes.json()
+
+  const exportUrl = await poll<string>(async () => {
+    const r = await fetch(`${API}/exports/${expJob.id}`, { headers: { Authorization: `Bearer ${token}` } })
+    const d = await r.json()
+    return { status: d.job?.status ?? 'pending', result: d.job?.urls?.[0] as string }
+  })
+
+  return { designId, exportUrl }
+}

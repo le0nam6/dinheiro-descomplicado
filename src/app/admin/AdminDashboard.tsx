@@ -6,6 +6,7 @@ type Post = { _id: string; title: string; slug: { current: string }; category: s
 type Milestone = { count: number; emoji: string; label: string; reward: string }
 type QueueItem = { _id: string; kind: 'noticia' | 'materia' | 'curiosidade'; brief: string; priority: number; status: string; createdAt?: string; source?: string }
 type UsedItem = { _id: string; kind: string; brief: string; usedAt?: string; usedRef?: string }
+type IgPost = { _id: string; title: string; slug: string; publishedAt: string; igExportUrl: string; igCaption: string; igCanvaDesignId: string }
 
 const QUEUE_KINDS: { value: QueueItem['kind']; label: string; emoji: string }[] = [
   { value: 'noticia',     label: 'Notícia (tema)', emoji: '📰' },
@@ -14,7 +15,7 @@ const QUEUE_KINDS: { value: QueueItem['kind']; label: string; emoji: string }[] 
 ]
 
 export function AdminDashboard() {
-  const [tab, setTab] = useState<'posts' | 'fila' | 'settings' | 'email' | 'fluxos'>('posts')
+  const [tab, setTab] = useState<'posts' | 'fila' | 'instagram' | 'settings' | 'email' | 'fluxos'>('posts')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
@@ -42,6 +43,32 @@ export function AdminDashboard() {
   const [migrateResult, setMigrateResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [migratingTitles, setMigratingTitles] = useState(false)
   const [migrateTitlesResult, setMigrateTitlesResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  // Instagram pendente
+  const [igPosts, setIgPosts] = useState<IgPost[]>([])
+  const [igLoading, setIgLoading] = useState(true)
+  const [igPublishing, setIgPublishing] = useState<string | null>(null)
+  const [igResult, setIgResult] = useState<Record<string, { ok: boolean; msg: string }>>({})
+
+  async function loadIgPosts() {
+    setIgLoading(true)
+    const d = await fetch('/api/admin/ig-posts').then(r => r.json()).catch(() => null)
+    setIgPosts(d?.posts || [])
+    setIgLoading(false)
+  }
+
+  async function approveIgPost(id: string) {
+    setIgPublishing(id)
+    try {
+      const res = await fetch(`/api/admin/ig-approve?postId=${id}`, { method: 'POST' })
+      const d = await res.json()
+      setIgResult(prev => ({ ...prev, [id]: d.ok ? { ok: true, msg: 'Publicado!' } : { ok: false, msg: d.error || 'Erro' } }))
+      if (d.ok) setIgPosts(prev => prev.filter(p => p._id !== id))
+    } catch (e) {
+      setIgResult(prev => ({ ...prev, [id]: { ok: false, msg: String(e) } }))
+    }
+    setIgPublishing(null)
+  }
 
   // Fila editorial
   const [queue, setQueue] = useState<QueueItem[]>([])
@@ -91,6 +118,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetch('/api/admin/posts').then(r => r.json()).then(d => { setPosts(d.posts || []); setLoading(false) })
+    loadIgPosts()
     fetch('/api/admin/settings').then(r => r.json()).then(d => {
       if (d.subscriberGoal) setGoal(d.subscriberGoal)
       if (d.subscriberGoalReward) setReward(d.subscriberGoalReward)
@@ -220,6 +248,9 @@ export function AdminDashboard() {
         <button onClick={() => setTab('fila')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === 'fila' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
           Fila editorial{queue.length > 0 && <span className="ml-1.5 text-[11px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">{queue.length}</span>}
         </button>
+        <button onClick={() => setTab('instagram')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === 'instagram' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          Instagram{igPosts.length > 0 && <span className="ml-1.5 text-[11px] font-bold text-pink-700 bg-pink-100 px-1.5 py-0.5 rounded-full">{igPosts.length}</span>}
+        </button>
         <button onClick={() => setTab('settings')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === 'settings' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
           Metas e Recompensas
         </button>
@@ -263,6 +294,89 @@ export function AdminDashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* Instagram tab */}
+      {tab === 'instagram' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">Posts gerados via Canva aguardando aprovação para o Instagram.</p>
+            <button onClick={loadIgPosts} className="text-xs font-semibold text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg">
+              ↻ Atualizar
+            </button>
+          </div>
+
+          {igLoading ? (
+            <p className="text-gray-400 text-center py-16">Carregando...</p>
+          ) : igPosts.length === 0 ? (
+            <div className="text-center py-16 border border-dashed border-gray-200 rounded-2xl">
+              <p className="text-gray-400 text-sm">Nenhum post pendente.</p>
+              <p className="text-gray-300 text-xs mt-1">O cron gera automaticamente a partir das notícias publicadas.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {igPosts.map(post => (
+                <div key={post._id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="flex gap-0 items-stretch">
+                    {/* Preview da imagem */}
+                    {post.igExportUrl && (
+                      <div className="shrink-0 w-48 bg-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={post.igExportUrl} alt={post.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    {/* Info + ações */}
+                    <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
+                      <div className="space-y-2">
+                        <p className="font-bold text-gray-900 text-sm leading-snug">{post.title}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {new Date(post.publishedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {post.igCanvaDesignId && (
+                            <> · <a href={`https://www.canva.com/design/${post.igCanvaDesignId}/edit`} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Editar no Canva ↗</a></>
+                          )}
+                        </p>
+                        {post.igCaption && (
+                          <details className="text-xs text-gray-500">
+                            <summary className="cursor-pointer text-gray-400 hover:text-gray-600 select-none">Ver legenda</summary>
+                            <pre className="mt-2 whitespace-pre-wrap font-sans leading-relaxed bg-gray-50 rounded-lg p-3 border border-gray-100">{post.igCaption}</pre>
+                          </details>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mt-4">
+                        <a
+                          href={post.igExportUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 px-4 py-2 rounded-xl transition-colors"
+                        >
+                          ↓ Baixar imagem
+                        </a>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(post.igCaption)}
+                          className="text-sm font-semibold text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-400 px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Copiar legenda
+                        </button>
+                        <button
+                          onClick={() => approveIgPost(post._id)}
+                          disabled={igPublishing === post._id}
+                          className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold text-sm px-5 py-2 rounded-xl transition-colors"
+                        >
+                          {igPublishing === post._id ? 'Salvando...' : '✓ Marcar como postado'}
+                        </button>
+                        {igResult[post._id] && (
+                          <span className={`text-xs font-semibold ${igResult[post._id].ok ? 'text-green-600' : 'text-red-500'}`}>
+                            {igResult[post._id].ok ? '✓ Feito' : '✗ ' + igResult[post._id].msg}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Fila editorial tab */}

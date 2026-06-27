@@ -1,5 +1,6 @@
 /**
- * Gera imagem 1080x1350 (4:5) no padrão do template Endinheirados para o Instagram.
+ * Gera imagem estática 1080x1350 (4:5) para notícias no Instagram.
+ * Layout: foto livre no topo, card verde sólido (#0D2B14) na base com título + URL.
  * GET /api/og?title=TITULO&photo=URL_FOTO
  */
 import { ImageResponse } from 'next/og'
@@ -7,19 +8,21 @@ import { NextRequest } from 'next/server'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// Node.js runtime para acesso ao filesystem (fontes e logo)
 export const runtime = 'nodejs'
 
-// Carrega fontes e logo uma única vez (cached no módulo)
-const bebasNeue = readFileSync(join(process.cwd(), 'public/fonts/BebasNeue.ttf'))
-const roboto    = readFileSync(join(process.cwd(), 'public/fonts/Roboto.ttf'))
-// Logo original em alta resolução (1536×1024)
-const logoData  = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
-const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`
+const londrinaSolid = readFileSync(join(process.cwd(), 'public/fonts/LondrinaSolid.ttf'))
+const lexendDeca    = readFileSync(join(process.cwd(), 'public/fonts/LexendDeca.ttf'))
+const logoData      = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
+const logoBase64    = `data:image/png;base64,${logoData.toString('base64')}`
+
+const CARD_H  = 500
+const BRAND   = '#0D2B14'
+const ACCENT  = '#4ADE80'
+const RADIUS  = 40
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const title    = searchParams.get('title') || 'ENDINHEIRADOS'
+  const title    = (searchParams.get('title') || 'ENDINHEIRADOS').toUpperCase()
   const photoUrl = searchParams.get('photo') || ''
 
   const img = new ImageResponse(
@@ -30,12 +33,10 @@ export async function GET(req: NextRequest) {
           height: 1350,
           position: 'relative',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          backgroundColor: '#0a1a0f',
+          backgroundColor: BRAND,
         }}
       >
-        {/* Foto de fundo */}
+        {/* Foto de fundo — cobre a altura toda para o glass funcionar */}
         {photoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -43,64 +44,95 @@ export async function GET(req: NextRequest) {
             alt=""
             style={{
               position: 'absolute',
-              top: 0, left: 0,
-              width: '100%', height: '100%',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
               objectFit: 'cover',
-              objectPosition: 'center',
+              objectPosition: 'center top',
             }}
           />
         )}
 
-        {/* Overlay gradiente escuro */}
+        {/* Gradiente escuro sobre a área do card para o glass ter profundidade */}
         <div
           style={{
             position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.72) 48%, rgba(0,0,0,0.08) 100%)',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: CARD_H + 120,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.48) 55%, rgba(0,0,0,0) 100%)',
           }}
         />
 
-        {/* Conteúdo inferior */}
+        {/* Logo sobreposta à foto, canto superior esquerdo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoBase64}
+          alt="Endinheirados"
+          style={{
+            position: 'absolute',
+            top: 48,
+            left: 56,
+            height: 144,
+            width: 432,
+            objectFit: 'contain',
+            objectPosition: 'left center',
+          }}
+        />
+
+        {/* Card glassmorphism na base */}
         <div
           style={{
-            position: 'relative',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: CARD_H,
+            backgroundColor: 'rgba(13, 43, 20, 0.62)',
+            borderRadius: `${RADIUS}px ${RADIUS}px 0 0`,
             display: 'flex',
             flexDirection: 'column',
-            gap: 16,
-            padding: '0 68px 68px',
+            justifyContent: 'space-between',
+            padding: '52px 64px 52px',
+            border: '1px solid rgba(74, 222, 128, 0.18)',
+            borderBottom: 'none',
           }}
         >
-          {/* Logo Endinheirados — base64 inline */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoBase64}
-            alt="Endinheirados"
-            style={{ height: 160, width: 480, objectFit: 'contain', objectPosition: 'left center' }}
-          />
-
-          {/* Título — Bebas Neue, CAIXA ALTA */}
+          {/* Highlight de luz no topo do card */}
           <div
             style={{
-              fontFamily: 'BebasNeue',
-              fontSize: 100,
+              position: 'absolute',
+              top: 0,
+              left: RADIUS,
+              right: RADIUS,
+              height: 1,
+              background: 'linear-gradient(to right, rgba(74,222,128,0) 0%, rgba(74,222,128,0.55) 40%, rgba(255,255,255,0.35) 50%, rgba(74,222,128,0.55) 60%, rgba(74,222,128,0) 100%)',
+            }}
+          />
+
+          {/* Título em Londrina Solid */}
+          <div
+            style={{
+              fontFamily: 'LondrinaSolid',
+              fontSize: 80,
               color: '#FFFFFF',
               lineHeight: 0.95,
-              letterSpacing: '2px',
+              letterSpacing: '1px',
               textTransform: 'uppercase',
-              textShadow: '0 3px 18px rgba(0,0,0,0.9)',
-              maxWidth: 960,
               wordBreak: 'break-word',
             }}
           >
-            {title.toUpperCase()}
+            {title}
           </div>
 
-          {/* endinheirados.cc — rodapé */}
+          {/* URL em Lexend Deca */}
           <div
             style={{
-              fontFamily: 'Roboto',
-              fontSize: 28,
-              color: '#a3c4a8',
+              fontFamily: 'LexendDeca',
+              fontSize: 23,
+              color: ACCENT,
               letterSpacing: '3px',
               textTransform: 'uppercase',
             }}
@@ -114,11 +146,12 @@ export async function GET(req: NextRequest) {
       width: 1080,
       height: 1350,
       fonts: [
-        { name: 'BebasNeue', data: bebasNeue.buffer, style: 'normal', weight: 400 },
-        { name: 'Roboto',    data: roboto.buffer,    style: 'normal', weight: 400 },
+        { name: 'LondrinaSolid', data: londrinaSolid.buffer as ArrayBuffer, style: 'normal', weight: 400 },
+        { name: 'LexendDeca',    data: lexendDeca.buffer    as ArrayBuffer, style: 'normal', weight: 400 },
       ],
     }
   )
+
   const headers = new Headers(img.headers)
   headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600')
   return new Response(img.body, { status: img.status, headers })

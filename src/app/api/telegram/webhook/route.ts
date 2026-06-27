@@ -178,8 +178,6 @@ export async function POST(request: Request) {
         const finalSlug = (doc.slug as { current: string }).current
         const blogUrl = `${SITE}/blog/${finalSlug}`
         // Se o slug foi renomeado por colisão, corrige o link na legenda
-        const caption = finalSlug === d.post.slug ? d.caption : d.caption.replaceAll(d.post.slug, finalSlug)
-        await deliverCarousel(d.slideUrls, caption, blogUrl)
         // Mantém o rascunho como "published" p/ permitir trocar a foto depois
         await sanity.patch(id).set({ status: 'published', publishedId: doc._id, publishedSlug: finalSlug, data: JSON.stringify(d) }).commit()
         await tg('editMessageCaption', {
