@@ -5,7 +5,7 @@
  */
 import { NextResponse } from 'next/server'
 import { sanity, tgSendMessage, tgAlert, fetchPhoto } from '@/lib/publish-core'
-import { uploadAssetFromUrl, createIgDesign } from '@/lib/canva-api'
+import { getToken, uploadAssetFromUrl, createIgDesign } from '@/lib/canva-api'
 import Anthropic from '@anthropic-ai/sdk'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
@@ -72,17 +72,21 @@ export async function GET(request: Request) {
     const pub = new Date(post.publishedAt)
     const date = `${String(pub.getDate()).padStart(2, '0')}/${String(pub.getMonth() + 1).padStart(2, '0')} • ${String(pub.getHours()).padStart(2, '0')}:${String(pub.getMinutes()).padStart(2, '0')}`
 
-    // 3. Upload foto para o Canva
-    console.log('[ig-backlog] Fazendo upload da foto para o Canva...')
-    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`)
+    // 3. Token Canva (obtido uma vez — Canva rotaciona refresh_token)
+    const canvaToken = await getToken()
 
-    // 4. Autofill + exportar design
+    // 4. Upload foto para o Canva
+    console.log('[ig-backlog] Fazendo upload da foto para o Canva...')
+    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`, canvaToken)
+
+    // 5. Autofill + exportar design
     console.log('[ig-backlog] Gerando design via autofill...')
     const { designId, exportUrl } = await createIgDesign({
       title: post.title.toUpperCase(),
       excerpt: post.excerpt.slice(0, 120),
       date,
       assetId,
+      token: canvaToken,
     })
 
     // 5. Gerar legenda
