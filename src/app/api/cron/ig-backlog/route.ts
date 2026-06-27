@@ -1,7 +1,6 @@
 /**
- * Vercel Cron: para cada notícia nova, gera 3 opções de imagem via /api/og e manda pro Telegram.
- * Opção 1: imagem de capa da matéria | Opções 2-3: fotos alternativas do Pexels
- * Admin escolhe qual imagem usar e posta no Instagram manualmente.
+ * Vercel Cron: para cada notícia nova, gera imagem via /api/og com a capa da matéria
+ * e manda pro Telegram. Admin posta no Instagram manualmente.
  */
 import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
@@ -57,20 +56,6 @@ Regras: português BR coloquial, ZERO travessão, sem emojis no corpo, 5 hashtag
   return (msg.content[0] as { text: string }).text.trim().slice(0, 1024)
 }
 
-function ogUrl(photo: string, post: { title: string; excerpt: string }, date: string): string {
-  const preview = firstSentence(post.excerpt || '')
-  return `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photo)}&excerpt=${encodeURIComponent(preview)}&date=${encodeURIComponent(date)}`
-}
-
-async function tgSendPhoto(url: string, label: string) {
-  const res = await fetch(`${BOT}/sendPhoto`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID, photo: url, caption: label }),
-  })
-  if (!res.ok) throw new Error(`Telegram sendPhoto (${label}): ${await res.text()}`)
-}
-
 export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -81,25 +66,23 @@ export async function GET(request: Request) {
     if (!post) return NextResponse.json({ ok: true, message: 'Sem notícia nova para o IG' })
 
     const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-    const query = post.title.split(' ').slice(0, 4).join(' ')
 
-    // Foto 1: capa da matéria (ou Pexels se não tiver)
-    const photo1 = post.coverImageUrl ?? (await fetchPhoto(`${query} Brasil`)).url
-    if (!photo1) throw new Error('Nenhuma foto disponível')
+    const photoUrl = post.coverImageUrl
+      ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
+    if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
-    // Fotos 2 e 3: alternativas do Pexels, excluindo a anterior
-    const alt2 = await fetchPhoto(`${query} Brasil`, [photo1])
-    const alt3 = await fetchPhoto(`${query} economia`, [photo1, alt2.url])
+    const preview = firstSentence(post.excerpt || '')
+    const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(preview)}&date=${encodeURIComponent(date)}`
 
-    // Gera legenda em paralelo com as imagens
-    const [caption] = await Promise.all([buildCaption(post)])
+    const caption = await buildCaption(post)
 
-    // Envia 3 opções de imagem para o Telegram
-    await tgSendPhoto(ogUrl(photo1, post, date), `🖼 Opção 1 — capa da matéria`)
-    await tgSendPhoto(ogUrl(alt2.url, post, date), `🖼 Opção 2 — alternativa`)
-    await tgSendPhoto(ogUrl(alt3.url, post, date), `🖼 Opção 3 — alternativa`)
+    const photoRes = await fetch(`${BOT}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, photo: ogUrl }),
+    })
+    if (!photoRes.ok) throw new Error(`Telegram sendPhoto: ${await photoRes.text()}`)
 
-    // Legenda separada
     await fetch(`${BOT}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,7 +95,7 @@ export async function GET(request: Request) {
 
     await sanity.patch(post._id).set({ igQueued: true }).commit()
 
-    return NextResponse.json({ ok: true, title: post.title })
+    return NextResponse.json({ ok: true, title: post.title, ogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await tgAlert('Cron IG backlog', err)

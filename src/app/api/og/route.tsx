@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
             backgroundImage: photoUrl ? `url(${photoUrl})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
             backgroundColor: '#d1fae5',
           }}
         >
