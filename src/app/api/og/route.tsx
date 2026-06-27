@@ -189,6 +189,6 @@ export async function GET(req: NextRequest) {
   )
 
   const headers = new Headers(img.headers)
-  headers.set('Cache-Control', 'public, max-age=3600, s-maxage=3600')
+  headers.set('Cache-Control', 'no-store')
   return new Response(img.body, { status: img.status, headers })
 }

@@ -72,7 +72,7 @@ export async function GET(request: Request) {
     if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
     const preview = firstSentence(post.excerpt || '')
-    const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(preview)}&date=${encodeURIComponent(date)}`
+    const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(preview)}&date=${encodeURIComponent(date)}&t=${Date.now()}`
 
     const caption = await buildCaption(post)
 
