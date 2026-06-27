@@ -25,9 +25,8 @@ export async function GET(req: NextRequest) {
   const excerpt  = searchParams.get('excerpt') || ''
   const date     = searchParams.get('date')    || new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-  // Trunca excerpt apenas — título aparece completo com fonte menor
-  const excerptTrunc = excerpt.length > 140
-    ? excerpt.slice(0, 140).replace(/\s+\S*$/, '') + '…'
+  const excerptTrunc = excerpt.length > 220
+    ? excerpt.slice(0, 220).replace(/\s+\S*$/, '') + '…'
     : excerpt
 
   // Satori não busca URLs externas em backgroundImage — converte para data URI
@@ -64,10 +63,10 @@ export async function GET(req: NextRequest) {
           style={{ width: 240, height: 160, objectFit: 'contain', marginBottom: 8 }}
         />
 
-        {/* Frame da foto */}
+        {/* Frame da foto — dimensões explícitas para overflow:hidden clipar corretamente em Satori */}
         <div
           style={{
-            width: '100%',
+            width: 968,
             height: 590,
             marginBottom: 20,
             flexShrink: 0,
@@ -75,6 +74,7 @@ export async function GET(req: NextRequest) {
             display: 'flex',
             backgroundColor: '#d1fae5',
             borderRadius: RADIUS,
+            overflow: 'hidden',
           }}
         >
           {photoDataUri && (
@@ -83,13 +83,9 @@ export async function GET(req: NextRequest) {
               src={photoDataUri}
               alt=""
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
+                width: 968,
+                height: 590,
                 objectFit: 'cover',
-                borderRadius: RADIUS,
               }}
             />
           )}
@@ -144,7 +140,7 @@ export async function GET(req: NextRequest) {
             <div
               style={{
                 fontFamily: 'LexendDeca',
-                fontSize: 28,
+                fontSize: 34,
                 color: '#444',
                 lineHeight: 1.45,
               }}
