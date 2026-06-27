@@ -98,19 +98,19 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
   else if (sig[0] === 0x52 && sig[1] === 0x49) { mime = 'image/webp'; ext = 'webp' }
   else if (sig[0] === 0x47 && sig[1] === 0x49) { mime = 'image/gif';  ext = 'gif' }
 
-  const nameB64 = Buffer.from(`${name}.${ext}`).toString('base64')
-  const metaJson = JSON.stringify({ name_base64: nameB64 })
-  const metadataB64 = Buffer.from(metaJson).toString('base64url')
+  const toB64url = (s: string) => Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  const metadataB64 = toB64url(JSON.stringify({ name_base64: toB64url(`${name}.${ext}`) }))
+  const blob = new Blob([imgBuffer], { type: mime })
 
-  console.log('[canva] upload size:', imgBuffer.byteLength, 'mime:', mime, 'meta:', metaJson)
+  console.log('[canva] upload size:', blob.size, 'mime:', mime)
   const uploadRes = await fetch(`${API}/asset-uploads`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Asset-Upload-Metadata': metadataB64,
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': mime,
     },
-    body: imgBuffer,
+    body: blob,
   })
   const uploadText = await uploadRes.text()
   console.log('[canva] upload response:', uploadRes.status, uploadText)
