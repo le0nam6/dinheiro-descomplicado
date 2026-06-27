@@ -154,7 +154,7 @@ export async function createIgDesign(data: {
   const exportRes = await fetch(`${API}/exports`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ design_id: designId, format: { type: 'jpg', quality: 'regular' } }),
+    body: JSON.stringify({ design_id: designId, format: 'jpg' }),
   })
   if (!exportRes.ok) throw new Error(`Canva export failed: ${await exportRes.text()}`)
   const { job: expJob } = await exportRes.json()
