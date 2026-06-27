@@ -90,7 +90,8 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
   const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) })
   if (!imgRes.ok) throw new Error(`Falha ao buscar foto: ${photoUrl}`)
   const imgBuffer = Buffer.from(await imgRes.arrayBuffer())
-  const metadataB64 = Buffer.from(JSON.stringify({ name_base64: Buffer.from(name).toString('base64') })).toString('base64')
+  const toB64url = (s: string) => Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  const metadataB64 = toB64url(JSON.stringify({ name_base64: toB64url(name) }))
 
   console.log('[canva] upload size:', imgBuffer.byteLength, 'metadata:', metadataB64)
   const uploadRes = await fetch(`${API}/asset-uploads`, {
