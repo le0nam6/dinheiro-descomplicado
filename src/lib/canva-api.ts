@@ -92,7 +92,7 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
   const imgBuffer = Buffer.from(await imgRes.arrayBuffer())
 
   const toB64url = (s: string) => Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-  const metadataB64 = toB64url(JSON.stringify({ name_base64: toB64url(`${name}.jpg`) }))
+  const metadataB64 = toB64url(JSON.stringify({ name: `${name}.jpg` }))
 
   const uploadRes = await fetch(`${API}/asset-uploads`, {
     method: 'POST',
