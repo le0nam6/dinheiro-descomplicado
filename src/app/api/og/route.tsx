@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
           style={{ width: 240, height: 160, objectFit: 'contain', marginBottom: 8 }}
         />
 
-        {/* Frame da foto — usa backgroundImage para garantir border radius sem vazamento */}
+        {/* Frame da foto */}
         <div
           style={{
             width: '100%',
@@ -75,13 +75,25 @@ export async function GET(req: NextRequest) {
             flexShrink: 0,
             position: 'relative',
             display: 'flex',
-            backgroundImage: photoDataUri ? `url(${photoDataUri})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+            overflow: 'hidden',
             backgroundColor: '#d1fae5',
           }}
         >
+          {photoDataUri && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoDataUri}
+              alt=""
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          )}
           {/* Badge de data */}
           <div
             style={{
