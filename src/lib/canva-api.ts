@@ -1,6 +1,6 @@
 /**
  * Canva Connect REST API — helpers para pipeline de posts do Instagram.
- * Template: DAHNyFwG8KY (campos autofill: photo, title, excerpt, date)
+ * Template: EAHNygtINEQ (campos autofill: photo, title, excerpt, date)
  *
  * Canva rotaciona o refresh_token a cada uso. Por isso:
  * - getToken() lê o token do Sanity (ou env var como fallback)
@@ -12,7 +12,7 @@ import { createClient } from '@sanity/client'
 
 const API = 'https://api.canva.com/rest/v1'
 
-export const CANVA_IG_TEMPLATE_ID = process.env.CANVA_IG_TEMPLATE_ID || 'DAHNyFwG8KY'
+export const CANVA_IG_TEMPLATE_ID = process.env.CANVA_IG_TEMPLATE_ID || 'EAHNygtINEQ'
 
 const sanity = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
