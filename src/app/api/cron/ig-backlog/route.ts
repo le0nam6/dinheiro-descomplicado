@@ -1,10 +1,9 @@
 /**
- * Vercel Cron: para cada notícia nova, gera imagem no Canva via autofill + legenda IG
+ * Vercel Cron: para cada notícia nova, gera imagem via /api/og + legenda IG
  * e manda pro Telegram. Admin posta no Instagram manualmente.
  */
 import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
-import { getToken, uploadAssetFromUrl, createIgDesign } from '@/lib/canva-api'
 import Anthropic from '@anthropic-ai/sdk'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
@@ -65,30 +64,16 @@ export async function GET(request: Request) {
       ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
     if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
-    // Token único para todo o request (evita rotação dupla)
-    const token = await getToken()
+    const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(post.excerpt || '')}&date=${encodeURIComponent(date)}`
 
-    // 1. Upload da foto para o Canva
-    const assetId = await uploadAssetFromUrl(photoUrl, `ig-${post.slug}`, token)
-
-    // 2. Autofill do template + export
-    const date = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-    const { exportUrl } = await createIgDesign({
-      title: post.title,
-      excerpt: post.excerpt,
-      date,
-      assetId,
-      token,
-    })
-
-    // 3. Legenda IG
     const caption = await buildCaption(post)
 
-    // 4. Telegram: imagem do Canva + legenda separada
+    // Telegram: imagem gerada + legenda separada
     const photoRes = await fetch(`${BOT}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, photo: exportUrl, caption: `📲 *${post.title}*`, parse_mode: 'Markdown' }),
+      body: JSON.stringify({ chat_id: CHAT_ID, photo: ogUrl, caption: `📲 *${post.title}*`, parse_mode: 'Markdown' }),
     })
     if (!photoRes.ok) throw new Error(`Telegram sendPhoto: ${await photoRes.text()}`)
 
@@ -100,7 +85,7 @@ export async function GET(request: Request) {
 
     await sanity.patch(post._id).set({ igQueued: true }).commit()
 
-    return NextResponse.json({ ok: true, title: post.title, exportUrl, site: SITE })
+    return NextResponse.json({ ok: true, title: post.title, ogUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await tgAlert('Cron IG backlog', err)
