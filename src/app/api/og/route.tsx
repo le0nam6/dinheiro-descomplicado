@@ -69,14 +69,12 @@ export async function GET(req: NextRequest) {
           style={{
             width: '100%',
             height: 590,
-            borderRadius: RADIUS,
-            border: '3px solid rgba(0,0,0,0.08)',
             marginBottom: 20,
             flexShrink: 0,
             position: 'relative',
             display: 'flex',
-            overflow: 'hidden',
             backgroundColor: '#d1fae5',
+            borderRadius: RADIUS,
           }}
         >
           {photoDataUri && (
@@ -91,6 +89,7 @@ export async function GET(req: NextRequest) {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                borderRadius: RADIUS,
               }}
             />
           )}
