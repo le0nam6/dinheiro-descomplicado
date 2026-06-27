@@ -18,7 +18,7 @@ async function getNextPost() {
   } | null>(
     `*[_type=="post" && articleType=="news" && igQueued!=true && publishedAt<=now()]
      | order(publishedAt desc)[0]
-     { _id, "slug": slug.current, title, excerpt, "coverImageUrl": coverImage.asset->url }`
+     { _id, "slug": slug.current, title, excerpt, "coverImageUrl": coverImage.url }`
   )
 }
 
