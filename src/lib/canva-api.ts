@@ -90,9 +90,6 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
   const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) })
   if (!imgRes.ok) throw new Error(`Falha ao buscar foto: ${photoUrl}`)
   const imgBuffer = await imgRes.arrayBuffer()
-  const rawCt = imgRes.headers.get('content-type') || 'image/jpeg'
-  const contentType = rawCt.split(';')[0].trim()
-
   const metadataB64 = Buffer.from(JSON.stringify({ name_base64: Buffer.from(name).toString('base64') })).toString('base64')
 
   const uploadRes = await fetch(`${API}/asset-uploads`, {
@@ -100,8 +97,7 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
     headers: {
       Authorization: `Bearer ${token}`,
       'Asset-Upload-Metadata': metadataB64,
-      'Content-Type': contentType,
-      'Content-Length': String(imgBuffer.byteLength),
+      'Content-Type': 'image/jpeg',
     },
     body: imgBuffer,
   })
