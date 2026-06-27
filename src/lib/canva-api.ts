@@ -104,9 +104,7 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
     },
     body: imgBuffer,
   })
-  const uploadText = await uploadRes.text()
-  console.log('[canva] upload response:', uploadRes.status, uploadText)
-  if (!uploadRes.ok) throw new Error(`Canva upload failed: ${uploadText}`)
+  if (!uploadRes.ok) throw new Error(`Canva upload failed: ${await uploadRes.text()}`)
   const { job } = await uploadRes.json()
 
   const assetId = await poll(async () => {
