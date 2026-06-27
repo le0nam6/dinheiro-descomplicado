@@ -30,6 +30,19 @@ export async function GET(req: NextRequest) {
     ? excerpt.slice(0, 140).replace(/\s+\S*$/, '') + '…'
     : excerpt
 
+  // Satori não busca URLs externas em backgroundImage — converte para data URI
+  let photoDataUri = ''
+  if (photoUrl) {
+    try {
+      const res = await fetch(photoUrl, { signal: AbortSignal.timeout(10_000) })
+      if (res.ok) {
+        const ct = res.headers.get('content-type') || 'image/jpeg'
+        const buf = Buffer.from(await res.arrayBuffer())
+        photoDataUri = `data:${ct};base64,${buf.toString('base64')}`
+      }
+    } catch { /* sem foto, mostra placeholder */ }
+  }
+
   const img = new ImageResponse(
     (
       <div
@@ -62,7 +75,7 @@ export async function GET(req: NextRequest) {
             flexShrink: 0,
             position: 'relative',
             display: 'flex',
-            backgroundImage: photoUrl ? `url(${photoUrl})` : undefined,
+            backgroundImage: photoDataUri ? `url(${photoDataUri})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
