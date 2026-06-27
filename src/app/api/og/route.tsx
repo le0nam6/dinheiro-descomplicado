@@ -1,7 +1,5 @@
 /**
  * Gera imagem 1080x1350 (4:5) para notícias no Instagram.
- * Layout inspirado no template Canva do Endinheirados:
- * logo topo · foto arredondada com badge de data · card branco com título + excerpt · rodapé
  * GET /api/og?title=...&photo=...&excerpt=...&date=...
  */
 import { ImageResponse } from 'next/og'
@@ -11,10 +9,10 @@ import { join } from 'path'
 
 export const runtime = 'nodejs'
 
-const nunitoBold  = readFileSync(join(process.cwd(), 'public/fonts/NunitoExtraBold.ttf'))
-const lexendDeca  = readFileSync(join(process.cwd(), 'public/fonts/LexendDeca.ttf'))
-const logoData    = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
-const logoBase64  = `data:image/png;base64,${logoData.toString('base64')}`
+const nunitoBold = readFileSync(join(process.cwd(), 'public/fonts/NunitoExtraBold.ttf'))
+const lexendDeca = readFileSync(join(process.cwd(), 'public/fonts/LexendDeca.ttf'))
+const logoData   = readFileSync(join(process.cwd(), 'public/logo-endinheirados.png'))
+const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`
 
 const GREEN  = '#4ADE80'
 const DARK   = '#0D2B14'
@@ -27,10 +25,10 @@ export async function GET(req: NextRequest) {
   const excerpt  = searchParams.get('excerpt') || ''
   const date     = searchParams.get('date')    || new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
-  const trunc = (s: string, max: number) =>
-    s.length > max ? s.slice(0, max).replace(/\s+\S*$/, '') + '…' : s
-  const titleTrunc   = trunc(title, 70)
-  const excerptTrunc = trunc(excerpt, 140)
+  // Trunca excerpt apenas — título aparece completo com fonte menor
+  const excerptTrunc = excerpt.length > 140
+    ? excerpt.slice(0, 140).replace(/\s+\S*$/, '') + '…'
+    : excerpt
 
   const img = new ImageResponse(
     (
@@ -42,42 +40,34 @@ export async function GET(req: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           backgroundColor: '#f7f8f6',
-          padding: '52px 56px 44px',
+          padding: '36px 56px 40px',
         }}
       >
-        {/* Logo — 15% maior que o original */}
+        {/* Logo — ratio natural do PNG é 1536×1024 = 3:2, então width:312 height:208 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={logoBase64}
           alt="Endinheirados"
-          style={{ width: 345, height: 101, objectFit: 'contain', marginBottom: 36 }}
+          style={{ width: 240, height: 160, objectFit: 'contain', marginBottom: 8 }}
         />
 
-        {/* Frame da foto com bordas arredondadas */}
+        {/* Frame da foto — usa backgroundImage para garantir border radius sem vazamento */}
         <div
           style={{
             width: '100%',
-            height: 580,
+            height: 590,
             borderRadius: RADIUS,
-            overflow: 'hidden',
-            position: 'relative',
             border: '3px solid rgba(0,0,0,0.08)',
-            marginBottom: 24,
+            marginBottom: 20,
+            flexShrink: 0,
+            position: 'relative',
             display: 'flex',
+            backgroundImage: photoUrl ? `url(${photoUrl})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundColor: '#d1fae5',
           }}
         >
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
-            />
-          ) : (
-            // Placeholder com mesmo border radius do frame
-            <div style={{ width: '100%', height: '100%', backgroundColor: '#d1fae5', borderRadius: RADIUS, display: 'flex' }} />
-          )}
-
           {/* Badge de data */}
           <div
             style={{
@@ -89,7 +79,6 @@ export async function GET(req: NextRequest) {
               padding: '10px 28px',
               fontSize: 28,
               fontFamily: 'LexendDeca',
-              fontWeight: 700,
               color: DARK,
               display: 'flex',
               alignItems: 'center',
@@ -99,36 +88,38 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        {/* Card branco com título + excerpt */}
+        {/* Card branco */}
         <div
           style={{
             width: '100%',
             backgroundColor: '#ffffff',
             borderRadius: RADIUS,
-            padding: '44px 52px 40px',
+            padding: '40px 52px 36px',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 8px 48px rgba(0,0,0,0.10)',
-            marginBottom: 28,
+            marginBottom: 24,
             flex: 1,
           }}
         >
+          {/* Título com fonte menor para aparecer completo */}
           <div
             style={{
               fontFamily: 'NunitoBold',
-              fontSize: 64,
+              fontSize: 50,
               color: DARK,
-              lineHeight: 1.08,
-              marginBottom: 20,
+              lineHeight: 1.1,
+              marginBottom: 18,
             }}
           >
-            {titleTrunc}
+            {title}
           </div>
+
           {excerptTrunc && (
             <div
               style={{
                 fontFamily: 'LexendDeca',
-                fontSize: 30,
+                fontSize: 28,
                 color: '#444',
                 lineHeight: 1.45,
               }}
