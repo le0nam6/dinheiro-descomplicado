@@ -492,8 +492,6 @@ export async function GET(request: Request) {
       ...(curation.reflection ? { reflection: curation.reflection } : {}),
     })
 
-    if (queuedCuriosity) await markQueueUsed(queuedCuriosity._id, slugValue)
-
     const url = `${SITE}/edicao/${slugValue}`
 
     // No modo rascunho não mexe em cache nem avisa o Telegram
