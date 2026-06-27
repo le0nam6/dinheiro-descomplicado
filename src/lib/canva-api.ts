@@ -89,9 +89,10 @@ async function poll<T>(
 export async function uploadAssetFromUrl(photoUrl: string, name: string, token: string): Promise<string> {
   const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) })
   if (!imgRes.ok) throw new Error(`Falha ao buscar foto: ${photoUrl}`)
-  const imgBuffer = await imgRes.arrayBuffer()
+  const imgBuffer = Buffer.from(await imgRes.arrayBuffer())
   const metadataB64 = Buffer.from(JSON.stringify({ name_base64: Buffer.from(name).toString('base64') })).toString('base64')
 
+  console.log('[canva] upload size:', imgBuffer.byteLength, 'metadata:', metadataB64)
   const uploadRes = await fetch(`${API}/asset-uploads`, {
     method: 'POST',
     headers: {
@@ -101,7 +102,9 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
     },
     body: imgBuffer,
   })
-  if (!uploadRes.ok) throw new Error(`Canva upload failed: ${await uploadRes.text()}`)
+  const uploadText = await uploadRes.text()
+  console.log('[canva] upload response:', uploadRes.status, uploadText)
+  if (!uploadRes.ok) throw new Error(`Canva upload failed: ${uploadText}`)
   const { job } = await uploadRes.json()
 
   const assetId = await poll(async () => {
