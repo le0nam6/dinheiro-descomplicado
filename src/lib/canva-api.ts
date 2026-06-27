@@ -108,7 +108,7 @@ export async function uploadAssetFromUrl(photoUrl: string, name: string, token: 
     headers: {
       Authorization: `Bearer ${token}`,
       'Asset-Upload-Metadata': metadataB64,
-      'Content-Type': mime,
+      'Content-Type': 'application/octet-stream',
     },
     body: imgBuffer,
   })
