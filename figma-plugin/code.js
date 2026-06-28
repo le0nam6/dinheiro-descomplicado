@@ -298,7 +298,7 @@ async function generatePost(post) {
       } catch (e) { /* sem foto, usa placeholder */ }
     }
 
-    await buildFrame({ ...post, photoBytes })
+    await buildFrame(Object.assign({}, post, { photoBytes: photoBytes }))
     figma.ui.postMessage({ type: 'done', text: `Card gerado: ${post.title.slice(0, 30)}…` })
   } catch (e) {
     figma.ui.postMessage({ type: 'error', text: e.message })
