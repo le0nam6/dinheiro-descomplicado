@@ -41,6 +41,7 @@ function setCorner(node, r) {
 
 async function loadFonts() {
   await Promise.all([
+    figma.loadFontAsync({ family: 'Inter', style: 'Regular' }),
     figma.loadFontAsync({ family: 'Nunito', style: 'ExtraBold' }),
     figma.loadFontAsync({ family: 'Lexend Deca', style: 'Regular' }),
     figma.loadFontAsync({ family: 'Nunito', style: 'Bold' }),
