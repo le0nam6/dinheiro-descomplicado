@@ -121,7 +121,7 @@ async function buildFrame(post) {
   setCorner(photoFrame, RADIUS)
   photoFrame.clipsContent = true
 
-  if (post?.photoBytes) {
+  if (post && post.photoBytes) {
     const imgHash = figma.createImage(post.photoBytes)
     photoFrame.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: imgHash.hash }]
   }
@@ -136,7 +136,7 @@ async function buildFrame(post) {
   badge.primaryAxisAlignItems = 'CENTER'
   badge.counterAxisAlignItems = 'CENTER'
   const dateText = await makeText({
-    chars: post?.date || '27/06',
+    chars: (post && post.date) || '27/06',
     size: 26, family: 'Lexend Deca', style: 'Regular', color: DARK,
   })
   badge.appendChild(dateText)
@@ -173,7 +173,7 @@ async function buildFrame(post) {
   }]
 
   const title = await makeText({
-    chars: post?.title || 'Título da notícia vai aparecer aqui completo',
+    chars: (post && post.title) || 'Título da notícia vai aparecer aqui completo',
     size: 50, family: 'Nunito', style: 'ExtraBold', color: DARK,
     w: INNER - 52 * 2,
   })
@@ -181,7 +181,7 @@ async function buildFrame(post) {
   title.lineHeight = { value: 110, unit: 'PERCENT' }
 
   const excerpt = await makeText({
-    chars: post?.excerpt || 'Texto de prévia da notícia aparece aqui. Deve ter entre 1 e 3 frases curtas.',
+    chars: (post && post.excerpt) || 'Texto de prévia da notícia aparece aqui. Deve ter entre 1 e 3 frases curtas.',
     size: 34, family: 'Lexend Deca', style: 'Regular', color: GRAY,
     w: INNER - 52 * 2,
   })
@@ -290,8 +290,8 @@ async function generatePost(post) {
         photoBytes = await new Promise((res, rej) => {
           const t = setTimeout(() => rej(new Error('timeout')), 15000)
           const h = (e) => {
-            if (e.pluginMessage?.type === 'image-bytes') { clearTimeout(t); res(new Uint8Array(e.pluginMessage.bytes)) }
-            if (e.pluginMessage?.type === 'image-error') { clearTimeout(t); rej(new Error(e.pluginMessage.error)) }
+            if (e.pluginMessage && e.pluginMessage.type === 'image-bytes') { clearTimeout(t); res(new Uint8Array(e.pluginMessage.bytes)) }
+            if (e.pluginMessage && e.pluginMessage.type === 'image-error') { clearTimeout(t); rej(new Error(e.pluginMessage.error)) }
           }
           figma.ui.once('message', h)
         })
