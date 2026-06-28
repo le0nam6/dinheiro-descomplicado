@@ -31,6 +31,8 @@ export const settingsSchema = defineType({
       }],
     }),
     defineField({ name: 'canvaRefreshToken', title: 'Canva Refresh Token (auto-gerenciado)', type: 'string' }),
+    defineField({ name: 'figmaAccessToken', title: 'Figma Access Token (auto-gerenciado)', type: 'string' }),
+    defineField({ name: 'figmaRefreshToken', title: 'Figma Refresh Token (auto-gerenciado)', type: 'string' }),
   ],
   preview: { select: { title: 'subscriberGoal' }, prepare: () => ({ title: 'Configurações do Site' }) },
 })
