@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, sans-serif; font-size: 13px; background: #fff; color: #111; }
+  .header { padding: 16px; border-bottom: 1px solid #eee; }
+  .header h2 { font-size: 15px; font-weight: 600; color: #0D2B14; }
+  .header p { font-size: 12px; color: #666; margin-top: 4px; }
+  .section { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+  label { display: block; font-size: 11px; font-weight: 500; color: #555; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .post-card { background: #f7f8f6; border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
+  .post-card:hover { border-color: #4ADE80; }
+  .post-card.selected { border-color: #4ADE80; background: #f0fdf4; }
+  .post-card .title { font-weight: 600; font-size: 12px; color: #0D2B14; margin-bottom: 4px; line-height: 1.3; }
+  .post-card .date { font-size: 11px; color: #888; }
+  .empty { text-align: center; padding: 24px 16px; color: #999; font-size: 12px; }
+  .btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #4ADE80; color: #0D2B14; }
+  .btn-secondary { background: #0D2B14; color: #fff; }
+  .btn-outline { background: transparent; color: #0D2B14; border: 1.5px solid #0D2B14; }
+  .actions { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  #status { padding: 8px 16px; font-size: 11px; color: #666; min-height: 28px; }
+  .loading { color: #4ADE80; }
+  .error { color: #e53e3e; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h2>Endinheirados · IG Notícia</h2>
+  <p>Gera o card de notícia direto no Figma</p>
+</div>
+
+<div class="section">
+  <label>Notícias pendentes</label>
+  <div id="post-list"><div class="empty">Carregando...</div></div>
+</div>
+
+<div id="status"></div>
+
+<div class="actions">
+  <button class="btn btn-primary" id="btn-generate" disabled>Gerar card no Figma</button>
+  <button class="btn btn-outline" id="btn-create-template">Criar template em branco</button>
+</div>
+
+<script>
+const API = 'https://endinheirados.cc'
+let selectedPost = null
+let posts = []
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status')
+  el.textContent = msg
+  el.className = type
+}
+
+async function loadPosts() {
+  try {
+    const r = await fetch(`${API}/api/ig-posts-pending`)
+    const data = await r.json()
+    posts = data.posts || []
+    renderPosts()
+  } catch (e) {
+    setStatus('Erro ao carregar posts: ' + e.message, 'error')
+    document.getElementById('post-list').innerHTML = '<div class="empty">Falha ao conectar com o site.</div>'
+  }
+}
+
+function renderPosts() {
+  const list = document.getElementById('post-list')
+  if (!posts.length) {
+    list.innerHTML = '<div class="empty">Nenhuma notícia pendente para o IG.</div>'
+    return
+  }
+  list.innerHTML = posts.map((p, i) => `
+    <div class="post-card" data-i="${i}">
+      <div class="title">${p.title}</div>
+      <div class="date">${p.date}</div>
+    </div>
+  `).join('')
+  list.querySelectorAll('.post-card').forEach(card => {
+    card.addEventListener('click', () => {
+      list.querySelectorAll('.post-card').forEach(c => c.classList.remove('selected'))
+      card.classList.add('selected')
+      selectedPost = posts[parseInt(card.dataset.i)]
+      document.getElementById('btn-generate').disabled = false
+    })
+  })
+}
+
+document.getElementById('btn-generate').addEventListener('click', () => {
+  if (!selectedPost) return
+  setStatus('Gerando card no Figma…', 'loading')
+  document.getElementById('btn-generate').disabled = true
+  parent.postMessage({ pluginMessage: { type: 'generate', post: selectedPost } }, '*')
+})
+
+document.getElementById('btn-create-template').addEventListener('click', () => {
+  setStatus('Criando template…', 'loading')
+  parent.postMessage({ pluginMessage: { type: 'create-template' } }, '*')
+})
+
+window.onmessage = async (e) => {
+  const msg = e.data.pluginMessage
+  if (!msg) return
+
+  if (msg.type === 'done') {
+    setStatus('✅ ' + msg.text)
+    document.getElementById('btn-generate').disabled = false
+    loadPosts()
+  }
+  if (msg.type === 'error') {
+    setStatus('❌ ' + msg.text, 'error')
+    document.getElementById('btn-generate').disabled = false
+  }
+
+  // Plugin pede que a UI faça o fetch da imagem (sandbox não tem rede)
+  if (msg.type === 'fetch-image') {
+    try {
+      const res = await fetch(msg.url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const buf = await res.arrayBuffer()
+      parent.postMessage({ pluginMessage: { type: 'image-bytes', bytes: Array.from(new Uint8Array(buf)) } }, '*')
+    } catch (err) {
+      parent.postMessage({ pluginMessage: { type: 'image-error', error: err.message } }, '*')
+    }
+  }
+}
+
+loadPosts()
+</script>
+</body>
+</html>
