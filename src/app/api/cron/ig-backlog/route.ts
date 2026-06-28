@@ -21,11 +21,6 @@ async function getNextPost() {
   )
 }
 
-function firstSentence(text: string): string {
-  const match = text.match(/^[^.!?]+[.!?]/)
-  return match ? match[0].trim() : text.slice(0, 100)
-}
-
 async function buildCaption(post: { title: string; excerpt: string; slug: string }): Promise<string> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const msg = await client.messages.create({
@@ -71,7 +66,7 @@ export async function GET(request: Request) {
       ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
     if (!photoUrl) throw new Error('Nenhuma foto disponível')
 
-    const preview = firstSentence(post.excerpt || '')
+    const preview = (post.excerpt || '').slice(0, 220)
     const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(preview)}&date=${encodeURIComponent(date)}&t=${Date.now()}`
 
     const caption = await buildCaption(post)
