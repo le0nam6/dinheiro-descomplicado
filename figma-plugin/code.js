@@ -295,7 +295,7 @@ async function generatePost(post) {
           }
           figma.ui.once('message', h)
         })
-      } catch { /* sem foto, usa placeholder */ }
+      } catch (e) { /* sem foto, usa placeholder */ }
     }
 
     await buildFrame({ ...post, photoBytes })
