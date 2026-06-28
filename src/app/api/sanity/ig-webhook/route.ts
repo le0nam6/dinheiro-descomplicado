@@ -49,12 +49,16 @@ export async function POST(request: Request) {
     slug: { current: string }; coverImage: { url: string } | null
   }
 
+  const isDraft = post._id?.startsWith('drafts.')
+
   // Só processa notícias publicadas que ainda não foram pro IG
   if (
+    isDraft ||
     post._type !== 'post' ||
     post.articleType !== 'news' ||
     !post.publishedAt ||
-    post.igQueued === true
+    post.igQueued === true ||
+    (post as Record<string, unknown>)._igTriggered === true
   ) {
     return NextResponse.json({ ok: true, skipped: true })
   }
@@ -64,13 +68,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Marca imediatamente para evitar disparo duplo (o próprio patch abaixo dispara o webhook)
+    await sanity.patch(post._id).set({ _igTriggered: true }).commit()
+
     const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
     const excerpt = (post.excerpt || '').slice(0, 220)
 
     const photoUrl = post.coverImage?.url
       ?? (await fetchPhoto(`${post.title.split(' ').slice(0, 4).join(' ')} Brasil`)).url
 
-    // Salva a foto usada no post para poder alternar depois
     await sanity.patch(post._id).set({ _igPhotoUrl: photoUrl }).commit()
 
     const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(photoUrl)}&excerpt=${encodeURIComponent(excerpt)}&date=${encodeURIComponent(date)}&t=${Date.now()}`
