@@ -64,6 +64,63 @@ export async function POST(request: Request) {
       const [action, id] = parts
       const msgId = cq.message?.message_id
 
+      // --- IG: OK (já postou manualmente) ---
+      if (action === 'iga') {
+        await sanity.patch(id).set({ igQueued: true }).unset(['_igPhotoUrl']).commit()
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Marcado!' })
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: { inline_keyboard: [[{ text: '✅ Postado no IG', callback_data: 'noop' }]] },
+        })
+        return NextResponse.json({ ok: true })
+      }
+
+      // --- IG: alternativa (nova foto do Pexels) ---
+      if (action === 'igr') {
+        const altCount = parseInt(parts[2] || '0', 10) + 1
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Buscando alternativa…' })
+
+        const post = await sanity.fetch<{
+          _id: string; title: string; excerpt: string; publishedAt: string;
+          coverImage: { url: string } | null; _igPhotoUrl: string | null
+        } | null>(
+          '*[_id==$id][0]{ _id, title, excerpt, publishedAt, coverImage, _igPhotoUrl }',
+          { id }
+        )
+        if (!post) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Post não encontrado.' })
+          return NextResponse.json({ ok: true })
+        }
+
+        const usedUrls = [post.coverImage?.url, post._igPhotoUrl].filter(Boolean) as string[]
+        const searchTerms = altCount <= 2
+          ? `${post.title.split(' ').slice(0, 4).join(' ')} Brasil`
+          : `${post.title.split(' ').slice(0, 3).join(' ')} economia`
+        const newPhoto = await fetchPhoto(searchTerms, usedUrls)
+
+        await sanity.patch(id).set({ _igPhotoUrl: newPhoto.url }).commit()
+
+        const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        const excerpt = (post.excerpt || '').slice(0, 220)
+        const ogUrl = `${SITE}/api/og?title=${encodeURIComponent(post.title)}&photo=${encodeURIComponent(newPhoto.url)}&excerpt=${encodeURIComponent(excerpt)}&date=${encodeURIComponent(date)}&t=${Date.now()}`
+
+        const igKeyboard = (postId: string, count: number) => ({
+          inline_keyboard: [[
+            { text: '🔄 Alternativa', callback_data: `igr:${postId}:${count}` },
+            { text: '✅ OK, já postei', callback_data: `iga:${postId}` },
+          ]],
+        })
+
+        await tg('sendPhoto', {
+          chat_id: cq.message.chat.id,
+          photo: ogUrl,
+          caption: `📸 Alternativa ${altCount}\n\n*${post.title}*`,
+          parse_mode: 'Markdown',
+          reply_markup: igKeyboard(id, altCount),
+        })
+        return NextResponse.json({ ok: true })
+      }
+
       // --- Curadoria da edição: toggle de manchete ---
       if (action === 'et') {
         const idx = parseInt(parts[2], 10)
