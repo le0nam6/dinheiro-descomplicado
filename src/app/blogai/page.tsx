@@ -177,7 +177,7 @@ export default function BlogAIPage() {
             Da pesquisa à publicação,<br />com <strong>você no controle</strong>.
           </h2>
           {[
-            { n: '01', title: 'IA monitora o que está em alta', desc: 'O sistema busca automaticamente dados reais de APIs oficiais (BACEN, IBGE, B3), feeds especializados e tendências — sempre com fontes verificáveis.' },
+            { n: '01', title: 'IA monitora o que está em alta', desc: 'O sistema busca dados do seu setor em fontes configuradas para o seu negócio — APIs de dados, feeds especializados, portais do nicho — e seleciona o que tem mais relevância no momento.' },
             { n: '02', title: 'Escreve o rascunho com a voz do seu negócio', desc: 'O modelo é treinado com o tom editorial do seu nicho. Cada artigo tem ângulo único, dados citados e estrutura que converte.' },
             { n: '03', title: 'Você aprova em 30 segundos pelo Telegram', desc: 'Recebe notificação com título, resumo e prévia. Um toque publica. Outro descarta. Menos de meio minuto.' },
             { n: '04', title: 'Publicação automática com SEO completo', desc: 'Schema markup, meta tags, links internos, imagem de capa. O Google indexa e o tráfego orgânico cresce enquanto você faz outra coisa.' },
@@ -190,6 +190,77 @@ export default function BlogAIPage() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── FLUXOS POSSÍVEIS ─────────────────────────────────────────── */}
+      <section style={{ background: BK, padding: '5rem 2.5rem' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '1.5rem' }}>fluxos de conteúdo</p>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '.75rem', letterSpacing: '-1px' }}>
+            O sistema se adapta ao<br /><strong>tipo de conteúdo</strong>.
+          </h2>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', marginBottom: '3rem', lineHeight: 1.6, maxWidth: 480 }}>
+            Cada nicho tem conteúdos que pedem aprovação rápida e outros que exigem revisão antes de publicar. O BlogAI suporta os dois.
+          </p>
+
+          {/* Fluxo 1 — Dados */}
+          <div style={{ background: 'rgba(5,46,22,.35)', border: '1px solid rgba(22,163,74,.3)', borderRadius: 16, padding: '1.75rem', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#4ade80' }}>01 — Conteúdo de Dados</span>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>ex: cotação do dólar, IPCA, resultados de mercado</p>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4ade80', background: 'rgba(22,163,74,.15)', border: '1px solid rgba(22,163,74,.3)', borderRadius: 20, padding: '4px 10px', whiteSpace: 'nowrap' }}>aprovação rápida</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {['Fonte de dados', 'IA analisa', 'Rascunho no CMS', 'Telegram', '1 toque → no ar'].map((step, i, arr) => (
+                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: i === arr.length - 1 ? '#4ade80' : 'rgba(255,255,255,0.7)', background: i === arr.length - 1 ? 'rgba(22,163,74,.2)' : 'rgba(255,255,255,0.06)', border: `1px solid ${i === arr.length - 1 ? 'rgba(22,163,74,.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '5px 12px', whiteSpace: 'nowrap' }}>{step}</span>
+                  {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>→</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Fluxo 2 — Editorial */}
+          <div style={{ background: 'rgba(66,32,6,.5)', border: '1px solid rgba(217,119,6,.3)', borderRadius: 16, padding: '1.75rem', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#fbbf24' }}>02 — Análise Editorial</span>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>ex: análise de setor, deep dive de produto, tendência</p>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#fbbf24', background: 'rgba(217,119,6,.15)', border: '1px solid rgba(217,119,6,.3)', borderRadius: 20, padding: '4px 10px', whiteSpace: 'nowrap' }}>revisão antes de publicar</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {['Feed do nicho', 'IA pesquisa', 'Rascunho no CMS', 'Telegram', 'Você revisa', 'Publica'].map((step, i, arr) => (
+                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: i === arr.length - 1 ? '#fbbf24' : 'rgba(255,255,255,0.7)', background: i === arr.length - 1 ? 'rgba(217,119,6,.2)' : 'rgba(255,255,255,0.06)', border: `1px solid ${i === arr.length - 1 ? 'rgba(217,119,6,.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '5px 12px', whiteSpace: 'nowrap' }}>{step}</span>
+                  {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>→</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Fluxo 3 — Pauta */}
+          <div style={{ background: 'rgba(40,0,0,.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>03 — Pauta Customizada</span>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>ex: responder dúvida de cliente, cobrir lançamento, evento do setor</p>
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '4px 10px', whiteSpace: 'nowrap' }}>você define o tema</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {['Você sugere o tema', 'IA pesquisa', 'Rascunho no CMS', 'Telegram', '1 toque → no ar'].map((step, i, arr) => (
+                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: i === 0 ? 'rgba(255,200,200,0.9)' : i === arr.length - 1 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.7)', background: i === 0 ? 'rgba(255,100,100,.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${i === 0 ? 'rgba(255,100,100,.25)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '5px 12px', whiteSpace: 'nowrap' }}>{step}</span>
+                  {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>→</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -209,7 +280,7 @@ export default function BlogAIPage() {
               'SEO técnico completo (schema, sitemap, robots)',
               'Newsletter integrada com automação de envio',
               'Painel admin para edições manuais',
-              '30 dias de suporte pós-entrega incluídos',
+              'Documentação e treinamento para operar o sistema',
             ].map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '1rem', background: '#f8f8f8', borderRadius: 12 }}>
                 <span style={{ color: W, fontWeight: 700, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
