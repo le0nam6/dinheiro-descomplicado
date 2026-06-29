@@ -18,40 +18,101 @@ export default function BlogAIPage() {
     <div className={ibm.className} style={{ fontFamily: "'IBM Plex Sans', sans-serif", overflowX: 'hidden' }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section style={{ background: WG, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '3rem 2.5rem 2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+      <section style={{ background: WG, minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr auto', padding: '3rem 0 0' }}>
+        {/* top bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0 2.5rem', marginBottom: '2rem' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>Automação editorial</span>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>com inteligência artificial</span>
         </div>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', letterSpacing: '.02em' }}>Bem-vindo ao</p>
-          <h1 style={{ fontSize: 'clamp(96px, 18vw, 200px)', fontWeight: 700, letterSpacing: '-6px', lineHeight: .9, color: '#fff', margin: 0 }}>
-            Blog<span style={{ color: 'rgba(255,255,255,0.25)' }}>AI</span>
-          </h1>
+
+        {/* content row: text left, phone right */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', gap: 0, minHeight: 0 }}>
+          {/* left: text */}
+          <div style={{ padding: '0 2.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', letterSpacing: '.02em' }}>Bem-vindo ao</p>
+            <h1 style={{ fontSize: 'clamp(72px, 11vw, 160px)', fontWeight: 700, letterSpacing: '-5px', lineHeight: .9, color: '#fff', margin: '0 0 2rem' }}>
+              Blog<span style={{ color: 'rgba(255,255,255,0.25)' }}>AI</span>
+            </h1>
+            <p style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.65)', maxWidth: 360, lineHeight: 1.55, margin: 0 }}>
+              Seu blog pesquisa, escreve e publica conteúdo relevante automaticamente. Você aprova em segundos pelo celular.
+            </p>
+          </div>
+
+          {/* right: phone mockup with gradient overlay */}
+          <div style={{ position: 'relative', height: '100%', minHeight: 480, overflow: 'hidden' }}>
+            {/* gradient left→transparent so phone blends with bg */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #1a0000 0%, transparent 35%)', zIndex: 2 }} />
+            {/* gradient bottom fade */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, background: 'linear-gradient(to top, #1a0000 0%, transparent 100%)', zIndex: 2 }} />
+            {/* phone SVG */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg)', zIndex: 1 }}>
+              <svg width="260" height="520" viewBox="0 0 260 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* phone body */}
+                <rect x="1" y="1" width="258" height="518" rx="35" fill="#0a0a0a" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+                {/* screen */}
+                <rect x="10" y="14" width="240" height="492" rx="27" fill="#111"/>
+                {/* notch */}
+                <rect x="95" y="18" width="70" height="8" rx="4" fill="#1a1a1a"/>
+                {/* status bar */}
+                <rect x="20" y="34" width="40" height="6" rx="3" fill="rgba(255,255,255,0.15)"/>
+                <rect x="200" y="34" width="40" height="6" rx="3" fill="rgba(255,255,255,0.15)"/>
+                {/* Telegram header */}
+                <rect x="10" y="50" width="240" height="48" rx="0" fill="#17212B"/>
+                <circle cx="35" cy="74" r="14" fill="#2196F3"/>
+                <text x="35" y="79" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">TG</text>
+                <text x="58" y="70" fill="rgba(255,255,255,0.9)" fontSize="12" fontWeight="600">BlogAI</text>
+                <text x="58" y="84" fill="rgba(255,255,255,0.4)" fontSize="10">bot • online</text>
+                {/* message bubble */}
+                <rect x="18" y="110" width="195" height="90" rx="12" fill="#182533"/>
+                <rect x="18" y="110" width="195" height="90" rx="12" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                <text x="30" y="130" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
+                <text x="30" y="148" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Novo artigo pronto:</text>
+                <text x="30" y="164" fill="rgba(255,255,255,0.7)" fontSize="9">"Dólar e Você: o que a alta</text>
+                <text x="30" y="176" fill="rgba(255,255,255,0.7)" fontSize="9">significa para o seu bolso"</text>
+                <text x="195" y="194" fill="rgba(255,255,255,0.3)" fontSize="8" textAnchor="end">14:03</text>
+                {/* approve button */}
+                <rect x="18" y="212" width="94" height="32" rx="8" fill="#16a34a"/>
+                <text x="65" y="232" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">✓ Publicar</text>
+                {/* edit button */}
+                <rect x="120" y="212" width="93" height="32" rx="8" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
+                <text x="166" y="232" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="11">Ver rascunho</text>
+                {/* second message */}
+                <rect x="18" y="258" width="170" height="56" rx="12" fill="#182533" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                <text x="30" y="278" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
+                <text x="30" y="295" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Artigo anterior publicado!</text>
+                <text x="30" y="308" fill="rgba(255,255,255,0.4)" fontSize="9">5 min atrás · endinheirados.cc</text>
+                {/* notification dot */}
+                <circle cx="228" cy="268" r="6" fill="#16a34a"/>
+                <text x="228" y="272" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">✓</text>
+                {/* bottom bar */}
+                <rect x="90" y="500" width="80" height="4" rx="2" fill="rgba(255,255,255,0.2)"/>
+              </svg>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
-          <p style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.65)', maxWidth: 380, lineHeight: 1.55, margin: 0 }}>
-            Seu blog pesquisa, escreve e publica conteúdo relevante automaticamente. Você aprova em segundos pelo celular.
-          </p>
+
+        {/* bottom bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.35)' }}>entrega em 6 semanas</span>
+          <a href="#preco" style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', textDecoration: 'none', letterSpacing: '.04em' }}>Ver investimento ↓</a>
         </div>
       </section>
 
-      {/* ── STATEMENT — AUTOMATIZE ───────────────────────────────────── */}
-      <section style={{ background: WG, padding: '6rem 2.5rem', overflow: 'hidden' }}>
+      {/* ── STATEMENT ────────────────────────────────────────────────── */}
+      <section style={{ background: WG, padding: '5rem 2.5rem 6rem', overflow: 'hidden' }}>
         <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
-          Nossa missão é simples
+          o que o BlogAI entrega
         </p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3rem', flexWrap: 'wrap' }}>
           <h2 style={{ fontSize: 'clamp(96px, 20vw, 240px)', fontWeight: 700, letterSpacing: '-8px', lineHeight: .85, color: '#fff', margin: 0 }}>
-            RANQUEAR
+            CRESCER
           </h2>
-          <div style={{ paddingBottom: '1rem' }}>
-            <p style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: 260 }}>
-              01 — o seu conteúdo<br />
-              02 — no Google<br />
-              03 — todo dia<br />
-              04 — sem equipe
+          <div style={{ paddingBottom: '1.25rem' }}>
+            <p style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.55)', lineHeight: 1.9, maxWidth: 280 }}>
+              01 — tráfego orgânico real<br />
+              02 — sem equipe de conteúdo<br />
+              03 — sem briefs no WhatsApp<br />
+              04 — sem 3 rodadas de revisão
             </p>
           </div>
         </div>
@@ -291,29 +352,63 @@ export default function BlogAIPage() {
         </div>
       </section>
 
-      {/* ── CRONOGRAMA ───────────────────────────────────────────────── */}
+      {/* ── CRONOGRAMA (GANTT) ───────────────────────────────────────── */}
       <section style={{ background: BK, padding: '5rem 2.5rem' }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '1.5rem' }}>cronograma</p>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '3rem', letterSpacing: '-1px' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '.75rem', letterSpacing: '-1px' }}>
             Do contrato ao blog no ar:<br /><strong>6 semanas</strong>.
           </h2>
-          {[
-            { weeks: 'semanas 1–2', title: 'Briefing, estratégia editorial e setup técnico', desc: 'Nicho, persona, pilares de conteúdo, tom de voz. Configuração de infraestrutura, domínio e hospedagem.' },
-            { weeks: 'semanas 3–4', title: 'Desenvolvimento das automações e integrações', desc: 'Conexão com fontes de dados, configuração do modelo de IA com o seu tom editorial, testes das rotinas.' },
-            { weeks: 'semana 5', title: 'Primeiros conteúdos, testes e ajustes finos', desc: 'Geração dos primeiros 10 artigos para validação com você. Ajustes no tom, fontes e fluxo de aprovação.' },
-            { weeks: 'semana 6', title: 'Entrega, treinamento e go live', desc: 'Blog publicado, rotinas ativas. Sessão de 1h para você operar o painel e o fluxo de aprovação.' },
-          ].map((t, i) => (
-            <div key={i} style={{ display: 'flex', gap: 20, padding: '1.75rem 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-              <div style={{ minWidth: 96, paddingTop: 3 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '.06em', textTransform: 'uppercase' }}>{t.weeks}</span>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginBottom: '3rem', lineHeight: 1.6 }}>
+            Cada fase tem entregáveis concretos. Você acompanha e aprova ao longo do caminho.
+          </p>
+
+          {/* Gantt header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '180px repeat(6, 1fr)', gap: 4, marginBottom: 8 }}>
+            <div />
+            {['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].map(w => (
+              <div key={w} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '.08em', textTransform: 'uppercase' }}>{w}</div>
+            ))}
+          </div>
+
+          {/* Gantt rows — [label, startCol(1-based), spanCols, desc] */}
+          {([
+            ['Briefing & estratégia', 1, 1, 'Nicho, persona, pilares, tom de voz'],
+            ['Setup técnico', 1, 2, 'Infra, domínio, CMS, hospedagem'],
+            ['Automações de IA', 3, 2, 'Fluxos de geração, fontes de dados, Telegram'],
+            ['Tom editorial', 3, 1, 'Ajuste do modelo ao seu negócio'],
+            ['Primeiros artigos', 5, 1, '10 rascunhos para validação com você'],
+            ['Testes & ajustes finos', 5, 2, 'Ciclo de aprovação, tom, fluxo'],
+            ['Entrega & go live', 6, 1, 'Blog publicado, rotinas ativas, treinamento'],
+          ] as [string, number, number, string][]).map(([label, start, span, desc], i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '180px repeat(6, 1fr)', gap: 4, marginBottom: 6, alignItems: 'center' }}>
+              <div style={{ paddingRight: 12 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', lineHeight: 1.3, marginTop: 2 }}>{desc}</div>
               </div>
-              <div>
-                <strong style={{ display: 'block', color: 'rgba(255,255,255,0.92)', fontSize: 15, fontWeight: 500, marginBottom: 5 }}>{t.title}</strong>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, margin: 0 }}>{t.desc}</p>
-              </div>
+              {Array.from({ length: 6 }).map((_, col) => {
+                const active = col + 1 >= start && col + 1 < start + span
+                const isFirst = col + 1 === start
+                const isLast = col + 1 === start + span - 1
+                return (
+                  <div key={col} style={{
+                    height: 28,
+                    background: active ? 'rgba(86,3,3,0.9)' : 'rgba(255,255,255,0.04)',
+                    borderRadius: active ? (isFirst && isLast ? 6 : isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0) : 4,
+                    border: active ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.04)',
+                  }} />
+                )
+              })}
             </div>
           ))}
+
+          {/* week labels bottom */}
+          <div style={{ display: 'grid', gridTemplateColumns: '180px repeat(6, 1fr)', gap: 4, marginTop: 16 }}>
+            <div />
+            {['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6'].map((w, i) => (
+              <div key={i} style={{ textAlign: 'center', fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '.04em' }}>{w}</div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -366,8 +461,53 @@ export default function BlogAIPage() {
         </div>
       </section>
 
+      {/* ── FAQ ──────────────────────────────────────────────────────── */}
+      <section style={{ background: '#fff', padding: '5rem 2.5rem' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(0,0,0,0.3)', textTransform: 'uppercase', marginBottom: '1.5rem' }}>perguntas frequentes</p>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: '#0a0a0a', lineHeight: 1.2, marginBottom: '3rem', letterSpacing: '-1px' }}>
+            As dúvidas que chegam<br /><strong>antes de fechar</strong>.
+          </h2>
+          {[
+            {
+              q: 'O conteúdo vai parecer gerado por IA?',
+              a: 'Não. O modelo é treinado com o tom editorial do seu negócio antes de escrever o primeiro artigo. O resultado é texto com voz própria, dados reais e estrutura jornalística — não o estilo genérico de IA que você já conhece.',
+            },
+            {
+              q: 'Quantos artigos são publicados por mês?',
+              a: 'Depende da configuração — normalmente entre 15 e 30 artigos/mês. O ritmo é ajustado ao seu nicho e à sua capacidade de revisão. Você nunca vai receber mais notificações do que consegue acompanhar.',
+            },
+            {
+              q: 'Preciso de um time técnico para operar?',
+              a: 'Não. A operação cotidiana é: você recebe a notificação no Telegram, lê o resumo e toca em "Publicar" ou "Rejeitar". O painel admin permite editar qualquer artigo sem código. Nenhuma dependência técnica sua.',
+            },
+            {
+              q: 'Para quais nichos o BlogAI funciona melhor?',
+              a: 'Nichos com dados públicos disponíveis, como finanças, saúde, tecnologia, direito, imóveis e agronegócio. Quanto mais informação estruturada existir no seu setor, mais rico e verificável é o conteúdo gerado.',
+            },
+            {
+              q: 'E se eu não gostar de um artigo?',
+              a: 'Você rejeita no Telegram — um toque. O artigo não é publicado. Você pode editar o rascunho no CMS antes de aprovar, ou simplesmente descartar. O sistema aprende com os padrões de aprovação ao longo do tempo.',
+            },
+            {
+              q: 'O que está incluso na manutenção mensal?',
+              a: 'Monitoramento das rotinas de automação, atualização do modelo de IA quando o seu negócio evoluir, suporte técnico por Telegram e até 2h/mês de ajustes editoriais ou integração de novas fontes.',
+            },
+            {
+              q: 'Posso cancelar a manutenção depois?',
+              a: 'Sim. A manutenção é opcional após o go live. O blog continua funcionando — você só assume a responsabilidade pelo monitoramento técnico e atualizações do modelo. É recomendável para quem não tem equipe de TI.',
+            },
+          ].map((item, i, arr) => (
+            <div key={i} style={{ padding: '1.5rem 0', borderBottom: i < arr.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+              <strong style={{ display: 'block', color: '#0a0a0a', fontSize: 15, fontWeight: 600, marginBottom: '.625rem', lineHeight: 1.35 }}>{item.q}</strong>
+              <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.5)', lineHeight: 1.65, margin: 0 }}>{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── PREÇO ────────────────────────────────────────────────────── */}
-      <section style={{ background: '#1a0000', padding: '5rem 2.5rem' }}>
+      <section id="preco" style={{ background: '#1a0000', padding: '5rem 2.5rem' }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '1.5rem' }}>investimento</p>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '.75rem', letterSpacing: '-1px' }}>
@@ -442,7 +582,18 @@ export default function BlogAIPage() {
           <a href="https://wa.me/5511999999999?text=Quero+saber+mais+sobre+o+BlogAI" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fbbf24', color: '#1a0000', fontSize: 15, fontWeight: 700, padding: '1.125rem 2rem', borderRadius: 10, textDecoration: 'none', letterSpacing: '.04em', textTransform: 'uppercase' }}>
             Quero meu BlogAI ↗
           </a>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>BlogAI · automação editorial com IA</span>
+          {/* V4 Company badge */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '.08em', textTransform: 'uppercase' }}>desenvolvido por</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 14px', background: 'rgba(255,255,255,0.04)' }}>
+              {/* V4 wordmark SVG */}
+              <svg width="52" height="20" viewBox="0 0 52 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="0" y="16" fontFamily="IBM Plex Sans, sans-serif" fontSize="18" fontWeight="700" fill="white" letterSpacing="-1">V4</text>
+              </svg>
+              <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)' }} />
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 500, letterSpacing: '.02em' }}>Company</span>
+            </div>
+          </div>
         </div>
       </section>
 
