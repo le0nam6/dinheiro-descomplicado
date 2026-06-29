@@ -31,16 +31,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
 
-        {/* Monetag Golden Tag */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script data-cfasync="false" data-zone="254623" src="https://quge5.com/88/tag.min.js" async />
+        {/* Monetag — In-Page Push (11216571) */}
+        <Script id="monetag-inpage" strategy="afterInteractive">{`(function(s){s.dataset.zone='11216571',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
-        {/* Monetag Service Worker */}
-        <Script id="monetag-sw" strategy="afterInteractive">{`
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' });
-          }
-        `}</Script>
+        {/* Monetag — Push Notification (11216807) */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11216807" async />
+
+        {/* Monetag — Vignette Banner (11217768) */}
+        <Script id="monetag-vignette" strategy="afterInteractive">{`(function(s){s.dataset.zone='11217768',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
         {/* Ezoic — Privacy (deve vir ANTES do header script) */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
