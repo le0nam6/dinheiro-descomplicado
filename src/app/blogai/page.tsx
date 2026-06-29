@@ -16,6 +16,31 @@ const BK = '#0a0a0a'
 export default function BlogAIPage() {
   return (
     <div className={ibm.className} style={{ fontFamily: "'IBM Plex Sans', sans-serif", overflowX: 'hidden' }}>
+      <style>{`
+        @keyframes blogai-float {
+          0%, 100% { transform: translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg) translateY(0px); }
+          50%       { transform: translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg) translateY(-14px); }
+        }
+        @keyframes blogai-pulse-btn {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
+          60%       { box-shadow: 0 0 0 10px rgba(22,163,74,0); }
+        }
+        @keyframes blogai-blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        @keyframes blogai-fadein {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .blogai-phone {
+          animation: blogai-float 5s ease-in-out infinite;
+          filter: drop-shadow(0 32px 48px rgba(0,0,0,0.6));
+        }
+        .blogai-btn-publicar rect { animation: blogai-pulse-btn 2.4s ease-out infinite; }
+        .blogai-msg-2 { animation: blogai-fadein 0.6s ease-out 1.2s both; }
+        .blogai-cursor { animation: blogai-blink 1s step-end infinite; }
+      `}</style>
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section style={{ background: WG, minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr auto', padding: '3rem 0 0' }}>
@@ -38,14 +63,10 @@ export default function BlogAIPage() {
             </p>
           </div>
 
-          {/* right: phone mockup with gradient overlay */}
+          {/* right: phone mockup */}
           <div style={{ position: 'relative', height: '100%', minHeight: 480, overflow: 'hidden' }}>
-            {/* gradient left→transparent so phone blends with bg */}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, #1a0000 0%, transparent 35%)', zIndex: 2 }} />
-            {/* gradient bottom fade */}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, background: 'linear-gradient(to top, #1a0000 0%, transparent 100%)', zIndex: 2 }} />
             {/* phone SVG */}
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg)', zIndex: 1 }}>
+            <div className="blogai-phone" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg)', zIndex: 1 }}>
               <svg width="260" height="520" viewBox="0 0 260 520" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {/* phone body */}
                 <rect x="1" y="1" width="258" height="518" rx="35" fill="#0a0a0a" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
@@ -71,19 +92,23 @@ export default function BlogAIPage() {
                 <text x="30" y="176" fill="rgba(255,255,255,0.7)" fontSize="9">significa para o seu bolso"</text>
                 <text x="195" y="194" fill="rgba(255,255,255,0.3)" fontSize="8" textAnchor="end">14:03</text>
                 {/* approve button */}
-                <rect x="18" y="212" width="94" height="32" rx="8" fill="#16a34a"/>
+                <g className="blogai-btn-publicar">
+                  <rect x="18" y="212" width="94" height="32" rx="8" fill="#16a34a"/>
+                </g>
                 <text x="65" y="232" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">✓ Publicar</text>
                 {/* edit button */}
                 <rect x="120" y="212" width="93" height="32" rx="8" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
                 <text x="166" y="232" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="11">Ver rascunho</text>
                 {/* second message */}
-                <rect x="18" y="258" width="170" height="56" rx="12" fill="#182533" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-                <text x="30" y="278" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
-                <text x="30" y="295" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Artigo anterior publicado!</text>
-                <text x="30" y="308" fill="rgba(255,255,255,0.4)" fontSize="9">5 min atrás · endinheirados.cc</text>
-                {/* notification dot */}
-                <circle cx="228" cy="268" r="6" fill="#16a34a"/>
-                <text x="228" y="272" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">✓</text>
+                <g className="blogai-msg-2">
+                  <rect x="18" y="258" width="170" height="56" rx="12" fill="#182533" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+                  <text x="30" y="278" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
+                  <text x="30" y="295" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Artigo anterior publicado!</text>
+                  <text x="30" y="308" fill="rgba(255,255,255,0.4)" fontSize="9">5 min atrás · endinheirados.cc</text>
+                  {/* notification dot */}
+                  <circle cx="228" cy="268" r="6" fill="#16a34a"/>
+                  <text x="228" y="272" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">✓</text>
+                </g>
                 {/* bottom bar */}
                 <rect x="90" y="500" width="80" height="4" rx="2" fill="rgba(255,255,255,0.2)"/>
               </svg>
@@ -585,13 +610,9 @@ export default function BlogAIPage() {
           {/* V4 Company badge */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
             <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '.08em', textTransform: 'uppercase' }}>desenvolvido por</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 14px', background: 'rgba(255,255,255,0.04)' }}>
-              {/* V4 wordmark SVG */}
-              <svg width="52" height="20" viewBox="0 0 52 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <text x="0" y="16" fontFamily="IBM Plex Sans, sans-serif" fontSize="18" fontWeight="700" fill="white" letterSpacing="-1">V4</text>
-              </svg>
-              <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)' }} />
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 500, letterSpacing: '.02em' }}>Company</span>
+            <div style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 16px', background: 'rgba(255,255,255,0.04)' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/v4-logo.svg" alt="V4 Company" height={24} style={{ height: 24, width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.7 }} />
             </div>
           </div>
         </div>
