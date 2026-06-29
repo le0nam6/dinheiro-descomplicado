@@ -31,6 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
 
+        {/* Monetag Golden Tag */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script data-cfasync="false" data-zone="254623" src="https://quge5.com/88/tag.min.js" async />
+
         {/* Monetag Service Worker */}
         <Script id="monetag-sw" strategy="afterInteractive">{`
           if ('serviceWorker' in navigator) {
