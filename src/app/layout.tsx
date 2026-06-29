@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import { headers } from 'next/headers'
 import { CustomCursor } from '@/components/CustomCursor'
 import { Newsletter } from '@/components/Newsletter'
 import { QuotesTicker } from '@/components/QuotesTicker'
@@ -24,47 +25,53 @@ export const metadata: Metadata = {
   verification: { google: 'j8L6BZiAKRU9noO_zNgiSlrxfT45Mefj5t76wUrd-_Q' },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const hdrs = await headers()
+  const pathname = hdrs.get('x-current-path') ?? ''
+  const isLP = pathname.startsWith('/blogai')
+
   return (
     <html lang="pt-BR">
       <head>
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
 
-        {/* Monetag — In-Page Push (11216571) */}
-        <Script id="monetag-inpage" strategy="afterInteractive">{`(function(s){s.dataset.zone='11216571',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
+        {!isLP && <>
+          {/* Monetag — In-Page Push (11216571) */}
+          <Script id="monetag-inpage" strategy="afterInteractive">{`(function(s){s.dataset.zone='11216571',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
-        {/* Monetag — Push Notification (11216807) */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11216807" async />
+          {/* Monetag — Push Notification (11216807) */}
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+          <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11216807" async />
 
-        {/* Monetag — Vignette Banner (11217768) */}
-        <Script id="monetag-vignette" strategy="afterInteractive">{`(function(s){s.dataset.zone='11217768',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
+          {/* Monetag — Vignette Banner (11217768) */}
+          <Script id="monetag-vignette" strategy="afterInteractive">{`(function(s){s.dataset.zone='11217768',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
-        {/* Ezoic — Privacy (deve vir ANTES do header script) */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
+          {/* Ezoic — Privacy (deve vir ANTES do header script) */}
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+          <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+          <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
 
-        {/* Ezoic — Header Script */}
-        <Script src="//www.ezojs.com/ezoic/sa.min.js" strategy="beforeInteractive" />
-        <Script id="ezoic-init" strategy="beforeInteractive">{`
-          window.ezstandalone = window.ezstandalone || {};
-          ezstandalone.cmd = ezstandalone.cmd || [];
-        `}</Script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="//ezoicanalytics.com/analytics.js" />
-        {/* Ezoic — define todos os placeholders e exibe */}
-        <Script id="ezoic-display" strategy="afterInteractive">{`
-          window.ezstandalone = window.ezstandalone || {};
-          ezstandalone.cmd = ezstandalone.cmd || [];
-          ezstandalone.cmd.push(function() {
-            ezstandalone.define(101, 102, 103, 104, 105, 106);
-            ezstandalone.enable();
-            ezstandalone.display();
-          });
-        `}</Script>
+          {/* Ezoic — Header Script */}
+          <Script src="//www.ezojs.com/ezoic/sa.min.js" strategy="beforeInteractive" />
+          <Script id="ezoic-init" strategy="beforeInteractive">{`
+            window.ezstandalone = window.ezstandalone || {};
+            ezstandalone.cmd = ezstandalone.cmd || [];
+          `}</Script>
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+          <script src="//ezoicanalytics.com/analytics.js" />
+          {/* Ezoic — define todos os placeholders e exibe */}
+          <Script id="ezoic-display" strategy="afterInteractive">{`
+            window.ezstandalone = window.ezstandalone || {};
+            ezstandalone.cmd = ezstandalone.cmd || [];
+            ezstandalone.cmd.push(function() {
+              ezstandalone.define(101, 102, 103, 104, 105, 106);
+              ezstandalone.enable();
+              ezstandalone.display();
+            });
+          `}</Script>
+        </>}
 
         {/* Google Analytics 4 */}
         <Script
@@ -79,12 +86,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</Script>
       </head>
       <body className={inter.className}>
-        <CustomCursor />
-        <ExitIntentPopup />
-        <QuotesTicker />
-        <Header />
-        <main className="max-w-4xl mx-auto px-4 py-12">{children}</main>
-        <Footer />
+        {isLP ? children : (
+          <>
+            <CustomCursor />
+            <ExitIntentPopup />
+            <QuotesTicker />
+            <Header />
+            <main className="max-w-4xl mx-auto px-4 py-12">{children}</main>
+            <Footer />
+          </>
+        )}
       </body>
     </html>
   )
