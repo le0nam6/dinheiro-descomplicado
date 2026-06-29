@@ -346,32 +346,26 @@ export default function BlogAIPage() {
       <section style={{ background: B, padding: '4rem 2rem' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.08em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '.75rem' }}>investimento</p>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', lineHeight: 1.1, marginBottom: '2rem', letterSpacing: '-1px' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', lineHeight: 1.1, marginBottom: '.75rem', letterSpacing: '-1px' }}>
             Menos do que um único<br />colaborador CLT
           </h2>
+          {/* Ancoragem R$ 25k */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '2rem' }}>
+            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)' }}>de</span>
+            <span style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', letterSpacing: '-0.5px' }}>R$ 25.000</span>
+          </div>
 
-          {/* 12x em destaque */}
+          {/* 12x em destaque — VERDE */}
           <div style={{
-            background: W, borderRadius: 16, padding: '2rem',
-            border: '1px solid rgba(255,255,255,0.1)', marginBottom: 12,
+            background: '#052e16', borderRadius: 16, padding: '2rem',
+            border: '1.5px solid #16a34a', marginBottom: 12,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: '.5rem' }}>em destaque — parcelado sem entrada</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span style={{ fontSize: 'clamp(48px, 10vw, 80px)', fontWeight: 700, color: '#fff', letterSpacing: '-3px', lineHeight: 1 }}>R$ 1.667</span>
-                  <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>/mês</span>
-                </div>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>12 parcelas · total R$ 20.000</p>
-              </div>
-              <div style={{
-                background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '.75rem 1rem',
-                textAlign: 'center', flexShrink: 0,
-              }}>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>primeiro pagamento</p>
-                <p style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>30 dias após a entrega</p>
-              </div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4ade80', marginBottom: '1rem' }}>✦ opção em destaque</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 'clamp(52px, 11vw, 88px)', fontWeight: 700, color: '#4ade80', letterSpacing: '-4px', lineHeight: 1 }}>R$ 1.667</span>
+              <span style={{ fontSize: 18, color: '#86efac', fontWeight: 400 }}>/mês</span>
             </div>
+            <p style={{ fontSize: 14, color: '#86efac' }}>12 parcelas · total R$ 20.000</p>
           </div>
 
           {/* Divisor */}
@@ -381,26 +375,26 @@ export default function BlogAIPage() {
             <div style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }} />
           </div>
 
-          {/* À vista */}
+          {/* À vista — VERDE */}
           <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '0.5px solid rgba(255,255,255,0.1)',
+            background: 'rgba(5,46,22,0.5)',
+            border: '0.5px solid #16a34a',
             borderRadius: 16, padding: '1.5rem 2rem',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             flexWrap: 'wrap', gap: 12, marginBottom: 12,
           }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.4)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: '.5rem' }}>oferta única — à vista</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4ade80', marginBottom: '.5rem' }}>oferta única — à vista</p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontSize: 'clamp(32px, 7vw, 52px)', fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1 }}>R$ 20.000</span>
+                <span style={{ fontSize: 'clamp(36px, 7vw, 56px)', fontWeight: 700, color: '#4ade80', letterSpacing: '-2px', lineHeight: 1 }}>R$ 20.000</span>
               </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>pagamento único — não se repete</p>
+              <p style={{ fontSize: 12, color: '#86efac', marginTop: 4 }}>pagamento único · economize R$ 5.000</p>
             </div>
             <div style={{
-              background: 'rgba(255,255,255,0.08)', borderRadius: 20,
-              padding: '6px 16px', fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)',
-              whiteSpace: 'nowrap',
-            }}>mesma base de valor</div>
+              background: 'rgba(74,222,128,0.1)', border: '0.5px solid #4ade80',
+              borderRadius: 20, padding: '6px 14px',
+              fontSize: 12, fontWeight: 500, color: '#4ade80', whiteSpace: 'nowrap',
+            }}>−20%</div>
           </div>
 
           {/* Manutenção */}
@@ -419,7 +413,7 @@ export default function BlogAIPage() {
               </div>
             </div>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', maxWidth: 280, lineHeight: 1.5 }}>
-              Monitoramento das automações, atualização do modelo de IA, suporte técnico e ajustes editoriais. Ativo a partir do mês seguinte à entrega.
+              Monitoramento das automações, atualização do modelo de IA, suporte técnico e ajustes editoriais.
             </p>
           </div>
         </div>
