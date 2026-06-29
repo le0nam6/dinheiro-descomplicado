@@ -161,7 +161,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <AdUnit slot="1234567890" format="horizontal" />
+      <AdUnit placeholderId={101} />
 
       {/* ── SORTEIO / INDICAÇÃO ───────────────────────────────────────── */}
       <ReferralBanner />
@@ -308,7 +308,7 @@ export default async function Home() {
         </div>
       )}
 
-      <AdUnit slot="0987654321" className="mb-8" />
+      <AdUnit placeholderId={105} className="mb-8" />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteSchema }} />
     </div>

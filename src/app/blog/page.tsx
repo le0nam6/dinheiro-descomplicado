@@ -32,7 +32,7 @@ export default async function BlogPage() {
         <p className="text-gray-500">Publicamos 2 artigos por dia. Finanças sem complicação.</p>
       </div>
 
-      <AdUnit slot="1234567890" format="horizontal" />
+      <AdUnit placeholderId={101} />
 
       {posts.length === 0 ? (
         <div className="text-center py-20 text-gray-400 border border-dashed border-gray-200 rounded-xl mt-6">

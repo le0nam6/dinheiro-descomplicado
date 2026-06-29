@@ -121,8 +121,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </figure>
       )}
 
-      {/* Ad antes do conteúdo */}
-      <AdUnit slot="1111111111" format="horizontal" />
+      {/* Ad abaixo do título */}
+      <AdUnit placeholderId={102} />
 
       {/* Conteúdo */}
       <div className="prose mt-8">
@@ -225,6 +225,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return (<>
             <PortableText value={first as any} components={ptComponents} />
+            <AdUnit placeholderId={103} />
             <ReferralInline seed={slug} />
             <PortableText value={second as any} components={ptComponents} />
           </>)
@@ -258,6 +259,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       {/* Sorteio / indicação */}
       <ReferralBanner />
+
+      {/* Ad após o conteúdo */}
+      <AdUnit placeholderId={104} />
 
       {/* Comentários (próprios, sem login) */}
       <Comments slug={post.slug.current} />

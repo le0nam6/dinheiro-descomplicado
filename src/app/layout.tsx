@@ -56,6 +56,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</Script>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="//ezoicanalytics.com/analytics.js" />
+        {/* Ezoic — define todos os placeholders e exibe */}
+        <Script id="ezoic-display" strategy="afterInteractive">{`
+          window.ezstandalone = window.ezstandalone || {};
+          ezstandalone.cmd = ezstandalone.cmd || [];
+          ezstandalone.cmd.push(function() {
+            ezstandalone.define(101, 102, 103, 104, 105, 106);
+            ezstandalone.enable();
+            ezstandalone.display();
+          });
+        `}</Script>
 
         {/* Google Analytics 4 */}
         <Script

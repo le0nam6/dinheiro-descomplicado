@@ -186,7 +186,7 @@ export default async function PillarPage({ params }: { params: Promise<{ slug: s
         </Link>
       )}
 
-      <AdUnit slot="1234567890" format="horizontal" />
+      <AdUnit placeholderId={101} />
 
       {posts.length === 0 ? (
         <div className="text-center py-16 text-gray-400 border border-dashed border-gray-200 rounded-xl mt-6">

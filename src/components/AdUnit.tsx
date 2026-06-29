@@ -2,41 +2,37 @@
 
 import { useEffect } from 'react'
 
+// IDs de placeholder configurados no painel Ezoic
+// 101 = topo de conteúdo  102 = abaixo do título  103 = meio do artigo
+// 104 = fim do artigo     105 = home/listagem      106 = sidebar
+
 interface AdUnitProps {
-  slot: string
-  format?: 'auto' | 'rectangle' | 'horizontal'
+  placeholderId: number
   className?: string
 }
 
-const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID
-// Só renderiza os blocos quando os anúncios estão LIBERADOS (aprovados).
-// Enquanto NEXT_PUBLIC_ADS_LIVE !== 'true', não reserva espaço (evita espaços em branco no celular).
-const isAdsenseActive =
-  process.env.NEXT_PUBLIC_ADS_LIVE === 'true' &&
-  !!ADSENSE_ID && ADSENSE_ID.startsWith('ca-pub-') && !ADSENSE_ID.includes('SEU_ID')
-
-export function AdUnit({ slot, format = 'auto', className = '' }: AdUnitProps) {
+export function AdUnit({ placeholderId, className = '' }: AdUnitProps) {
   useEffect(() => {
-    if (!isAdsenseActive) return
-    try {
-      // @ts-expect-error adsbygoogle global
-      ;(window.adsbygoogle = window.adsbygoogle || []).push({})
-    } catch {}
-  }, [])
-
-  // Sem AdSense configurado: não renderiza nada (evita espaço em branco)
-  if (!isAdsenseActive) return null
+    if (typeof window === 'undefined') return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ez = (window as any).ezstandalone
+    if (!ez) return
+    ez.cmd = ez.cmd || []
+    ez.cmd.push(function () {
+      if (ez.enabled) {
+        ez.define(placeholderId)
+        ez.refresh(placeholderId)
+      } else {
+        ez.define(placeholderId)
+        ez.enable()
+        ez.display()
+      }
+    })
+  }, [placeholderId])
 
   return (
-    <div className={`my-6 text-center ${className}`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block' }}
-        data-ad-client={ADSENSE_ID}
-        data-ad-slot={slot}
-        data-ad-format={format}
-        data-full-width-responsive="true"
-      />
+    <div className={`my-6 ${className}`}>
+      <div id={`ezoic-pub-ad-placeholder-${placeholderId}`} />
     </div>
   )
 }
