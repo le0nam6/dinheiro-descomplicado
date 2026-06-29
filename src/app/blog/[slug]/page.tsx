@@ -27,12 +27,19 @@ export async function generateStaticParams() {
 
 const SITE = 'https://endinheirados.cc'
 
+function imgProxy(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith(SITE) || url.startsWith('/')) return url
+  return `${SITE}/api/img?url=${encodeURIComponent(url)}`
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const post = await getPostBySlug(slug)
   if (!post) return {}
-  const ogImage = post.coverImage?.url
-    ? [{ url: post.coverImage.url, width: 1200, height: 630, alt: post.title }]
+  const proxied = imgProxy(post.coverImage?.url)
+  const ogImage = proxied
+    ? [{ url: proxied, width: 1200, height: 630, alt: post.title }]
     : []
   return {
     title: post.title,
@@ -52,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       card: 'summary_large_image',
       title: post.title,
       description: post.excerpt,
-      images: post.coverImage?.url ? [post.coverImage.url] : [],
+      images: proxied ? [proxied] : [],
     },
   }
 }
@@ -107,7 +114,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* Imagem */}
       {post.coverImage?.url && (
         <figure className="mb-8">
-          <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-full h-64 object-cover rounded-xl" fetchPriority="high" loading="eager" />
+          <img src={imgProxy(post.coverImage.url)} alt={post.coverImage.alt} className="w-full h-64 object-cover rounded-xl" fetchPriority="high" loading="eager" />
           {post.coverImage.credit && (
             <figcaption className="text-xs text-gray-400 mt-2 text-right">Foto: {post.coverImage.credit} · Unsplash</figcaption>
           )}
@@ -265,8 +272,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE}/blog/${slug}` },
             headline: post.title,
             description: post.excerpt,
-            image: post.coverImage?.url
-              ? [{ '@type': 'ImageObject', url: post.coverImage.url, width: 1200, height: 630 }]
+            image: imgProxy(post.coverImage?.url)
+              ? [{ '@type': 'ImageObject', url: imgProxy(post.coverImage?.url), width: 1200, height: 630 }]
               : undefined,
             datePublished: post.publishedAt,
             dateModified: post.updatedAt || post.publishedAt,
