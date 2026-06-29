@@ -45,25 +45,30 @@ export default function AutorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Organization',
-            name: 'Endinheirados',
-            url: 'https://endinheirados.cc',
-            logo: 'https://endinheirados.cc/icon.png',
-            description: 'Portal brasileiro de educação financeira. Notícias diárias, ferramentas gratuitas e newsletter às 5h.',
-            foundingDate: '2024',
-            knowsAbout: ['finanças pessoais', 'investimentos', 'educação financeira', 'renda extra', 'independência financeira'],
-            sameAs: [
-              'https://www.instagram.com/endinheirados',
-              'https://t.me/endinheirados',
-            ],
-            contactPoint: {
-              '@type': 'ContactPoint',
-              contactType: 'editorial',
-              url: 'https://endinheirados.cc/contato',
+          __html: JSON.stringify([
+            {
+              '@context': 'https://schema.org',
+              '@type': 'Person',
+              name: 'Leonam Alves',
+              url: 'https://endinheirados.cc/autor',
+              jobTitle: 'Editor-chefe',
+              worksFor: { '@type': 'Organization', name: 'Endinheirados', url: 'https://endinheirados.cc' },
+              knowsAbout: ['finanças pessoais', 'investimentos', 'educação financeira', 'renda extra'],
+              sameAs: ['https://www.instagram.com/endinheirados'],
             },
-          }),
+            {
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Endinheirados',
+              url: 'https://endinheirados.cc',
+              logo: 'https://endinheirados.cc/logo-endinheirados.png',
+              description: 'Portal brasileiro de educação financeira. Notícias diárias, ferramentas gratuitas e newsletter às 5h.',
+              foundingDate: '2024',
+              knowsAbout: ['finanças pessoais', 'investimentos', 'educação financeira', 'renda extra', 'independência financeira'],
+              sameAs: ['https://www.instagram.com/endinheirados', 'https://t.me/endinheirados'],
+              contactPoint: { '@type': 'ContactPoint', contactType: 'editorial', url: 'https://endinheirados.cc/contato' },
+            },
+          ]),
         }}
       />
     </div>

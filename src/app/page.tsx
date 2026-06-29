@@ -52,6 +52,26 @@ function PostCover({ post, className = '' }: { post: Post; className?: string })
   return <div className={`${className} bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center text-3xl`}>💰</div>
 }
 
+const websiteSchema = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Endinheirados',
+  url: 'https://endinheirados.cc',
+  description: 'Aprenda a ganhar dinheiro e garantir que ele nunca acabe. Investimentos, renda extra, independência financeira.',
+  inLanguage: 'pt-BR',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Endinheirados',
+    url: 'https://endinheirados.cc',
+    logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/logo-endinheirados.png' },
+  },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: 'https://endinheirados.cc/blog?q={search_term_string}' },
+    'query-input': 'required name=search_term_string',
+  },
+})
+
 export default async function Home() {
   const [allPosts, edition] = await Promise.all([getPosts(30) as Promise<Post[]>, getLatestEdition()])
 
@@ -290,6 +310,7 @@ export default async function Home() {
 
       <AdUnit slot="0987654321" className="mb-8" />
 
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteSchema }} />
     </div>
   )
 }

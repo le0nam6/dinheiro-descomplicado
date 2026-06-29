@@ -4,7 +4,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      allow: '/',
+      allow: ['/', '/api/img'],
       disallow: ['/studio/', '/api/'],
     },
     sitemap: ['https://endinheirados.cc/sitemap.xml', 'https://endinheirados.cc/news-sitemap.xml'],
