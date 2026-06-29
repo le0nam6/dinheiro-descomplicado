@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { IBM_Plex_Sans } from 'next/font/google'
+import { HeroAnimation } from './HeroAnimation'
 
 const ibm = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '700'], display: 'swap' })
 
@@ -18,36 +19,20 @@ export default function BlogAIPage() {
     <div className={ibm.className} style={{ fontFamily: "'IBM Plex Sans', sans-serif", overflowX: 'hidden' }}>
       <style>{`
         @keyframes blogai-float {
-          0%, 100% { transform: translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg) translateY(0px); }
-          50%       { transform: translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg) translateY(-14px); }
+          0%, 100% { transform: perspective(1000px) rotateY(-6deg) rotateX(3deg) translateY(0px); }
+          50%       { transform: perspective(1000px) rotateY(-6deg) rotateX(3deg) translateY(-12px); }
         }
-        @keyframes blogai-pulse-btn {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
-          60%       { box-shadow: 0 0 0 10px rgba(22,163,74,0); }
-        }
-        @keyframes blogai-blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        @keyframes blogai-fadein {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .blogai-phone {
-          animation: blogai-float 5s ease-in-out infinite;
-          filter: drop-shadow(0 32px 48px rgba(0,0,0,0.6));
-        }
-        .blogai-btn-publicar rect { animation: blogai-pulse-btn 2.4s ease-out infinite; }
-        .blogai-msg-2 { animation: blogai-fadein 0.6s ease-out 1.2s both; }
-        .blogai-cursor { animation: blogai-blink 1s step-end infinite; }
+        .blogai-phone { animation: blogai-float 5s ease-in-out infinite; }
       `}</style>
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section style={{ background: WG, minHeight: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr auto', padding: '3rem 0 0' }}>
         {/* top bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0 2.5rem', marginBottom: '2rem' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>Automação editorial</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '.04em' }}>com inteligência artificial</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2.5rem', marginBottom: '2rem' }}>
+          {/* V4 logo */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/v4-logo.svg" alt="V4 Company" height={18} style={{ height: 18, width: 'auto', filter: 'brightness(0) invert(1)', opacity: 0.55 }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.4)', letterSpacing: '.04em' }}>automação editorial com IA</span>
         </div>
 
         {/* content row: text left, phone right */}
@@ -63,55 +48,10 @@ export default function BlogAIPage() {
             </p>
           </div>
 
-          {/* right: phone mockup */}
-          <div style={{ position: 'relative', height: '100%', minHeight: 480, overflow: 'hidden' }}>
-            {/* phone SVG */}
-            <div className="blogai-phone" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) perspective(1000px) rotateY(-8deg) rotateX(4deg)', zIndex: 1 }}>
-              <svg width="260" height="520" viewBox="0 0 260 520" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* phone body */}
-                <rect x="1" y="1" width="258" height="518" rx="35" fill="#0a0a0a" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
-                {/* screen */}
-                <rect x="10" y="14" width="240" height="492" rx="27" fill="#111"/>
-                {/* notch */}
-                <rect x="95" y="18" width="70" height="8" rx="4" fill="#1a1a1a"/>
-                {/* status bar */}
-                <rect x="20" y="34" width="40" height="6" rx="3" fill="rgba(255,255,255,0.15)"/>
-                <rect x="200" y="34" width="40" height="6" rx="3" fill="rgba(255,255,255,0.15)"/>
-                {/* Telegram header */}
-                <rect x="10" y="50" width="240" height="48" rx="0" fill="#17212B"/>
-                <circle cx="35" cy="74" r="14" fill="#2196F3"/>
-                <text x="35" y="79" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">TG</text>
-                <text x="58" y="70" fill="rgba(255,255,255,0.9)" fontSize="12" fontWeight="600">BlogAI</text>
-                <text x="58" y="84" fill="rgba(255,255,255,0.4)" fontSize="10">bot • online</text>
-                {/* message bubble */}
-                <rect x="18" y="110" width="195" height="90" rx="12" fill="#182533"/>
-                <rect x="18" y="110" width="195" height="90" rx="12" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-                <text x="30" y="130" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
-                <text x="30" y="148" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Novo artigo pronto:</text>
-                <text x="30" y="164" fill="rgba(255,255,255,0.7)" fontSize="9">"Dólar e Você: o que a alta</text>
-                <text x="30" y="176" fill="rgba(255,255,255,0.7)" fontSize="9">significa para o seu bolso"</text>
-                <text x="195" y="194" fill="rgba(255,255,255,0.3)" fontSize="8" textAnchor="end">14:03</text>
-                {/* approve button */}
-                <g className="blogai-btn-publicar">
-                  <rect x="18" y="212" width="94" height="32" rx="8" fill="#16a34a"/>
-                </g>
-                <text x="65" y="232" textAnchor="middle" fill="white" fontSize="11" fontWeight="700">✓ Publicar</text>
-                {/* edit button */}
-                <rect x="120" y="212" width="93" height="32" rx="8" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-                <text x="166" y="232" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="11">Ver rascunho</text>
-                {/* second message */}
-                <g className="blogai-msg-2">
-                  <rect x="18" y="258" width="170" height="56" rx="12" fill="#182533" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-                  <text x="30" y="278" fill="rgba(255,255,255,0.5)" fontSize="9">🤖 BlogAI</text>
-                  <text x="30" y="295" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="500">Artigo anterior publicado!</text>
-                  <text x="30" y="308" fill="rgba(255,255,255,0.4)" fontSize="9">5 min atrás · endinheirados.cc</text>
-                  {/* notification dot */}
-                  <circle cx="228" cy="268" r="6" fill="#16a34a"/>
-                  <text x="228" y="272" textAnchor="middle" fill="white" fontSize="8" fontWeight="700">✓</text>
-                </g>
-                {/* bottom bar */}
-                <rect x="90" y="500" width="80" height="4" rx="2" fill="rgba(255,255,255,0.2)"/>
-              </svg>
+          {/* right: Remotion animated phone */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 480 }}>
+            <div className="blogai-phone" style={{ transform: 'perspective(1000px) rotateY(-6deg) rotateX(3deg)' }}>
+              <HeroAnimation />
             </div>
           </div>
         </div>
