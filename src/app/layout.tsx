@@ -29,6 +29,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
+
+        {/* Ezoic — Privacy (deve vir ANTES do header script) */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
+
+        {/* Ezoic — Header Script */}
+        <Script src="//www.ezojs.com/ezoic/sa.min.js" strategy="beforeInteractive" />
+        <Script id="ezoic-init" strategy="beforeInteractive">{`
+          window.ezstandalone = window.ezstandalone || {};
+          ezstandalone.cmd = ezstandalone.cmd || [];
+        `}</Script>
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="//ezoicanalytics.com/analytics.js" />
+
         {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-C1TGQHVY23"
@@ -40,15 +56,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           gtag('js', new Date());
           gtag('config', 'G-C1TGQHVY23');
         `}</Script>
-        {/* Google AdSense — tag <script> literal no <head> (necessário p/ o verificador do AdSense ler no HTML cru) */}
-        {process.env.NEXT_PUBLIC_ADSENSE_ID?.startsWith('ca-pub-') && !process.env.NEXT_PUBLIC_ADSENSE_ID.includes('SEU_ID') && (
-          // eslint-disable-next-line @next/next/no-sync-scripts
-          <script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-            crossOrigin="anonymous"
-          />
-        )}
       </head>
       <body className={inter.className}>
         <CustomCursor />

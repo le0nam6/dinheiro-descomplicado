@@ -270,8 +270,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               : undefined,
             datePublished: post.publishedAt,
             dateModified: post.updatedAt || post.publishedAt,
-            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: `${SITE}/autor` },
-            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: `${SITE}/icon.png` } },
+            author: { '@type': 'Person', name: 'Leonam Alves', url: `${SITE}/autor`, jobTitle: 'Editor-chefe' },
+            publisher: { '@type': 'Organization', name: 'Endinheirados', url: SITE, logo: { '@type': 'ImageObject', url: `${SITE}/logo-endinheirados.png`, width: 240, height: 160 } },
           }),
         }}
       />
