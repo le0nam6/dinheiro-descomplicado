@@ -57,6 +57,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {/* Monetag — Vignette Banner (11221476) */}
           <Script id="monetag-vignette-2" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221476',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
+          {/* Monetag — Popunder (11221460) */}
+          <Script id="monetag-popunder" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221460',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
+
           {/* Ezoic — Privacy (deve vir ANTES do header script) */}
           {/* eslint-disable-next-line @next/next/no-sync-scripts */}
           <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
