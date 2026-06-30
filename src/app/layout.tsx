@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://portalendinheirados.com.br' },
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
-  verification: { google: 'j8L6BZiAKRU9noO_zNgiSlrxfT45Mefj5t76wUrd-_Q', other: { 'p:domain_verify': '2765cecee42e5c4343c116c8e770ea27' } },
+  verification: { google: 'PRO85KTW2EUojiO_FAINzk-rVkMu_TcNUGH7euZk22I', other: { 'p:domain_verify': '2765cecee42e5c4343c116c8e770ea27' } },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
