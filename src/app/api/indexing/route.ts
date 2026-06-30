@@ -2,7 +2,7 @@ import { GoogleAuth } from 'google-auth-library'
 import { NextRequest, NextResponse } from 'next/server'
 
 const INDEXING_ENDPOINT = 'https://indexing.googleapis.com/v3/urlNotifications:publish'
-const BASE = 'https://endinheirados.cc'
+const BASE = 'https://portalendinheirados.com.br'
 
 function getAuth() {
   const privateKey = process.env.GOOGLE_INDEXING_PRIVATE_KEY?.replace(/\\n/g, '\n')

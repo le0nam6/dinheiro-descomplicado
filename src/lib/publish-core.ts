@@ -7,7 +7,7 @@ import { createHmac } from 'crypto'
 import { GoogleAuth } from 'google-auth-library'
 import Anthropic from '@anthropic-ai/sdk'
 
-export const SITE = 'https://endinheirados.cc'
+export const SITE = 'https://portalendinheirados.com.br'
 
 async function notifyGoogleIndexing(url: string) {
   const privateKey = process.env.GOOGLE_INDEXING_PRIVATE_KEY?.replace(/\\n/g, '\n')
@@ -227,6 +227,27 @@ export function blogApprovalKeyboard(sanityId: string) {
         { text: '❌ Rejeitar', callback_data: `br:${sanityId}` },
       ],
       [{ text: '👁 Ver conteúdo completo', url: previewUrl }],
+    ],
+  }
+}
+
+export function originalDraftKeyboard(sanityId: string, canDirectPublish: boolean) {
+  const previewUrl = `${SITE}/admin/preview/${sanityId}?token=${adminPreviewToken()}`
+  if (canDirectPublish) {
+    return {
+      inline_keyboard: [
+        [
+          { text: '✅ Publicar agora', callback_data: `ori_pub:${sanityId}` },
+          { text: '❌ Descartar', callback_data: `br:${sanityId}` },
+        ],
+        [{ text: '👁 Ler rascunho', url: previewUrl }],
+      ],
+    }
+  }
+  return {
+    inline_keyboard: [
+      [{ text: '✏️ Revisar no Sanity', url: previewUrl }],
+      [{ text: '❌ Descartar', callback_data: `br:${sanityId}` }],
     ],
   }
 }

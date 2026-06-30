@@ -691,7 +691,7 @@ export function AdminDashboard() {
               { kind: 'auto', label: 'Monta slides OG', desc: 'Gera as URLs de cada slide via /api/og: Slide 1 = capa (foto de fundo + igTitle + logo). Slides 2-N = conteúdo (verde escuro + headline + texto). Slide final = CTA ("QUER O GUIA COMPLETO?"). Total: 5-7 slides.' },
               { kind: 'auto', label: 'Cria pendingPost no Sanity', desc: 'Guarda tudo: artigo, foto escolhida, URLs dos slides, legenda, opções de imagens alternativas. Status: "pending". O blog ainda NÃO tem o post.' },
               { kind: 'user', label: '📱 Telegram — preview + aprovação', desc: 'Você recebe: (1) imagem do slide capa com botões de ação. (2) 3 fotos do Google como alternativas com botão "Usar opção N". Botões: ✅ Aprovar · ❌ Rejeitar · ✏️ Editar título · 📝 Editar legenda · 🖼 Buscar mais fotos · 👁 Ver artigo completo.' },
-              { kind: 'auto', label: 'Aprovação → publica no blog', desc: 'Cria o post no Sanity com status "aprovado". Aparece em endinheirados.cc.' },
+              { kind: 'auto', label: 'Aprovação → publica no blog', desc: 'Cria o post no Sanity com status "aprovado". Aparece em portalendinheirados.com.br.' },
               { kind: 'auto', label: 'Envia carrossel no Telegram', desc: 'Pré-aquece os slides OG (fetch em paralelo para cache), depois sendMediaGroup com todos os slides. Você recebe as imagens prontas para salvar.' },
               { kind: 'auto', label: 'Envia legenda no Telegram', desc: 'Mensagem separada com "📋 LEGENDA (copie e cole):" + o texto completo do Instagram.' },
               { kind: 'user', label: '📸 Você posta no Instagram', desc: 'Salva os slides do Telegram. Abre o Instagram. Cola a legenda. Adiciona música. Posta o carrossel.', highlight: true },

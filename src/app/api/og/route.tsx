@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
             Leia mais em
           </span>
           <span style={{ fontFamily: 'NunitoBold', fontSize: 28, color: DARK }}>
-            endinheirados.cc
+            portalendinheirados.com.br
           </span>
         </div>
       </div>

@@ -5,7 +5,7 @@ import crypto from 'crypto'
 export const dynamic = 'force-dynamic'
 
 const CLIENT_ID = process.env.CANVA_CLIENT_ID!
-const REDIRECT_URI = 'https://endinheirados.cc/api/canva/callback'
+const REDIRECT_URI = 'https://portalendinheirados.com.br/api/canva/callback'
 const SCOPES = 'design:content:read asset:write asset:read design:content:write design:meta:read'
 
 function base64url(buf: Buffer) {

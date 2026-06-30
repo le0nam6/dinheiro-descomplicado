@@ -18,8 +18,8 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: { default: 'Endinheirados', template: '%s | Endinheirados' },
   description: 'Aprenda a ganhar dinheiro e garantir que ele nunca acabe. Investimentos, renda extra, independência financeira e muito mais.',
-  metadataBase: new URL('https://endinheirados.cc'),
-  alternates: { canonical: 'https://endinheirados.cc' },
+  metadataBase: new URL('https://portalendinheirados.com.br'),
+  alternates: { canonical: 'https://portalendinheirados.com.br' },
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
   robots: { index: true, follow: true },
   verification: { google: 'j8L6BZiAKRU9noO_zNgiSlrxfT45Mefj5t76wUrd-_Q', other: { 'p:domain_verify': '2765cecee42e5c4343c116c8e770ea27' } },

@@ -143,7 +143,7 @@ export const TelegramComposition: React.FC = () => {
                 <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white', flexShrink: 0, fontFamily: 'system-ui' }}>✓</div>
                 <div>
                   <div style={{ fontSize: 9.5, fontWeight: 700, color: '#4ade80', fontFamily: 'system-ui', lineHeight: 1.3 }}>Publicado!</div>
-                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', fontFamily: 'system-ui' }}>agora • endinheirados.cc</div>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', fontFamily: 'system-ui' }}>agora • portalendinheirados.com.br</div>
                 </div>
               </div>
             )}

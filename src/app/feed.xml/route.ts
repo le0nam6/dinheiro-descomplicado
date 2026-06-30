@@ -1,6 +1,6 @@
 import { getPosts } from '@/lib/sanity'
 
-const BASE_URL = 'https://endinheirados.cc'
+const BASE_URL = 'https://portalendinheirados.com.br'
 
 type Post = {
   title: string

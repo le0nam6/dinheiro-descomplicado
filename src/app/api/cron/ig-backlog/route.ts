@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
 import Anthropic from '@anthropic-ai/sdk'
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://endinheirados.cc'
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://portalendinheirados.com.br'
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!
 
@@ -41,7 +41,7 @@ Formato (3 parágrafos + link + hashtags):
 
 [PARÁGRAFO 3 — 3-4 linhas: gancho final, convida a acessar]
 
-🔗 endinheirados.cc/blog/${post.slug}
+🔗 portalendinheirados.com.br/blog/${post.slug}
 
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 

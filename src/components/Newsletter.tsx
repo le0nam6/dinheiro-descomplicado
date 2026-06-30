@@ -31,7 +31,7 @@ export function Newsletter({ referredBy }: { referredBy?: string } = {}) {
   }
 
   if (status === 'success') {
-    const link = referralCode ? `https://endinheirados.cc/indicacao/${referralCode}` : null
+    const link = referralCode ? `https://portalendinheirados.com.br/indicacao/${referralCode}` : null
     return (
       <div className="max-w-md mx-auto space-y-3">
         <div className="bg-green-100 border border-green-300 rounded-xl px-4 py-3 text-green-800 text-sm font-medium">

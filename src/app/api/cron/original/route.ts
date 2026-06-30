@@ -26,7 +26,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls,
   fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
-  blogApprovalKeyboard, nextQueueItem, markQueueUsed,
+  originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -34,6 +34,10 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type Series = 'numero' | 'setor' | 'preco' | 'emprego' | 'dolar' | 'fundo' | 'fintech' | 'renda'
+
+// Séries ancoradas em dados reais: têm botão "Publicar agora" no Telegram.
+// Séries de análise subjetiva: só "Revisar no Sanity" (publicação manual obrigatória).
+const SAFE_SERIES = new Set<Series>(['numero', 'dolar', 'preco', 'emprego'])
 
 // ─── Setores semanais ─────────────────────────────────────────────────────────
 
@@ -273,7 +277,7 @@ Retorne SOMENTE JSON válido:
   "readingTime": 7,
   "coverQuery": "termo inglês para imagem",
   "body": ["parágrafo curto (max 3 frases).", "## Subtítulo", "parágrafo curto.", "..."],
-  "igCaption": "legenda 3 parágrafos\\n\\n🔗 endinheirados.cc/blog/SLUG\\n\\n#hashtags #endinheirados",
+  "igCaption": "legenda 3 parágrafos\\n\\n🔗 portalendinheirados.com.br/blog/SLUG\\n\\n#hashtags #endinheirados",
   "igTitle": "TÍTULO CAIXA ALTA"
 }`
 }
@@ -363,17 +367,43 @@ ${jsonSchema('educação financeira')}`
 async function generateDolar(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosDolar()
   if (!d.cambio5d.length) throw new Error('BACEN sem dados de câmbio — abortando geração para evitar dado inventado')
-  const prompt = `Você é repórter do Endinheirados. Escreva "Dólar e Você" — como a variação cambial afeta o dia a dia do brasileiro.
 
-DADOS (use SOMENTE estes números — não invente nenhum outro):
-Dólar (últimos pregões): ${d.cambio5d.map((p: BacenPoint) => `${p.data}: R$ ${p.valor}`).join(' | ')}
+  // Calcula variação dos últimos pregões para o prompt
+  const first = d.cambio5d[0]
+  const last  = d.cambio5d[d.cambio5d.length - 1]
+  const delta = first && last
+    ? (parseFloat(last.valor) - parseFloat(first.valor)).toFixed(2)
+    : null
+
+  const prompt = `Você é repórter de finanças pessoais do Endinheirados. Escreva um artigo da série "Dólar e Você".
+
+DADOS REAIS (use SOMENTE estes — nunca invente cotações, histórico ou previsões):
+Dólar (pregões recentes): ${d.cambio5d.map((p: BacenPoint) => `${p.data}: R$ ${p.valor}`).join(' | ')}
+${delta !== null ? `Variação no período: ${parseFloat(delta) > 0 ? '+' : ''}R$ ${delta}` : ''}
 Euro: ${d.euroLast ? `R$ ${d.euroLast.valor} (${d.euroLast.data})` : 'n/d'}
-Selic: ${d.selic[0]?.valor ?? '?'}% a.d.
+Selic: ${d.selic[0]?.valor ?? '?'}% a.a.
 Manchetes: ${d.news.join('\n')}
 
 ${recentBlock(recent)}
 
-Baseado SOMENTE nos dados de câmbio acima e nas manchetes, escolha UM impacto concreto para aprofundar — pode ser combustível, passagem aérea, um produto importado específico, ou o efeito nos investimentos. Escreva inteiramente sobre esse impacto usando apenas os números fornecidos acima. Não invente cotações, não cite valores históricos que não estejam nos dados, não extrapole. 10-12 parágrafos. Não tente cobrir todos os efeitos do câmbio ao mesmo tempo.
+MISSÃO: escolha UM único ângulo — o mais concreto e útil para quem está aprendendo sobre finanças. Exemplos de bons ângulos: "por que o spread do banco engole boa parte da queda do dólar", "como assinaturas em dólar (Spotify, Netflix, Adobe) ficam mais baratas ou caras", "o que muda no preço do combustível quando o dólar oscila". Ruim: cobrir tudo ao mesmo tempo, fazer resumo do mercado, especular sobre próximas semanas.
+
+REGRAS RÍGIDAS:
+1. Declare o ângulo escolhido na PRIMEIRA frase do artigo. Ex: "Quando o dólar cai, muita gente acha que paga menos — mas o spread do banco pode devorar esse ganho todo."
+2. Use exemplos com produtos/serviços NOMEADOS e valores calculados a partir dos dados acima. Ex: "uma assinatura de US$ 9,99 no Spotify sai a R$ X com câmbio a R$ Y".
+3. Quando citar instituições financeiras ou produtos (Nomad, Wise, C6 Global, Itaú, Nubank), use nomes reais — não diga "alguns bancos oferecem".
+4. NUNCA faça previsões de câmbio. Proibido: "o dólar deve ficar entre X e Y", "nas próximas semanas", "se o Fed...". Fale só do que os dados mostram, não do que pode acontecer.
+5. Explique qualquer jargão no mesmo parágrafo que aparece. Spread, IOF, taxa de câmbio comercial — trate como se o leitor nunca tivesse ouvido esses termos.
+6. Máximo 3 frases por parágrafo. Tom de quem explica para um amigo, não de nota de assessoria econômica.
+7. Não escreva seção de "perspectivas", "conclusão motivacional" ou "fique de olho".
+
+ESTRUTURA SUGERIDA (adapte ao ângulo escolhido):
+- Parágrafo 1: gancho com o fato do dado + ângulo declarado
+- 2-3 parágrafos: explica o mecanismo por trás (sem jargão)
+- 2-3 parágrafos: números concretos calculados dos DADOS acima
+- 1-2 parágrafos: o que a pessoa pode fazer com essa informação agora
+- 1 parágrafo: ressalva honesta (o que esse artigo NÃO cobre)
+
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -478,11 +508,11 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
     return { dry: true, series, label: config.label, slot, nowBrt: nowBrt.toISOString(), data }
   }
 
-  // Trava: não publica se já saiu conteúdo DESTE CRON nas últimas 3h
-  // (ignora artigos do cron de notícias — usa categoria como proxy)
+  // Trava: não cria rascunho se já foi criado um (aprovado) nas últimas 3h.
+  // Filtra por status=="aprovado" para não contar rascunhos pendentes de revisão.
   if (!force) {
     const lastOriginal: string | null = await sanity.fetch(
-      `*[_type=="post" && articleType=="news" && category in ["investimentos","educação financeira"] && publishedAt >= $since]|order(publishedAt desc)[0].publishedAt`,
+      `*[_type=="post" && articleType=="news" && status=="aprovado" && category in ["investimentos","educação financeira"] && publishedAt >= $since]|order(publishedAt desc)[0].publishedAt`,
       { since: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() }
     )
     if (lastOriginal) {
@@ -512,14 +542,16 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
   if (queued) await markQueueUsed(queued._id, slug)
 
   if (tgConfigured()) {
+    const canDirectPublish = queued ? true : SAFE_SERIES.has(series)
+    const typeTag = canDirectPublish ? '📊 Dados reais · revisão rápida' : '🧠 Análise subjetiva · revisão obrigatória'
     const tgRes = await tgSendMessage(
-      `${emoji} ${label}${queued ? ' (sua pauta)' : ''} para revisão\n\n${post.title}\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n🔗 ${url}`,
-      blogApprovalKeyboard(docId),
+      `${emoji} *${label}*${queued ? ' (sua pauta)' : ''} — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n_${typeTag}_\n🔗 ${url}`,
+      originalDraftKeyboard(docId, canDirectPublish),
     )
     if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
   }
 
-  return { ok: true, series: queued ? 'pauta' : series, label, url }
+  return { ok: true, series: queued ? 'pauta' : series, label, url, draft: true }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────

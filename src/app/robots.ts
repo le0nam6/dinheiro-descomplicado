@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: ['/', '/api/img'],
       disallow: ['/studio/', '/api/'],
     },
-    sitemap: ['https://endinheirados.cc/sitemap.xml', 'https://endinheirados.cc/news-sitemap.xml'],
+    sitemap: ['https://portalendinheirados.com.br/sitemap.xml', 'https://portalendinheirados.com.br/news-sitemap.xml'],
   }
 }

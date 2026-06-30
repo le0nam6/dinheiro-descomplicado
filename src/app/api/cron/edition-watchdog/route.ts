@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const date = brtDate()
-  const url = `https://endinheirados.cc/edicao/${date}`
+  const url = `https://portalendinheirados.com.br/edicao/${date}`
 
   const exists = await sanity.fetch('*[_type=="edition" && slug.current==$d][0]._id', { d: date })
   if (exists) return NextResponse.json({ ok: true, status: 'ok', date })

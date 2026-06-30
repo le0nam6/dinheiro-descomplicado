@@ -4,10 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Declarar o Imposto de Renda 2025 — Guia Completo Passo a Passo',
   description: 'Guia completo para declarar o imposto de renda: quem deve declarar, documentos necessários, como lançar investimentos e como evitar cair na malha fina.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/imposto-de-renda' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/imposto-de-renda' },
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 const faqs = [
   { q: 'Quem é obrigado a declarar o IR em 2025?', a: 'Deve declarar em 2025 (ano-base 2024) quem: recebeu rendimentos tributáveis acima de R$33.888; recebeu rendimentos isentos acima de R$200.000; obteve ganho de capital na venda de bens; realizou operações em bolsa; tinha bens e direitos acima de R$800.000 em 31/12/2024; ou teve receita de atividade rural acima de R$169.440. Os limites são atualizados anualmente — confirme no site da Receita Federal.' },

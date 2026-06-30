@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Montar o Fundo de Emergência — Guia Completo 2025',
   description: 'Quanto guardar no fundo de emergência, onde deixar e como chegar lá. Guia prático com exemplos reais para CLT, autônomo e empreendedor.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/fundo-de-emergencia' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/fundo-de-emergencia' },
 }
 
 const faqs = [
@@ -21,16 +21,16 @@ const jsonLd = {
       '@type': 'Article',
       headline: 'Como montar seu fundo de emergência — guia completo',
       description: 'Quanto guardar no fundo de emergência, onde deixar e como chegar lá. Guia prático com exemplos reais.',
-      url: 'https://endinheirados.cc/guias/fundo-de-emergencia',
-      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://endinheirados.cc' },
+      url: 'https://portalendinheirados.com.br/guias/fundo-de-emergencia',
+      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://portalendinheirados.com.br' },
       inLanguage: 'pt-BR',
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://endinheirados.cc' },
-        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://endinheirados.cc/guias' },
-        { '@type': 'ListItem', position: 3, name: 'Fundo de emergência', item: 'https://endinheirados.cc/guias/fundo-de-emergencia' },
+        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://portalendinheirados.com.br' },
+        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://portalendinheirados.com.br/guias' },
+        { '@type': 'ListItem', position: 3, name: 'Fundo de emergência', item: 'https://portalendinheirados.com.br/guias/fundo-de-emergencia' },
       ],
     },
     {

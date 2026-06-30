@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Guias Financeiros Completos — Passo a Passo',
   description: 'Guias práticos e completos de finanças pessoais: fundo de emergência, score de crédito, como investir do zero e mais. Linguagem simples, resultado real.',
-  alternates: { canonical: 'https://endinheirados.cc/guias' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias' },
 }
 
 const guias = [

@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, zIndex: 1 }}>
             <div style={{ width: 48, height: 3, background: GREEN_LIME, borderRadius: 4 }} />
             <span style={{ fontFamily: 'Roboto', fontSize: 32, color: WHITE, letterSpacing: 2 }}>
-              endinheirados.cc
+              portalendinheirados.com.br
             </span>
           </div>
         </div>
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ width: 18, height: 18, borderRadius: '50%', background: GREEN_LIME }} />
               <span style={{ fontFamily: 'Roboto', fontSize: 30, color: WHITE, letterSpacing: 2 }}>
-                endinheirados.cc
+                portalendinheirados.com.br
               </span>
             </div>
             <div style={{ fontFamily: 'BebasNeue', fontSize: 36, color: GREEN_LIME, letterSpacing: 3 }}>
@@ -268,7 +268,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 14, height: 14, borderRadius: '50%', background: GREEN_LIME }} />
             <span style={{ fontFamily: 'Roboto', fontSize: 26, color: GRAY_TEXT, letterSpacing: 2 }}>
-              endinheirados.cc
+              portalendinheirados.com.br
             </span>
           </div>
           {!isLast && (

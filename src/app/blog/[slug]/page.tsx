@@ -25,7 +25,7 @@ export async function generateStaticParams() {
   return posts.map((p: { slug: { current: string } }) => ({ slug: p.slug.current }))
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 function imgProxy(url: string | null | undefined): string | undefined {
   if (!url) return undefined

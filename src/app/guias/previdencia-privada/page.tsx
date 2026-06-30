@@ -4,10 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Previdência Privada Vale a Pena? PGBL ou VGBL — Guia Completo',
   description: 'Guia completo de previdência privada: diferença entre PGBL e VGBL, quando compensa, taxas que destroem rentabilidade e alternativas que o banco não te conta.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/previdencia-privada' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/previdencia-privada' },
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 const faqs = [
   { q: 'PGBL ou VGBL — qual é melhor?', a: 'PGBL é indicado para quem faz declaração completa do IR e pode deduzir até 12% da renda bruta anual. O imposto é cobrado sobre o total resgatado (principal + rendimentos) no futuro. VGBL é melhor para quem declara no simplificado ou já atingiu o limite de dedução — o IR incide apenas sobre os rendimentos. Para a maioria das pessoas na classe média, o VGBL costuma ser mais adequado.' },

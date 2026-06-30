@@ -342,7 +342,7 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
 
   const prompt = `${context}
 
-Você escreve para o blog Endinheirados (endinheirados.cc), portal de finanças pessoais para brasileiros da Geração Z.
+Você escreve para o blog Endinheirados (portalendinheirados.com.br), portal de finanças pessoais para brasileiros da Geração Z.
 
 ANO ATUAL: ${currentYear}. NUNCA escreva outro ano como "este ano", "em 2025", "ano passado" sem fonte explícita — ${currentYear} é o presente. Qualquer referência temporal sem fonte deve ser atemporal ("recentemente", "hoje em dia", "nos últimos meses").
 
@@ -430,7 +430,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
 
   // Segunda call: Sonnet gera o copy do Instagram (caption, título do card, slides).
   // Esses são os únicos textos que o seguidor lê no feed — qualidade aqui é tudo.
-  const igPrompt = `Você é copywriter sênior de Instagram para o Endinheirados (endinheirados.cc), canal de finanças pessoais para a Geração Z brasileira.
+  const igPrompt = `Você é copywriter sênior de Instagram para o Endinheirados (portalendinheirados.com.br), canal de finanças pessoais para a Geração Z brasileira.
 
 Com base neste artigo do blog, crie o material completo para o carrossel do Instagram:
 
@@ -459,7 +459,7 @@ REGRA DO igCaption (legenda do Instagram):
 - Bloco 2: o núcleo do conteúdo — o que a pessoa precisa saber, com a sua voz
 - Bloco 3: feche com algo concreto, acionável ou com uma virada de perspectiva
 - Sem emojis no corpo dos parágrafos
-- Finaliza EXATAMENTE com esta linha no final: 🔗 Acesse o guia completo em endinheirados.cc/blog/${article.slug}
+- Finaliza EXATAMENTE com esta linha no final: 🔗 Acesse o guia completo em portalendinheirados.com.br/blog/${article.slug}
 
 seguida de linha em branco e: #finançaspessoais #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 (substitua HASHTAG2-4 por hashtags reais e relevantes para o tema)

@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   if (!url) return new Response('Missing url', { status: 400 })
 
   // Só proxy de URLs externas — internas passam direto
-  if (url.startsWith('https://endinheirados.cc') || url.startsWith('/')) {
+  if (url.startsWith('https://portalendinheirados.com.br') || url.startsWith('/')) {
     return Response.redirect(url, 301)
   }
 

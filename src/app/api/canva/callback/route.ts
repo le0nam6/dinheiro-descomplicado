@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 const CLIENT_ID = process.env.CANVA_CLIENT_ID!
 const CLIENT_SECRET = process.env.CANVA_CLIENT_SECRET!
-const REDIRECT_URI = 'https://endinheirados.cc/api/canva/callback'
+const REDIRECT_URI = 'https://portalendinheirados.com.br/api/canva/callback'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl

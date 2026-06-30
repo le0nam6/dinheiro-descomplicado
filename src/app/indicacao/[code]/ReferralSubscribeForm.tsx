@@ -69,8 +69,8 @@ export function ReferralSubscribeForm({ referralCode }: { referralCode: string }
 
   if (alreadySubscribed || status === 'success') {
     const myLink = status === 'success' && myCode
-      ? `https://endinheirados.cc/indicacao/${myCode}`
-      : `https://endinheirados.cc/indicacao/${referralCode}`
+      ? `https://portalendinheirados.com.br/indicacao/${myCode}`
+      : `https://portalendinheirados.com.br/indicacao/${referralCode}`
     return (
       <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-4">
         {status === 'success' ? (

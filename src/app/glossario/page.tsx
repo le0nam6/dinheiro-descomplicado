@@ -5,10 +5,10 @@ import { terms } from '@/lib/glossario'
 export const metadata: Metadata = {
   title: 'Glossário Financeiro — Termos Essenciais Explicados',
   description: 'Dicionário de finanças pessoais: significado de Selic, CDI, FGTS, LCI, LCA, juros compostos e mais. Explicações diretas e sem enrolação.',
-  alternates: { canonical: 'https://endinheirados.cc/glossario' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/glossario' },
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 export default function GlossarioPage() {
   return (

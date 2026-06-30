@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Aumentar o Score de Crédito — Guia Completo 2025',
   description: 'O que realmente mexe com o score, o que é mito e o passo a passo para subir a pontuação no Serasa e SPC. Resultados em 30 a 90 dias.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/score-de-credito' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/score-de-credito' },
 }
 
 const faqs = [
@@ -21,16 +21,16 @@ const jsonLd = {
       '@type': 'Article',
       headline: 'Como aumentar o score de crédito — guia completo',
       description: 'O que realmente mexe com o score, o que é mito e o passo a passo para subir a pontuação.',
-      url: 'https://endinheirados.cc/guias/score-de-credito',
-      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://endinheirados.cc' },
+      url: 'https://portalendinheirados.com.br/guias/score-de-credito',
+      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://portalendinheirados.com.br' },
       inLanguage: 'pt-BR',
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://endinheirados.cc' },
-        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://endinheirados.cc/guias' },
-        { '@type': 'ListItem', position: 3, name: 'Score de crédito', item: 'https://endinheirados.cc/guias/score-de-credito' },
+        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://portalendinheirados.com.br' },
+        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://portalendinheirados.com.br/guias' },
+        { '@type': 'ListItem', position: 3, name: 'Score de crédito', item: 'https://portalendinheirados.com.br/guias/score-de-credito' },
       ],
     },
     {

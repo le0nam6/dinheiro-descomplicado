@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     await sendEditionCampaign({
       date: edition.date,
       title: edition.title,
-      url: `https://endinheirados.cc/edicao/${edition.slug}`,
+      url: `https://portalendinheirados.com.br/edicao/${edition.slug}`,
       punchline: edition.punchline,
       intro: edition.intro,
       closing: edition.closing,

@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Começar a Investir do Zero — Guia Completo 2025',
   description: 'Do primeiro real investido ao portfólio diversificado. Aprenda a investir sem precisar entender tudo antes de começar, com ordem de prioridades e exemplos práticos.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/como-investir-do-zero' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/como-investir-do-zero' },
 }
 
 const faqs = [
@@ -21,16 +21,16 @@ const jsonLd = {
       '@type': 'Article',
       headline: 'Como começar a investir do zero — guia completo',
       description: 'Do primeiro real investido ao portfólio diversificado. Aprenda a investir com ordem de prioridades e exemplos práticos.',
-      url: 'https://endinheirados.cc/guias/como-investir-do-zero',
-      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://endinheirados.cc' },
+      url: 'https://portalendinheirados.com.br/guias/como-investir-do-zero',
+      publisher: { '@type': 'Organization', name: 'Endinheirados', url: 'https://portalendinheirados.com.br' },
       inLanguage: 'pt-BR',
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://endinheirados.cc' },
-        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://endinheirados.cc/guias' },
-        { '@type': 'ListItem', position: 3, name: 'Como investir do zero', item: 'https://endinheirados.cc/guias/como-investir-do-zero' },
+        { '@type': 'ListItem', position: 1, name: 'Início', item: 'https://portalendinheirados.com.br' },
+        { '@type': 'ListItem', position: 2, name: 'Guias', item: 'https://portalendinheirados.com.br/guias' },
+        { '@type': 'ListItem', position: 3, name: 'Como investir do zero', item: 'https://portalendinheirados.com.br/guias/como-investir-do-zero' },
       ],
     },
     {

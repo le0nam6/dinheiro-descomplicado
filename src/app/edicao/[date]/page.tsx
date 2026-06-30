@@ -46,7 +46,7 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
 
   const stories: Story[] = ed.stories || []
   const snapshot: Quote[] = ed.marketSnapshot || []
-  const pageUrl = `https://endinheirados.cc/edicao/${date}`
+  const pageUrl = `https://portalendinheirados.com.br/edicao/${date}`
   // Usa a data real do documento (o slug pode ser um rascunho, não uma data)
   const displayDate = ed.date || date
 
@@ -237,8 +237,8 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
             description: ed.intro,
             datePublished: ed.publishedAt,
             dateModified: ed.publishedAt,
-            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: 'https://endinheirados.cc/autor' },
-            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/icon.png' } },
+            author: { '@type': 'Organization', name: 'Equipe Editorial Endinheirados', url: 'https://portalendinheirados.com.br/autor' },
+            publisher: { '@type': 'Organization', name: 'Endinheirados', logo: { '@type': 'ImageObject', url: 'https://portalendinheirados.com.br/icon.png' } },
           }),
         }}
       />

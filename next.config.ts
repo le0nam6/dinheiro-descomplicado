@@ -7,14 +7,25 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'cdn.sanity.io' },
     ],
   },
-  // Canonical: tudo em https://endinheirados.cc (sem-www). O www redireciona pra
-  // cá — evita conteúdo duplicado e confusão de propriedade no Search Console.
+  // Canonical: portalendinheirados.com.br. O .cc e o www redirecionam pra cá.
   async redirects() {
     return [
       {
         source: '/:path*',
+        has: [{ type: 'host', value: 'endinheirados.cc' }],
+        destination: 'https://portalendinheirados.com.br/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
         has: [{ type: 'host', value: 'www.endinheirados.cc' }],
-        destination: 'https://endinheirados.cc/:path*',
+        destination: 'https://portalendinheirados.com.br/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.portalendinheirados.com.br' }],
+        destination: 'https://portalendinheirados.com.br/:path*',
         permanent: true,
       },
       {

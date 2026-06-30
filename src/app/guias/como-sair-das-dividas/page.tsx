@@ -4,10 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Sair das Dívidas em 2025 — Guia Passo a Passo',
   description: 'Guia completo para sair das dívidas: como fazer um diagnóstico, qual método usar (bola de neve ou avalanche), como negociar com bancos e como não voltar a se endividar.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/como-sair-das-dividas' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/como-sair-das-dividas' },
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 const faqs = [
   { q: 'Por onde começar para sair das dívidas?', a: 'Comece com um diagnóstico completo: liste todas as dívidas com saldo, taxa de juros e parcela mínima. Depois some a renda e os gastos essenciais. O que sobra é sua margem de ataque às dívidas. Sem esse mapa, qualquer estratégia fica no chuto.' },

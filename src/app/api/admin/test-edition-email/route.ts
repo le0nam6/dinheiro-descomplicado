@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   await sendEditionPreviewEmail(email, {
     date: edition.date,
     title: edition.title,
-    url: `https://endinheirados.cc/edicao/${edition.slug}`,
+    url: `https://portalendinheirados.com.br/edicao/${edition.slug}`,
     punchline: edition.punchline,
     intro: edition.intro,
     closing: edition.closing,

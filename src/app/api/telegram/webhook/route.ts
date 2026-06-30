@@ -217,6 +217,24 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, approved: id })
       }
 
+      // --- Publicar rascunho de série original (ori_pub:) ---
+      if (action === 'ori_pub') {
+        const post = await sanity.fetch('*[_id==$id][0]{_id, title, slug}', { id })
+        if (!post) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Rascunho não encontrado.' })
+          return NextResponse.json({ ok: true })
+        }
+        await sanity.patch(id).set({ status: 'aprovado' }).commit()
+        const slug = post.slug?.current ?? ''
+        try { revalidatePath(`/blog/${slug}`); revalidatePath('/') } catch { /* ISR */ }
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Publicado!' })
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: { inline_keyboard: [[{ text: `✅ Publicado — ${post.title?.slice(0, 40)}`, callback_data: 'noop' }]] },
+        })
+        return NextResponse.json({ ok: true, published: id })
+      }
+
       // --- Rejeitar/deletar post do blog (br:) ---
       if (action === 'br') {
         const post = await sanity.fetch('*[_id==$id][0]{_id, title}', { id })

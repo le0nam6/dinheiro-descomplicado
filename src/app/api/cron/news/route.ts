@@ -95,7 +95,7 @@ PAUTA OBRIGATÓRIA DO EDITOR-CHEFE (prioridade máxima, acima de tudo abaixo):
 "${editorBrief}"
 Escreva a notícia SOBRE essa pauta. Se houver manchetes na lista relacionadas, use-as como fonte e cite. Se não houver nenhuma relacionada, escreva com base em conhecimento factual e atual do tema, mantendo imparcialidade e SEM inventar números, datas ou falas específicas. O título e o ângulo devem refletir a pauta do editor, não outra manchete.
 ` : ''
-  const prompt = `Você é repórter de finanças do portal Endinheirados (endinheirados.cc). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
+  const prompt = `Você é repórter de finanças do portal Endinheirados (portalendinheirados.com.br). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
 ${editorBlock}
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
 ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
@@ -188,7 +188,7 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
   "readingTime": 6,
   "coverQuery": "termo em inglês específico ao tema real da notícia, para busca no Pexels",
   "body": ["lead direto e completo, sem subtítulo antes.", "## Subtítulo específico ao fato (não genérico)", "parágrafo desenvolvido.", "parágrafo curto de ênfase.", "## Outro subtítulo específico", "- item de lista um", "- item de lista dois", "parágrafo que amarra.", "## Subtítulo que fecha com o ângulo natural desta notícia", "parágrafo de fechamento concreto — o que vem a seguir, o que os dados indicam, ou o que o leitor deveria observar."],
-  "igCaption": "legenda instagram informativa e neutra, 3 parágrafos, termina com \\n\\n🔗 Leia no site: endinheirados.cc/blog/SLUG\\n\\n#mercadofinanceiro #economia #noticias #investimentos #endinheirados",
+  "igCaption": "legenda instagram informativa e neutra, 3 parágrafos, termina com \\n\\n🔗 Leia no site: portalendinheirados.com.br/blog/SLUG\\n\\n#mercadofinanceiro #economia #noticias #investimentos #endinheirados",
   "igTitle": "título CAIXA ALTA p/ card, max 3 linhas",
   "sourceIndexes": [1, 2]
 }

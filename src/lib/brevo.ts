@@ -5,7 +5,7 @@ function listId() { return parseInt(process.env.BREVO_LIST_ID || '2') }
 function sender() {
   return {
     name: 'Endinheirados 💸',
-    email: process.env.BREVO_SENDER_EMAIL || 'newsletter@endinheirados.cc',
+    email: process.env.BREVO_SENDER_EMAIL || 'newsletter@portalendinheirados.com.br',
   }
 }
 
@@ -15,7 +15,7 @@ function h() {
 
 export async function sendWelcomeEmail(email: string, referralCode: string): Promise<void> {
   if (!process.env.BREVO_API_KEY) return
-  const referralLink = `https://endinheirados.cc/indicacao/${referralCode}`
+  const referralLink = `https://portalendinheirados.com.br/indicacao/${referralCode}`
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -35,7 +35,7 @@ export async function sendWelcomeEmail(email: string, referralCode: string): Pro
     <p style="margin:0 0 20px;font-size:16px;color:#4b5563;line-height:1.7;">
       A partir de agora, todo dia às <strong>5h da manhã</strong> você recebe as principais notícias de finanças — explicadas de forma simples, em menos de 5 minutos.
     </p>
-    <a href="https://endinheirados.cc" style="display:inline-block;background:#16a34a;color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Explorar o site →</a>
+    <a href="https://portalendinheirados.com.br" style="display:inline-block;background:#16a34a;color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Explorar o site →</a>
   </td></tr>
 
   <tr><td style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:0;padding:28px 40px;text-align:center;">
@@ -50,7 +50,7 @@ export async function sendWelcomeEmail(email: string, referralCode: string): Pro
   </td></tr>
 
   <tr><td style="background:#fff;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;border-top:1px solid #f3f4f6;">
-    <p style="margin:0;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://endinheirados.cc" style="color:#9ca3af;">endinheirados.cc</a></p>
+    <p style="margin:0;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://portalendinheirados.com.br" style="color:#9ca3af;">portalendinheirados.com.br</a></p>
   </td></tr>
 
 </table>
@@ -73,7 +73,7 @@ export async function sendWelcomeEmail(email: string, referralCode: string): Pro
 
 export async function sendReferralLinkEmail(email: string, referralCode: string): Promise<void> {
   if (!process.env.BREVO_API_KEY) return
-  const link = `https://endinheirados.cc/indicacao/${referralCode}`
+  const link = `https://portalendinheirados.com.br/indicacao/${referralCode}`
   await fetch(`${API}/smtp/email`, {
     method: 'POST',
     headers: h(),
@@ -215,7 +215,7 @@ async function sendTransactional(to: string, subject: string, html: string): Pro
 }
 
 export async function sendMilestoneEmail(email: string, referralCode: string, milestone: { emoji: string; label: string; reward: string; count: number }): Promise<void> {
-  const referralLink = `https://endinheirados.cc/indicacao/${referralCode}`
+  const referralLink = `https://portalendinheirados.com.br/indicacao/${referralCode}`
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -238,7 +238,7 @@ export async function sendMilestoneEmail(email: string, referralCode: string, mi
     <a href="${referralLink}" style="display:inline-block;background:#16a34a;color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Ver meu painel de indicações →</a>
   </td></tr>
   <tr><td style="padding:20px 40px;text-align:center;">
-    <p style="margin:0;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://endinheirados.cc" style="color:#9ca3af;">endinheirados.cc</a></p>
+    <p style="margin:0;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://portalendinheirados.com.br" style="color:#9ca3af;">portalendinheirados.com.br</a></p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -307,14 +307,14 @@ export function buildEditionHtml(p: EditionParams): string {
         <p style="margin:0 0 6px;font-size:24px;">💸</p>
         <p style="margin:0 0 6px;font-size:17px;font-weight:800;color:#111827;line-height:1.3;">Curtindo a edição? Indica pra um amigo.</p>
         <p style="margin:0 0 16px;font-size:14px;color:#4b5563;line-height:1.6;">Cada amigo que assinar pelo seu link conta como indicação. No topo da trilha tem uma consultoria financeira 1:1 de graça.</p>
-        <a href="https://endinheirados.cc/indicacao/{{ contact.REFERRAL_CODE }}" style="display:inline-block;background:#16a34a;color:#fff;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">Pegar meu link de indicação →</a>
+        <a href="https://portalendinheirados.com.br/indicacao/{{ contact.REFERRAL_CODE }}" style="display:inline-block;background:#16a34a;color:#fff;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">Pegar meu link de indicação →</a>
       </td></tr>
     </table>
   </td></tr>`
 
   const storiesHtml = p.stories.map((s, idx) => {
     // Merge tag não pode ser encodeURIComponent — Brevo substitui depois
-    const staticPart = encodeURIComponent(`${s.headline || ''}\n\nLi no Endinheirados:\nhttps://endinheirados.cc/indicacao/`)
+    const staticPart = encodeURIComponent(`${s.headline || ''}\n\nLi no Endinheirados:\nhttps://portalendinheirados.com.br/indicacao/`)
     const waUrl = `https://wa.me/?text=${staticPart}{{ contact.REFERRAL_CODE }}`
     const story = `
   <tr><td style="padding:28px 0;border-bottom:1px solid #e5e7eb;">
@@ -349,11 +349,11 @@ export function buildEditionHtml(p: EditionParams): string {
       ${p.featuredPosts.slice(0, 3).map((post, i) => `
       <tr><td style="padding-top:${i > 0 ? '20px' : '0'};padding-bottom:20px;${i < 2 ? 'border-bottom:1px solid #e5e7eb;' : ''}">
         ${post.category ? `<p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;color:${GREEN};text-transform:uppercase;">${esc(post.category)}</p>` : ''}
-        <a href="https://endinheirados.cc/blog/${esc(post.slug)}" style="text-decoration:none;">
+        <a href="https://portalendinheirados.com.br/blog/${esc(post.slug)}" style="text-decoration:none;">
           <p style="margin:0 0 6px;font-size:16px;font-weight:800;color:#111827;line-height:1.3;">${esc(post.title)}</p>
         </a>
         ${post.excerpt ? `<p style="margin:0 0 8px;font-size:14px;color:#6b7280;line-height:1.6;">${esc(post.excerpt.slice(0, 120))}${post.excerpt.length > 120 ? '…' : ''}</p>` : ''}
-        <a href="https://endinheirados.cc/blog/${esc(post.slug)}" style="font-size:13px;font-weight:700;color:${GREEN};text-decoration:none;">Ler artigo →</a>
+        <a href="https://portalendinheirados.com.br/blog/${esc(post.slug)}" style="font-size:13px;font-weight:700;color:${GREEN};text-decoration:none;">Ler artigo →</a>
       </td></tr>`).join('')}
     </table>
   </td></tr>` : ''
@@ -404,8 +404,8 @@ export function buildEditionHtml(p: EditionParams): string {
 
   <!-- Header: logo transparente sobre fundo verde -->
   <tr><td style="background:${GREEN};border-radius:12px 12px 0 0;padding:4px 40px 8px;text-align:center;">
-    <a href="https://endinheirados.cc" style="display:inline-block;">
-      <img src="https://endinheirados.cc/logo-email.png" alt="Endinheirados" width="220" style="height:auto;display:block;margin:0 auto;" />
+    <a href="https://portalendinheirados.com.br" style="display:inline-block;">
+      <img src="https://portalendinheirados.com.br/logo-email.png" alt="Endinheirados" width="220" style="height:auto;display:block;margin:0 auto;" />
     </a>
     <p style="margin:2px 0 1px;font-size:11px;color:#bbf7d0;letter-spacing:.06em;text-transform:uppercase;font-weight:700;">O melhor portal de finanças da nova geração</p>
     <p style="margin:0;font-size:13px;color:#dcfce7;">${fmtDate(p.date)}${p.readingTime ? ` · ${p.readingTime} min de leitura` : ''}</p>
@@ -462,8 +462,8 @@ export function buildEditionHtml(p: EditionParams): string {
     <h3 style="margin:0 0 10px;font-size:20px;font-weight:900;color:#ffffff;line-height:1.3;">Ganhe recompensas indicando amigos</h3>
     <p style="margin:0 0 6px;font-size:15px;color:#bbf7d0;line-height:1.7;">Cada pessoa que você indicar que se inscrever conta como uma indicação confirmada. Acumule e desbloqueie prêmios reais — planilhas exclusivas, grupos fechados, kits digitais e muito mais.</p>
     <p style="margin:0 0 20px;font-size:13px;color:#86efac;">Já temos inscritos ganhando. Você ainda não começou.</p>
-    <a href="https://endinheirados.cc/indicacao/{{ contact.REFERRAL_CODE }}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:800;padding:14px 32px;border-radius:10px;text-decoration:none;letter-spacing:.01em;">Ver meu link de indicação →</a>
-    <p style="margin:12px 0 0;font-size:11px;color:#4ade80;word-break:break-all;">endinheirados.cc/indicacao/{{ contact.REFERRAL_CODE }}</p>
+    <a href="https://portalendinheirados.com.br/indicacao/{{ contact.REFERRAL_CODE }}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:800;padding:14px 32px;border-radius:10px;text-decoration:none;letter-spacing:.01em;">Ver meu link de indicação →</a>
+    <p style="margin:12px 0 0;font-size:11px;color:#4ade80;word-break:break-all;">portalendinheirados.com.br/indicacao/{{ contact.REFERRAL_CODE }}</p>
   </td></tr>
 
   <!-- Spacer -->
@@ -471,7 +471,7 @@ export function buildEditionHtml(p: EditionParams): string {
 
   <!-- Footer -->
   <tr><td style="padding:0 40px 24px;text-align:center;">
-    <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://endinheirados.cc" style="color:#9ca3af;">endinheirados.cc</a></p>
+    <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;">Você recebe esse e-mail porque se inscreveu em <a href="https://portalendinheirados.com.br" style="color:#9ca3af;">portalendinheirados.com.br</a></p>
     <p style="margin:0;font-size:12px;color:#9ca3af;"><a href="{unsubscribe}" style="color:#9ca3af;text-decoration:underline;">Cancelar inscrição</a></p>
   </td></tr>
 

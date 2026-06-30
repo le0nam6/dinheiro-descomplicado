@@ -14,11 +14,11 @@ export async function generateMetadata({ params }: { params: Promise<{ termo: st
   return {
     title: `O que é ${term.name}? — Glossário Financeiro`,
     description: term.shortDef,
-    alternates: { canonical: `https://endinheirados.cc/glossario/${termo}` },
+    alternates: { canonical: `https://portalendinheirados.com.br/glossario/${termo}` },
   }
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 const GUIA_MAP: Record<string, { title: string; href: string }> = {
   'fundo-de-emergencia': { title: 'Como montar o fundo de emergência — guia completo', href: '/guias/fundo-de-emergencia' },

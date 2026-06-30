@@ -56,18 +56,18 @@ const websiteSchema = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Endinheirados',
-  url: 'https://endinheirados.cc',
+  url: 'https://portalendinheirados.com.br',
   description: 'Aprenda a ganhar dinheiro e garantir que ele nunca acabe. Investimentos, renda extra, independência financeira.',
   inLanguage: 'pt-BR',
   publisher: {
     '@type': 'Organization',
     name: 'Endinheirados',
-    url: 'https://endinheirados.cc',
-    logo: { '@type': 'ImageObject', url: 'https://endinheirados.cc/logo-endinheirados.png' },
+    url: 'https://portalendinheirados.com.br',
+    logo: { '@type': 'ImageObject', url: 'https://portalendinheirados.com.br/logo-endinheirados.png' },
   },
   potentialAction: {
     '@type': 'SearchAction',
-    target: { '@type': 'EntryPoint', urlTemplate: 'https://endinheirados.cc/blog?q={search_term_string}' },
+    target: { '@type': 'EntryPoint', urlTemplate: 'https://portalendinheirados.com.br/blog?q={search_term_string}' },
     'query-input': 'required name=search_term_string',
   },
 })

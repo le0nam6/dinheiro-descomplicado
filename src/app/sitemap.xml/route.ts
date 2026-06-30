@@ -2,7 +2,7 @@ import { createClient } from '@sanity/client'
 
 export const dynamic = 'force-dynamic'
 
-const BASE = 'https://endinheirados.cc'
+const BASE = 'https://portalendinheirados.com.br'
 
 const STATIC: [string, string, string][] = [
   [BASE,                                              'daily',   '1.0'],

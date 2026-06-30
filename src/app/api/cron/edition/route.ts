@@ -111,7 +111,7 @@ async function curate(news: NewsItem[], previousHeadlines: string[], weekday: st
   const isFriday = weekday === 'sexta-feira'
   const isSunday = weekday === 'domingo'
   const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
-  const prompt = `Você é o editor-chefe do "Endinheirados" (endinheirados.cc). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
+  const prompt = `Você é o editor-chefe do "Endinheirados" (portalendinheirados.com.br). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
 
 HOJE É ${weekday.toUpperCase()}, ${todayLabel}.
 

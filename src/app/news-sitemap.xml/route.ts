@@ -3,7 +3,7 @@
  */
 import { client } from '@/lib/sanity'
 
-const BASE = 'https://endinheirados.cc'
+const BASE = 'https://portalendinheirados.com.br'
 export const revalidate = 600
 
 function esc(s: string) {

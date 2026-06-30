@@ -4,10 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Como Economizar Dinheiro: 20 Formas que Funcionam de Verdade',
   description: 'Guia prático para economizar dinheiro no dia a dia — sem fórmulas mágicas. Do orçamento às compras, passando por contas fixas e hábitos que fazem diferença de verdade.',
-  alternates: { canonical: 'https://endinheirados.cc/guias/como-economizar-dinheiro' },
+  alternates: { canonical: 'https://portalendinheirados.com.br/guias/como-economizar-dinheiro' },
 }
 
-const SITE = 'https://endinheirados.cc'
+const SITE = 'https://portalendinheirados.com.br'
 
 const faqs = [
   { q: 'Quanto devo economizar por mês?', a: 'O mínimo recomendado é 10% da renda líquida. O ideal, especialmente no começo, é 20% (regra 50/30/20: 50% necessidades, 30% desejos, 20% poupança). Mas qualquer percentual positivo é melhor que zero — comece com o que for possível e aumente gradualmente.' },
