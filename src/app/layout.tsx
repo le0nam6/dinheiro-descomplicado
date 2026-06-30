@@ -47,6 +47,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {/* Monetag — Vignette Banner (11217768) */}
           <Script id="monetag-vignette" strategy="afterInteractive">{`(function(s){s.dataset.zone='11217768',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
 
+          {/* Monetag — Push Notification (11221455) */}
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+          <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11221455" async />
+
+          {/* Monetag — In-Page Push (11221467) */}
+          <Script id="monetag-inpage-2" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221467',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
+
+          {/* Monetag — Vignette Banner (11221476) */}
+          <Script id="monetag-vignette-2" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221476',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
+
           {/* Ezoic — Privacy (deve vir ANTES do header script) */}
           {/* eslint-disable-next-line @next/next/no-sync-scripts */}
           <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
