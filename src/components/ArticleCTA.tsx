@@ -8,6 +8,8 @@ const TOOL_MAP: Record<string, { title: string; href: string; emoji: string }> =
   'educação financeira': { title: 'Simulador de Quitação de Dívidas', href: '/ferramentas/simulador-dividas', emoji: '🔴' },
   'financiamento': { title: 'Calculadora de Empréstimo Consignado', href: '/ferramentas/calculadora-consignado', emoji: '💳' },
   'previdência': { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
+  'notícias': { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
+  'economia': { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
 }
 
 // Glossário relevante por categoria
@@ -50,7 +52,12 @@ const GLOSSARIO_MAP: Record<string, { name: string; slug: string }[]> = {
     { name: 'Rentabilidade líquida', slug: 'rentabilidade-liquida' },
     { name: 'Come-cotas', slug: 'come-cotas' },
   ],
-  'noticias': [
+  'notícias': [
+    { name: 'Selic', slug: 'selic' },
+    { name: 'IPCA', slug: 'ipca' },
+    { name: 'CDI', slug: 'cdi' },
+  ],
+  'economia': [
     { name: 'Selic', slug: 'selic' },
     { name: 'IPCA', slug: 'ipca' },
     { name: 'CDI', slug: 'cdi' },
@@ -80,6 +87,14 @@ const GUIAS_MAP: Record<string, { title: string; href: string }[]> = {
   ],
   'previdência': [
     { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+  ],
+  'notícias': [
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+    { title: 'Como montar o fundo de emergência', href: '/guias/fundo-de-emergencia' },
+  ],
+  'economia': [
+    { title: 'Como começar a investir do zero', href: '/guias/como-investir-do-zero' },
+    { title: 'Como montar o fundo de emergência', href: '/guias/fundo-de-emergencia' },
   ],
 }
 

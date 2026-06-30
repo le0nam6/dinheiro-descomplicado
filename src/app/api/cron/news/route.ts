@@ -183,7 +183,7 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
   "title": "título jornalístico, descritivo, max 75 chars",
   "slug": "slug-sem-acento",
   "excerpt": "resumo factual até 155 chars",
-  "category": "notícias",
+  "category": "categoria mais adequada ao conteúdo: 'investimentos' (mercado, ações, fundos, empresas, dividendos), 'educação financeira' (consumo, crédito, câmbio, preços, impostos, FGTS, aposentadoria), 'notícias' (apenas se for puramente político/macroeconômico sem ângulo de finanças pessoais)",
   "seoKeywords": ["kw1","kw2","kw3","kw4","kw5"],
   "readingTime": 6,
   "coverQuery": "termo em inglês específico ao tema real da notícia, para busca no Pexels",
@@ -202,7 +202,9 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
   const parsed = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
   const idxs: number[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [1]
   const newsSources = idxs.map((i: number) => top[i - 1]).filter(Boolean)
-  return { ...parsed, category: 'notícias', funnel: 'tofu', articleType: 'news', newsSources }
+  const VALID_CATEGORIES = ['investimentos', 'educação financeira', 'notícias', 'economia']
+  const category = VALID_CATEGORIES.includes(parsed.category) ? parsed.category : 'notícias'
+  return { ...parsed, category, funnel: 'tofu', articleType: 'news', newsSources }
 }
 
 // Retorna true se o título novo repete o mesmo assunto de algum título recente
