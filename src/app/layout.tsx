@@ -36,55 +36,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
 
-        {!isLP && <>
-          {/* Monetag — In-Page Push (11216571) */}
-          <Script id="monetag-inpage" strategy="afterInteractive">{`(function(s){s.dataset.zone='11216571',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
-
-          {/* Monetag — Push Notification (11216807) */}
-          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-          <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11216807" async />
-
-          {/* Monetag — Vignette Banner (11217768) */}
-          <Script id="monetag-vignette" strategy="afterInteractive">{`(function(s){s.dataset.zone='11217768',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
-
-          {/* Monetag — Push Notification (11221455) */}
-          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-          <script data-cfasync="false" src="https://5gvci.com/act/files/tag.min.js?z=11221455" async />
-
-          {/* Monetag — In-Page Push (11221467) */}
-          <Script id="monetag-inpage-2" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221467',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
-
-          {/* Monetag — Vignette Banner (11221476) */}
-          <Script id="monetag-vignette-2" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221476',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
-
-          {/* Monetag — Popunder (11221460) */}
-          <Script id="monetag-popunder" strategy="afterInteractive">{`(function(s){s.dataset.zone='11221460',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}</Script>
-
-          {/* Ezoic — Privacy (deve vir ANTES do header script) */}
-          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-          <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
-          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-          <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
-
-          {/* Ezoic — Header Script */}
-          <Script src="//www.ezojs.com/ezoic/sa.min.js" strategy="beforeInteractive" />
-          <Script id="ezoic-init" strategy="beforeInteractive">{`
-            window.ezstandalone = window.ezstandalone || {};
-            ezstandalone.cmd = ezstandalone.cmd || [];
-          `}</Script>
-          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-          <script src="//ezoicanalytics.com/analytics.js" />
-          {/* Ezoic — define todos os placeholders e exibe */}
-          <Script id="ezoic-display" strategy="afterInteractive">{`
-            window.ezstandalone = window.ezstandalone || {};
-            ezstandalone.cmd = ezstandalone.cmd || [];
-            ezstandalone.cmd.push(function() {
-              ezstandalone.define(101, 102, 103, 104, 105, 106);
-              ezstandalone.enable();
-              ezstandalone.display();
-            });
-          `}</Script>
-        </>}
 
         {/* Google Analytics 4 */}
         <Script
