@@ -216,10 +216,32 @@ function isTooSimilar(newTitle: string, existingTitles: string[]): boolean {
   })
 }
 
+// Raspa texto de um artigo a partir da URL
+async function fetchArticleText(url: string): Promise<string> {
+  const html = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    signal: AbortSignal.timeout(10000),
+  }).then(r => r.text())
+
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/)
+  const title = titleMatch?.[1]?.trim().replace(/\s*[|\-–].*/g, '') ?? ''
+
+  // Extrai parágrafos de texto limpo
+  const paragraphs: string[] = []
+  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi
+  let m
+  while ((m = pRe.exec(html)) !== null) {
+    const text = m[1].replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()
+    if (text.length > 60) paragraphs.push(text)
+  }
+
+  return `Título original: ${title}\n\nConteúdo:\n${paragraphs.slice(0, 12).join('\n\n')}`
+}
+
 // Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
-async function processNews(skipRecencyLock = false) {
+async function processNews(skipRecencyLock = false, articleUrl?: string) {
   // Gate de janela + trava de recência. Em dev/force, ambos são ignorados.
-  if (!skipRecencyLock) {
+  if (!skipRecencyLock && !articleUrl) {
     // Só publica nos slots de 8h, 12h, 16h e 20h (horário de Brasília).
     const spNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
     if (!PUBLISH_SLOTS.includes(spNow.getHours())) return
@@ -244,11 +266,25 @@ async function processNews(skipRecencyLock = false) {
   )
   const saturatedThemes = detectSaturatedThemes(recentTitles12h)
 
-  // Pauta do editor tem prioridade sobre a escolha automática
-  const queued = await nextQueueItem('noticia')
+  // URL enviada pelo editor tem prioridade máxima sobre tudo
+  let editorBrief: string | undefined
+  if (articleUrl) {
+    try {
+      editorBrief = await fetchArticleText(articleUrl)
+    } catch (err) {
+      console.error('[news] Falha ao raspar artigo:', err)
+      editorBrief = `Escreva sobre o artigo em: ${articleUrl}`
+    }
+  } else {
+    // Pauta da fila do editor tem prioridade sobre a escolha automática
+    const queued = await nextQueueItem('noticia')
+    if (queued) editorBrief = queued.brief
+  }
+
+  const queued = articleUrl ? null : await nextQueueItem('noticia')
 
   const recent = await getRecentTitles(20)
-  const post = await generate(news, recent, saturatedThemes, queued?.brief)
+  const post = await generate(news, recent, saturatedThemes, editorBrief ?? queued?.brief)
 
   // Descarta se o assunto já foi publicado nas últimas 6h (exceto pauta do editor, que sempre vale)
   if (!queued && isTooSimilar(post.title, recentNewsTitles)) {
@@ -297,12 +333,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const force = new URL(request.url).searchParams.get('force') === 'true'
+  const params = new URL(request.url).searchParams
+  const force = params.get('force') === 'true'
+  const articleUrl = params.get('url') ?? undefined
 
   // Em dev com force=true, roda síncrono para facilitar testes
   if (force && process.env.NODE_ENV === 'development') {
     try {
-      await processNews(true)
+      await processNews(true, articleUrl)
       return NextResponse.json({ ok: true, forced: true })
     } catch (err) {
       return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -314,7 +352,7 @@ export async function GET(request: Request) {
   // pesado roda em after(), enquanto o agendador recebe um 200 imediato.
   after(async () => {
     try {
-      await processNews(force)
+      await processNews(force || !!articleUrl, articleUrl)
     } catch (err) {
       await tgAlert('Cron notícias (slots 8/12/16/20h)', err)
     }

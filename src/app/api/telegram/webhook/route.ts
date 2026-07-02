@@ -362,7 +362,8 @@ export async function POST(request: Request) {
           `🤖 *Endinheirados Bot*\n\n` +
           `📊 /status — visão geral do sistema\n` +
           `📋 /pendentes — posts aguardando aprovação\n` +
-          `📰 /gerar — gera uma notícia agora\n\n` +
+          `📰 /gerar — gera uma notícia agora\n` +
+          `🔗 /noticia <url> — gera notícia a partir de um artigo específico\n\n` +
           `*Fila editorial*\n` +
           `📰 /pauta <ideia> — tema pra próxima notícia\n` +
           `📝 /materia <ideia> — matéria própria\n` +
@@ -432,7 +433,29 @@ export async function POST(request: Request) {
         await tg('sendMessage', { chat_id: chatId, text: '📰 Gerando notícia… (alguns segundos)' })
         const origin = new URL(request.url).origin
         const r = await fetch(`${origin}/api/cron/news`, { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }).then(r => r.json()).catch(() => null)
-        await tg('sendMessage', { chat_id: chatId, text: r?.ok ? `✅ Publicada: ${r.title}\n${SITE}/blog/${r.slug}` : `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
+        if (!r?.ok) {
+          await tg('sendMessage', { chat_id: chatId, text: `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
+        }
+        // Se ok, a própria processNews() envia a notificação com título + link ao terminar
+        return NextResponse.json({ ok: true })
+      }
+
+      // /noticia <url> — gera notícia a partir de um artigo específico
+      if (cmd === '/noticia') {
+        const url = text.slice('/noticia'.length).trim()
+        if (!url || !url.startsWith('http')) {
+          await tg('sendMessage', { chat_id: chatId, text: '❌ Uso: /noticia <url>\nEx: /noticia https://investnews.com.br/...' })
+          return NextResponse.json({ ok: true })
+        }
+        await tg('sendMessage', { chat_id: chatId, text: `📰 Gerando notícia a partir do artigo…\n\n🔗 ${url}` })
+        const origin = new URL(request.url).origin
+        const r = await fetch(
+          `${origin}/api/cron/news?url=${encodeURIComponent(url)}`,
+          { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }
+        ).then(r => r.json()).catch(() => null)
+        if (!r?.ok) {
+          await tg('sendMessage', { chat_id: chatId, text: `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
+        }
         return NextResponse.json({ ok: true })
       }
 
