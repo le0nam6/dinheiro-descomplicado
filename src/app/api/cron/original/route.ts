@@ -688,8 +688,9 @@ function buildProposalKeyboard(pid: string, angles: ProposalAngles) {
       angles.map((_, i) => ({ text: `Ângulo ${i + 1}`, callback_data: `orig:${pid}:${i}` })),
       [
         { text: '❓ Explica mais', callback_data: `orig:${pid}:more` },
-        { text: '⏭️ Outras opções', callback_data: `orig:${pid}:skip` },
+        { text: '🔄 Outras opções', callback_data: `orig:${pid}:skip` },
       ],
+      [{ text: '🚫 Pular série hoje', callback_data: `orig:${pid}:dismiss` }],
     ],
   }
 }

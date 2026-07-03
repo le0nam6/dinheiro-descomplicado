@@ -197,6 +197,15 @@ export async function POST(request: Request) {
         const proposalId = id
         const choice = parts[2]
 
+        if (choice === 'dismiss') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🚫 Série pulada' })
+          await tg('editMessageReplyMarkup', {
+            chat_id: cq.message.chat.id, message_id: msgId,
+            reply_markup: { inline_keyboard: [[{ text: '🚫 Série pulada hoje', callback_data: 'noop' }]] },
+          })
+          return NextResponse.json({ ok: true })
+        }
+
         if (choice === 'skip') {
           await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🔄 Buscando outras opções…' })
           await tg('editMessageReplyMarkup', {
