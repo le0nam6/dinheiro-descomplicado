@@ -207,11 +207,7 @@ export async function POST(request: Request) {
         }
 
         if (choice === 'skip') {
-          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🔄 Buscando outras opções…' })
-          await tg('editMessageReplyMarkup', {
-            chat_id: cq.message.chat.id, message_id: msgId,
-            reply_markup: { inline_keyboard: [[{ text: '⏳ Buscando alternativas…', callback_data: 'noop' }]] },
-          })
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🔄 Buscando outras opções… (~10s)' })
           const origin = new URL(request.url).origin
           fetch(
             `${origin}/api/cron/original?skipProposalId=${proposalId}&force=true`,
