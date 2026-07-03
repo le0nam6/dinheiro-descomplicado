@@ -260,13 +260,14 @@ async function fetchDadosRenda() {
 const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional. JAMAIS invente números, cotações, percentuais, datas ou nomes de empresas que não estejam explicitamente nos DADOS acima. Se um dado não foi fornecido, não estime nem aproxime — omita ou escreva "dados não disponíveis".'
 
 const TESE_INSTRUCAO = `
-PASSO OBRIGATÓRIO ANTES DE ESCREVER:
+ANTES DE ESCREVER — raciocínio INTERNO (não escreva nada ainda, só pense):
 Olhe os dados acima. Encontre o fato com maior TENSÃO NARRATIVA — uma contradição, uma ironia, algo que vai contra o que o leitor esperaria.
 
-Complete mentalmente esta frase antes de continuar:
-"Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+Formule internamente: "Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
 
-A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não consegue completar com algo genuinamente surpreendente, procure outro ângulo nos dados — sempre existe.`
+A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não há surpresa genuína, procure outro ângulo — sempre existe.
+
+NÃO escreva esse raciocínio na resposta. Retorne SOMENTE o JSON.`
 
 function jsonSchema(category: string) {
   return `\n\n${PROHIBICOES}

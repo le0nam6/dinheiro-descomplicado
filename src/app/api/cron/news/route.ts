@@ -104,13 +104,14 @@ NÃO repita temas já publicados:
 ${recent.map(t => `- ${t}`).join('\n')}
 ${diversityBlock}
 
-PASSO OBRIGATÓRIO ANTES DE ESCREVER QUALQUER COISA:
-Leia todas as manchetes acima. Encontre a história com maior TENSÃO NARRATIVA — um fato contraditório, uma ironia, algo que vai contra o que o leitor esperaria. Não o mais importante: o mais SURPREENDENTE.
+ANTES DE ESCREVER — raciocínio INTERNO (não escreva nada ainda, só pense):
+Leia todas as manchetes. Encontre a história com maior TENSÃO NARRATIVA — um fato contraditório, uma ironia, algo que vai contra o que o leitor esperaria. Não o mais importante: o mais SURPREENDENTE.
 
-Complete mentalmente esta frase antes de continuar:
-"A matéria de hoje é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+Formule internamente: "Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
 
-A segunda parte dessa frase é sua tese. O título, o lead e toda a estrutura devem PROVAR essa segunda parte. Se você não consegue completar a frase com algo genuinamente surpreendente, escolha outra manchete.
+A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não há surpresa genuína, escolha outra manchete.
+
+NÃO escreva esse raciocínio na resposta. Retorne SOMENTE o JSON abaixo.
 
 IMPARCIALIDADE É MANDATÓRIA:
 - Reporte os FATOS. Sem opinião, sem adjetivos torcedores, sem especulação apresentada como certeza.
