@@ -192,6 +192,69 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, pickedImage: imgIdx })
       }
 
+      // --- Proposta de ângulo editorial (orig:proposalId:choice) ---
+      if (action === 'orig') {
+        const proposalId = id
+        const choice = parts[2]
+
+        if (choice === 'skip') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '⏭️ Pulado' })
+          await tg('editMessageReplyMarkup', {
+            chat_id: cq.message.chat.id, message_id: msgId,
+            reply_markup: { inline_keyboard: [[{ text: '⏭️ Série pulada hoje', callback_data: 'noop' }]] },
+          })
+          return NextResponse.json({ ok: true })
+        }
+
+        if (choice === 'more') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Carregando contexto…' })
+          const proposal = await sanity.fetch(
+            `*[_id == $id][0]{series, angles}`,
+            { id: proposalId }
+          )
+          if (!proposal) {
+            await tg('sendMessage', { chat_id: cq.message.chat.id, text: '❌ Proposta não encontrada.' })
+            return NextResponse.json({ ok: true })
+          }
+          const detail = (proposal.angles as Array<{ title: string; pitch: string; context: string }>)
+            .map((a, i) => `*${i + 1}. ${a.title}*\n${a.pitch}\n\n_Dado que sustenta:_ ${a.context}`)
+            .join('\n\n─────\n\n')
+          await tg('sendMessage', {
+            chat_id: cq.message.chat.id,
+            text: `📊 *Contexto de cada ângulo*\n\n${detail}`,
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                (proposal.angles as Array<unknown>).map((_, i) => ({
+                  text: `Gerar ângulo ${i + 1}`,
+                  callback_data: `orig:${proposalId}:${i}`,
+                })),
+                [{ text: '⏭️ Pular', callback_data: `orig:${proposalId}:skip` }],
+              ],
+            },
+          })
+          return NextResponse.json({ ok: true })
+        }
+
+        // Ângulo escolhido — dispara geração em background
+        const angleIndex = parseInt(choice, 10)
+        if (isNaN(angleIndex)) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Opção inválida' })
+          return NextResponse.json({ ok: true })
+        }
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Gerando… pode levar ~1 min' })
+        await tg('editMessageReplyMarkup', {
+          chat_id: cq.message.chat.id, message_id: msgId,
+          reply_markup: { inline_keyboard: [[{ text: `⏳ Gerando ângulo ${angleIndex + 1}…`, callback_data: 'noop' }]] },
+        })
+        const origin = new URL(request.url).origin
+        fetch(
+          `${origin}/api/cron/original?proposalId=${proposalId}&angle=${angleIndex}&force=true`,
+          { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }
+        ).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
       const pending = await sanity.fetch('*[_id==$id][0]{_id, data, status, publishedId, publishedSlug}', { id })
       if (!pending) {
         await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Esse rascunho não existe mais.' })

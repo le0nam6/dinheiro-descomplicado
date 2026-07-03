@@ -257,7 +257,7 @@ async function fetchDadosRenda() {
 
 // ─── Geradores de artigo ──────────────────────────────────────────────────────
 
-const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional. JAMAIS invente números, cotações, percentuais, datas ou nomes de empresas que não estejam explicitamente nos DADOS acima. Se um dado não foi fornecido, não estime nem aproxime — omita ou escreva "dados não disponíveis".'
+const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional. JAMAIS invente números, cotações, percentuais, datas ou nomes de empresas que não estejam explicitamente nos DADOS acima. Se um dado não foi fornecido, não estime, não aproxime e NÃO mencione a ausência — simplesmente omita esse ponto e escreva sobre o que você tem.'
 
 const TESE_INSTRUCAO = `
 ANTES DE ESCREVER — raciocínio INTERNO (não escreva nada ainda, só pense):
@@ -329,6 +329,83 @@ async function fetchRedditQuestions(): Promise<string> {
 ${top.map(p => `- "${p.title}" (r/${p.sub}, ${p.score} pontos)`).join('\n')}
 
 Use isso para calibrar o que sua audiência NÃO sabe. A surpresa do seu artigo deve ser relevante para quem faria essas perguntas — não para quem já é especialista. Se algum desses temas tiver conexão direta com os dados acima, priorize esse ângulo.`
+}
+
+async function proposeAngles(
+  series: Series,
+  config: SeriesConfig,
+  data: unknown
+): Promise<{ proposalId: string; angles: Array<{ title: string; pitch: string; context: string }> }> {
+  const msg = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 700,
+    messages: [{
+      role: 'user',
+      content: `Editor de finanças pessoais. Analise os dados abaixo e proponha 3 ângulos editoriais completamente diferentes.
+
+Série: ${config.label}
+Dados: ${JSON.stringify(data).slice(0, 2500)}
+
+Cada ângulo deve ser:
+- Surpreendente e não-óbvio para o brasileiro médio
+- Sustentado pelos dados fornecidos (não invente)
+- Diferente dos outros dois em foco e abordagem
+
+Responda SOMENTE com JSON:
+[{"title":"título curto max 55 chars","pitch":"por que é interessante — uma frase direta","context":"qual dado específico sustenta isso e por que vai contra a intuição do leitor — 2 frases"}]`,
+    }],
+  })
+  const text = (msg.content[0] as { text: string }).text.trim()
+  const angles = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+
+  const doc = await sanity.create({
+    _type: 'originalProposal',
+    series,
+    angles,
+    dataSnapshot: JSON.stringify(data).slice(0, 8000),
+    createdAt: new Date().toISOString(),
+  })
+
+  return { proposalId: doc._id, angles }
+}
+
+async function generateFromProposal(
+  proposalId: string,
+  angleIndex: number,
+  recent: string[]
+): Promise<{ post: GeneratedPost; series: Series }> {
+  const proposal = await sanity.fetch(
+    `*[_id == $id][0]{series, angles, dataSnapshot}`,
+    { id: proposalId }
+  )
+  if (!proposal) throw new Error('Proposta não encontrada')
+
+  const angle = proposal.angles[angleIndex]
+  const series = proposal.series as Series
+  const config = SERIES_MAP[series]
+  const category = ['setor', 'fundo'].includes(series) ? 'investimentos' : 'educação financeira'
+
+  const prompt = `Você é redator de finanças pessoais do Endinheirados. Escreva um artigo para a série "${config.label}".
+
+DADOS:
+${proposal.dataSnapshot}
+
+ÂNGULO ESCOLHIDO PELO EDITOR:
+"${angle.title}"
+Por que é interessante: ${angle.pitch}
+Contexto: ${angle.context}
+
+${recentBlock(recent)}
+
+Escreva inteiramente para provar este ângulo. Descarte dados que não contribuam para ele. 10-12 parágrafos. Um ângulo, profundidade real, sem generalidades.
+${TESE_INSTRUCAO}
+${jsonSchema(category)}`
+
+  const p = await callClaude(prompt)
+  return {
+    post: { ...p, funnel: SAFE_SERIES.has(series) ? 'mofu' : 'tofu', articleType: 'news' },
+    series,
+  }
 }
 
 async function callClaude(prompt: string): Promise<GeneratedPost> {
@@ -557,7 +634,13 @@ const SERIES_MAP: Record<Series, SeriesConfig> = {
 
 // ─── Orquestrador ─────────────────────────────────────────────────────────────
 
-async function processOriginal(dry = false, forceSeries?: Series, force = false) {
+async function processOriginal(
+  dry = false,
+  forceSeries?: Series,
+  force = false,
+  proposalId?: string,
+  angleIndex?: number
+) {
   const nowBrt = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
   const hour = nowBrt.getHours()
   const dayOfYear = Math.floor((nowBrt.getTime() - new Date(nowBrt.getFullYear(), 0, 0).getTime()) / 86400000)
@@ -565,13 +648,38 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
   const series = forceSeries ?? selectSeries(slot, dayOfYear)
   const config = SERIES_MAP[series]
 
+  // Modo: gerar a partir do ângulo escolhido pelo editor
+  if (proposalId !== undefined && angleIndex !== undefined) {
+    const recent = await getRecentTitles(30)
+    const { post, series: ps } = await generateFromProposal(proposalId, angleIndex, recent)
+    const pc = SERIES_MAP[ps]
+
+    const recentPhotos = await getRecentPhotoUrls(30)
+    const serperPics = await fetchSerperImages(post.title || pc.coverQuery, 2)
+    const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || pc.coverQuery, recentPhotos)
+
+    const doc = await createSanityPost(post, photo)
+    const slug = (doc.slug as { current: string }).current
+    const docId = (doc as { _id: string })._id
+    const url = `${SITE}/blog/${slug}`
+
+    if (tgConfigured()) {
+      const canDirectPublish = SAFE_SERIES.has(ps)
+      const typeTag = canDirectPublish ? '📊 Dados reais · revisão rápida' : '🧠 Análise subjetiva · revisão obrigatória'
+      await tgSendMessage(
+        `${pc.emoji} *${pc.label}* — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n_${typeTag}_\n🔗 ${url}`,
+        originalDraftKeyboard(docId, canDirectPublish),
+      )
+    }
+    return { ok: true, series: ps, url, draft: true }
+  }
+
   if (dry) {
     const data = await config.fetchData()
     return { dry: true, series, label: config.label, slot, nowBrt: nowBrt.toISOString(), data }
   }
 
   // Trava: não cria rascunho se já foi criado um (aprovado) nas últimas 3h.
-  // Filtra por status=="aprovado" para não contar rascunhos pendentes de revisão.
   if (!force) {
     const lastOriginal: string | null = await sanity.fetch(
       `*[_type=="post" && articleType=="news" && status=="aprovado" && category in ["investimentos","educação financeira"] && publishedAt >= $since]|order(publishedAt desc)[0].publishedAt`,
@@ -587,33 +695,63 @@ async function processOriginal(dry = false, forceSeries?: Series, force = false)
 
   // Pauta do editor (fila editorial) tem prioridade sobre a série automática
   const queued = await nextQueueItem('materia')
-  const post = queued ? await generateFromBrief(queued.brief, recent) : await config.generate(recent)
-  const label = queued ? 'Matéria da sua pauta' : config.label
-  const emoji = queued ? '📝' : config.emoji
-  const coverFallback = queued ? 'Brazil personal finance money planning' : config.coverQuery
 
-  const recentPhotos = await getRecentPhotoUrls(30)
-  const serperPics = await fetchSerperImages(post.title || coverFallback, 2)
-  const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || coverFallback, recentPhotos)
+  if (queued) {
+    // Gera direto a partir da pauta do editor
+    const post = await generateFromBrief(queued.brief, recent)
+    const recentPhotos = await getRecentPhotoUrls(30)
+    const serperPics = await fetchSerperImages(post.title || 'Brazil personal finance money planning', 2)
+    const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || 'Brazil personal finance money planning', recentPhotos)
 
-  const doc = await createSanityPost(post, photo)
-  const slug = (doc.slug as { current: string }).current
-  const docId = (doc as { _id: string })._id
-  const url = `${SITE}/blog/${slug}`
+    const doc = await createSanityPost(post, photo)
+    const slug = (doc.slug as { current: string }).current
+    const docId = (doc as { _id: string })._id
+    const url = `${SITE}/blog/${slug}`
 
-  if (queued) await markQueueUsed(queued._id, slug)
+    await markQueueUsed(queued._id, slug)
 
-  if (tgConfigured()) {
-    const canDirectPublish = queued ? true : SAFE_SERIES.has(series)
-    const typeTag = canDirectPublish ? '📊 Dados reais · revisão rápida' : '🧠 Análise subjetiva · revisão obrigatória'
-    const tgRes = await tgSendMessage(
-      `${emoji} *${label}*${queued ? ' (sua pauta)' : ''} — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 200) ?? (post.body as string[])?.[0]?.replace(/^#+\s*/, '').slice(0, 200) ?? ''}\n\n_${typeTag}_\n🔗 ${url}`,
-      originalDraftKeyboard(docId, canDirectPublish),
-    )
-    if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
+    if (tgConfigured()) {
+      const tgRes = await tgSendMessage(
+        `📝 *Matéria da sua pauta* — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n_📊 Revisão rápida_\n🔗 ${url}`,
+        originalDraftKeyboard(docId, true),
+      )
+      if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
+    }
+    return { ok: true, series: 'pauta', url, draft: true }
   }
 
-  return { ok: true, series: queued ? 'pauta' : series, label, url, draft: true }
+  // Modo proposta: busca dados e envia ângulos para o editor escolher
+  const rawData = await config.fetchData()
+  if (!rawData) {
+    if (tgConfigured()) await tgSendMessage(`⚠️ *${config.label}* sem dados hoje`)
+    return { skipped: true, reason: 'no_data' }
+  }
+
+  const { proposalId: pid, angles } = await proposeAngles(series, config, rawData)
+
+  if (tgConfigured()) {
+    const anglesText = angles.map((a: { title: string; pitch: string }, i: number) =>
+      `*${i + 1}. ${a.title}*\n${a.pitch}`
+    ).join('\n\n')
+
+    await tgSendMessage(
+      `${config.emoji} *${config.label}* — escolha o ângulo de hoje:\n\n${anglesText}`,
+      {
+        inline_keyboard: [
+          angles.map((_: unknown, i: number) => ({
+            text: `Ângulo ${i + 1}`,
+            callback_data: `orig:${pid}:${i}`,
+          })),
+          [
+            { text: '❓ Explica mais', callback_data: `orig:${pid}:more` },
+            { text: '⏭️ Pular', callback_data: `orig:${pid}:skip` },
+          ],
+        ],
+      }
+    )
+  }
+
+  return { pending: true, proposalId: pid }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -624,9 +762,12 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams
-  const dry   = params.get('dry') === 'true'
-  const force = params.get('force') === 'true'
+  const dry         = params.get('dry') === 'true'
+  const force       = params.get('force') === 'true'
   const forceSeries = params.get('series') as Series | null
+  const proposalId  = params.get('proposalId') ?? undefined
+  const angleParam  = params.get('angle')
+  const angleIndex  = angleParam !== null ? parseInt(angleParam, 10) : undefined
 
   if (dry) {
     try {
@@ -640,7 +781,7 @@ export async function GET(request: Request) {
   // Em dev com force=true, roda síncrono para facilitar testes
   if (force && process.env.NODE_ENV === 'development') {
     try {
-      const result = await processOriginal(false, forceSeries ?? undefined, true)
+      const result = await processOriginal(false, forceSeries ?? undefined, true, proposalId, angleIndex)
       return NextResponse.json(result)
     } catch (err) {
       return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -649,7 +790,7 @@ export async function GET(request: Request) {
 
   after(async () => {
     try {
-      await processOriginal(false, forceSeries ?? undefined, force)
+      await processOriginal(false, forceSeries ?? undefined, force, proposalId, angleIndex)
     } catch (err) {
       await tgAlert('Cron original', err)
     }
