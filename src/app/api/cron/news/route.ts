@@ -79,11 +79,35 @@ function detectSaturatedThemes(recentTitles: string[]): string[] {
   return saturated
 }
 
+async function fetchRedditQuestions(): Promise<string> {
+  const subreddits = ['investimentos', 'financaspessoais']
+  const posts: Array<{ title: string; score: number; sub: string }> = []
+  await Promise.allSettled(subreddits.map(async (sub) => {
+    try {
+      const data = await fetch(
+        `https://www.reddit.com/r/${sub}/top.json?t=week&limit=25`,
+        { headers: { 'User-Agent': 'Endinheirados/1.0' }, signal: AbortSignal.timeout(8000) }
+      ).then(r => r.json())
+      for (const item of (data?.data?.children ?? [])) {
+        const p = item.data
+        if (p.score > 5 && p.title) posts.push({ title: p.title, score: p.score, sub })
+      }
+    } catch { /* subreddit off */ }
+  }))
+  if (!posts.length) return ''
+  const top = posts.sort((a, b) => b.score - a.score).slice(0, 12)
+  return `\nPERGUNTAS E DÚVIDAS REAIS DA SUA AUDIÊNCIA (Reddit BR — top posts da semana):
+${top.map(p => `- "${p.title}" (r/${p.sub}, ${p.score} pontos)`).join('\n')}
+
+Use isso para calibrar o que sua audiência NÃO sabe. Prefira manchetes que respondam ou se conectem a essas dúvidas reais.`
+}
+
 async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[], editorBrief?: string): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
   // Embaralha as notícias para não pegar sempre as primeiras do mesmo feed
   const shuffled = [...news].sort(() => Math.random() - 0.5)
   const top = shuffled.slice(0, 20)
   const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
+  const redditContext = await fetchRedditQuestions()
 
   const diversityBlock = saturatedThemes.length > 0 ? `
 DIVERSIDADE OBRIGATÓRIA — temas já muito cobertos hoje (evite salvo se for absolutamente a maior notícia do momento):
@@ -97,6 +121,7 @@ Escreva a notícia SOBRE essa pauta. Se houver manchetes na lista relacionadas, 
 ` : ''
   const prompt = `Você é repórter de finanças do portal Endinheirados (portalendinheirados.com.br).
 ${editorBlock}
+${redditContext}
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
 ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
 

@@ -304,12 +304,39 @@ Retorne SOMENTE JSON válido:
 }`
 }
 
+async function fetchRedditQuestions(): Promise<string> {
+  const subreddits = ['investimentos', 'financaspessoais']
+  const posts: Array<{ title: string; score: number; sub: string }> = []
+
+  await Promise.allSettled(subreddits.map(async (sub) => {
+    try {
+      const data = await fetch(
+        `https://www.reddit.com/r/${sub}/top.json?t=week&limit=25`,
+        { headers: { 'User-Agent': 'Endinheirados/1.0' }, signal: AbortSignal.timeout(8000) }
+      ).then(r => r.json())
+      for (const item of (data?.data?.children ?? [])) {
+        const p = item.data
+        if (p.score > 5 && p.title) posts.push({ title: p.title, score: p.score, sub })
+      }
+    } catch { /* subreddit off */ }
+  }))
+
+  if (!posts.length) return ''
+
+  const top = posts.sort((a, b) => b.score - a.score).slice(0, 12)
+
+  return `\nPERGUNTAS E DÚVIDAS REAIS DA SUA AUDIÊNCIA (Reddit BR — top posts da semana):
+${top.map(p => `- "${p.title}" (r/${p.sub}, ${p.score} pontos)`).join('\n')}
+
+Use isso para calibrar o que sua audiência NÃO sabe. A surpresa do seu artigo deve ser relevante para quem faria essas perguntas — não para quem já é especialista. Se algum desses temas tiver conexão direta com os dados acima, priorize esse ângulo.`
+}
+
 async function callClaude(prompt: string): Promise<GeneratedPost> {
-  const ragContext = await getEditorialContext(
-    'título post financeiro tom de voz copywriting',
-    ['titulo', 'tom', 'geral'],
-  )
-  const fullPrompt = ragContext ? `${prompt}\n${ragContext}` : prompt
+  const [ragContext, redditContext] = await Promise.all([
+    getEditorialContext('título post financeiro tom de voz copywriting', ['titulo', 'tom', 'geral']),
+    fetchRedditQuestions(),
+  ])
+  const fullPrompt = [prompt, ragContext, redditContext].filter(Boolean).join('\n')
   const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: fullPrompt }] })
   const text = (msg.content[0] as { text: string }).text.trim()
   return JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
