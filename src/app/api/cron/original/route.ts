@@ -778,23 +778,24 @@ export async function GET(request: Request) {
     }
   }
 
-  // Em dev com force=true, roda síncrono para facilitar testes
-  if (force && process.env.NODE_ENV === 'development') {
-    try {
-      const result = await processOriginal(false, forceSeries ?? undefined, true, proposalId, angleIndex)
-      return NextResponse.json(result)
-    } catch (err) {
-      return NextResponse.json({ error: String(err) }, { status: 500 })
-    }
+  // Geração a partir de ângulo escolhido: lenta (Sonnet ~60s) → after()
+  if (proposalId !== undefined && angleIndex !== undefined) {
+    after(async () => {
+      try {
+        await processOriginal(false, forceSeries ?? undefined, true, proposalId, angleIndex)
+      } catch (err) {
+        await tgAlert('Cron original', err)
+      }
+    })
+    return NextResponse.json({ ok: true, queued: true })
   }
 
-  after(async () => {
-    try {
-      await processOriginal(false, forceSeries ?? undefined, force, proposalId, angleIndex)
-    } catch (err) {
-      await tgAlert('Cron original', err)
-    }
-  })
-
-  return NextResponse.json({ ok: true, queued: true })
+  // Proposta de ângulos: rápida (Haiku ~5s) → síncrono para garantir envio
+  try {
+    const result = await processOriginal(false, forceSeries ?? undefined, force)
+    return NextResponse.json(result)
+  } catch (err) {
+    await tgAlert('Cron original', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
 }
