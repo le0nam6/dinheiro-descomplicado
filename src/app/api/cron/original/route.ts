@@ -858,9 +858,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, queued: true })
   }
 
-  // Proposta inicial ou alternativa (Haiku ~5s) → síncrono para garantir envio
+  // Alternativas (Haiku ~10s) chamadas via webhook fire-and-forget → after() para responder rápido
+  if (skipProposalId !== undefined) {
+    after(async () => {
+      try {
+        await processOriginal(false, forceSeries ?? undefined, force, undefined, undefined, skipProposalId)
+      } catch (err) {
+        await tgAlert('Cron original', err)
+      }
+    })
+    return NextResponse.json({ ok: true, queued: true })
+  }
+
+  // Proposta inicial (Haiku ~5s) → síncrono para garantir envio
   try {
-    const result = await processOriginal(false, forceSeries ?? undefined, force, undefined, undefined, skipProposalId)
+    const result = await processOriginal(false, forceSeries ?? undefined, force)
     return NextResponse.json(result)
   } catch (err) {
     await tgAlert('Cron original', err)

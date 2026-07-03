@@ -198,11 +198,10 @@ export async function POST(request: Request) {
         const choice = parts[2]
 
         if (choice === 'dismiss') {
-          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🚫 Série pulada' })
-          await tg('editMessageReplyMarkup', {
-            chat_id: cq.message.chat.id, message_id: msgId,
-            reply_markup: { inline_keyboard: [[{ text: '🚫 Série pulada hoje', callback_data: 'noop' }]] },
-          })
+          const dismissRes = await tg('answerCallbackQuery', { callback_query_id: cq.id, text: '🚫 Série pulada hoje' })
+          console.log('[webhook] dismiss answerCallbackQuery:', JSON.stringify(dismissRes))
+          const deleteRes = await tg('deleteMessage', { chat_id: cq.message.chat.id, message_id: msgId })
+          console.log('[webhook] dismiss deleteMessage:', JSON.stringify(deleteRes))
           return NextResponse.json({ ok: true })
         }
 
