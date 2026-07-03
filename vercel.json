@@ -10,13 +10,16 @@
     "src/app/api/cron/publish/route.ts": { "maxDuration": 300 },
     "src/app/api/cron/ig-backlog/route.ts": { "maxDuration": 120 },
     "src/app/api/cron/weekly-insights/route.ts": { "maxDuration": 300 },
-    "src/app/api/cron/original/route.ts": { "maxDuration": 300 }
+    "src/app/api/cron/original/route.ts": { "maxDuration": 300 },
+    "src/app/api/cron/editorial-reminder/route.ts": { "maxDuration": 10 }
   },
   "crons": [
     { "path": "/api/cron/edition-candidates", "schedule": "0 1 * * *" },
     { "path": "/api/cron/edition", "schedule": "0 9 * * *" },
     { "path": "/api/cron/send-edition-email", "schedule": "5 8 * * *" },
     { "path": "/api/cron/original", "schedule": "0 11 * * *" },
-    { "path": "/api/cron/original", "schedule": "0 18 * * *" }
+    { "path": "/api/cron/original", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/editorial-reminder?slot=morning", "schedule": "0 12 * * *" },
+    { "path": "/api/cron/editorial-reminder?slot=afternoon", "schedule": "0 17 * * 1-5" }
   ]
 }
