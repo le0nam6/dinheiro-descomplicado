@@ -632,6 +632,68 @@ const SERIES_MAP: Record<Series, SeriesConfig> = {
   renda:   { label: 'Renda Extra Real',     emoji: '💰', fetchData: fetchDadosRenda,   generate: generateRenda,   coverQuery: 'Brazil side hustle extra income money' },
 }
 
+type ProposalAngles = Array<{ title: string; pitch: string; context: string }>
+
+async function proposeAlternativeAngles(
+  skipProposalId: string
+): Promise<{ proposalId: string; angles: ProposalAngles; series: Series }> {
+  const original = await sanity.fetch(
+    `*[_id == $id][0]{series, angles, dataSnapshot}`,
+    { id: skipProposalId }
+  )
+  if (!original) throw new Error('Proposta original não encontrada')
+
+  const series = original.series as Series
+  const config = SERIES_MAP[series]
+  const previousTitles = (original.angles as ProposalAngles).map(a => a.title).join('; ')
+
+  const msg = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 700,
+    messages: [{
+      role: 'user',
+      content: `Editor de finanças pessoais. Os ângulos abaixo foram rejeitados. Proponha 3 ângulos COMPLETAMENTE DIFERENTES.
+
+Série: ${config.label}
+Dados: ${String(original.dataSnapshot).slice(0, 2500)}
+
+Ângulos JÁ REJEITADOS (não repita nem varie esses):
+${previousTitles}
+
+Novos ângulos devem ter foco completamente diferente dos rejeitados, ser surpreendentes e não-óbvios, e ser sustentados pelos dados fornecidos.
+
+Responda SOMENTE com JSON:
+[{"title":"título curto max 55 chars","pitch":"por que é interessante — uma frase direta","context":"qual dado específico sustenta isso e por que vai contra a intuição — 2 frases"}]`,
+    }],
+  })
+
+  const text = (msg.content[0] as { text: string }).text.trim()
+  const angles: ProposalAngles = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+
+  const doc = await sanity.create({
+    _type: 'originalProposal',
+    series,
+    angles,
+    dataSnapshot: original.dataSnapshot,
+    createdAt: new Date().toISOString(),
+    previousProposalId: skipProposalId,
+  })
+
+  return { proposalId: doc._id, angles, series }
+}
+
+function buildProposalKeyboard(pid: string, angles: ProposalAngles) {
+  return {
+    inline_keyboard: [
+      angles.map((_, i) => ({ text: `Ângulo ${i + 1}`, callback_data: `orig:${pid}:${i}` })),
+      [
+        { text: '❓ Explica mais', callback_data: `orig:${pid}:more` },
+        { text: '⏭️ Outras opções', callback_data: `orig:${pid}:skip` },
+      ],
+    ],
+  }
+}
+
 // ─── Orquestrador ─────────────────────────────────────────────────────────────
 
 async function processOriginal(
@@ -639,7 +701,8 @@ async function processOriginal(
   forceSeries?: Series,
   force = false,
   proposalId?: string,
-  angleIndex?: number
+  angleIndex?: number,
+  skipProposalId?: string
 ) {
   const nowBrt = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
   const hour = nowBrt.getHours()
@@ -647,6 +710,20 @@ async function processOriginal(
   const slot: 'morning' | 'afternoon' = hour < 12 ? 'morning' : 'afternoon'
   const series = forceSeries ?? selectSeries(slot, dayOfYear)
   const config = SERIES_MAP[series]
+
+  // Modo: outras opções (pular anterior)
+  if (skipProposalId) {
+    const { proposalId: pid, angles, series: altSeries } = await proposeAlternativeAngles(skipProposalId)
+    const ac = SERIES_MAP[altSeries]
+    if (tgConfigured()) {
+      const anglesText = angles.map((a, i) => `*${i + 1}. ${a.title}*\n${a.pitch}`).join('\n\n')
+      await tgSendMessage(
+        `${ac.emoji} *${ac.label}* — outras opções:\n\n${anglesText}`,
+        buildProposalKeyboard(pid, angles)
+      )
+    }
+    return { pending: true, proposalId: pid }
+  }
 
   // Modo: gerar a partir do ângulo escolhido pelo editor
   if (proposalId !== undefined && angleIndex !== undefined) {
@@ -736,18 +813,7 @@ async function processOriginal(
 
     await tgSendMessage(
       `${config.emoji} *${config.label}* — escolha o ângulo de hoje:\n\n${anglesText}`,
-      {
-        inline_keyboard: [
-          angles.map((_: unknown, i: number) => ({
-            text: `Ângulo ${i + 1}`,
-            callback_data: `orig:${pid}:${i}`,
-          })),
-          [
-            { text: '❓ Explica mais', callback_data: `orig:${pid}:more` },
-            { text: '⏭️ Pular', callback_data: `orig:${pid}:skip` },
-          ],
-        ],
-      }
+      buildProposalKeyboard(pid, angles)
     )
   }
 
@@ -762,12 +828,13 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams
-  const dry         = params.get('dry') === 'true'
-  const force       = params.get('force') === 'true'
-  const forceSeries = params.get('series') as Series | null
-  const proposalId  = params.get('proposalId') ?? undefined
-  const angleParam  = params.get('angle')
-  const angleIndex  = angleParam !== null ? parseInt(angleParam, 10) : undefined
+  const dry            = params.get('dry') === 'true'
+  const force          = params.get('force') === 'true'
+  const forceSeries    = params.get('series') as Series | null
+  const proposalId     = params.get('proposalId') ?? undefined
+  const angleParam     = params.get('angle')
+  const angleIndex     = angleParam !== null ? parseInt(angleParam, 10) : undefined
+  const skipProposalId = params.get('skipProposalId') ?? undefined
 
   if (dry) {
     try {
@@ -790,9 +857,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, queued: true })
   }
 
-  // Proposta de ângulos: rápida (Haiku ~5s) → síncrono para garantir envio
+  // Proposta inicial ou alternativa (Haiku ~5s) → síncrono para garantir envio
   try {
-    const result = await processOriginal(false, forceSeries ?? undefined, force)
+    const result = await processOriginal(false, forceSeries ?? undefined, force, undefined, undefined, skipProposalId)
     return NextResponse.json(result)
   } catch (err) {
     await tgAlert('Cron original', err)
