@@ -28,6 +28,7 @@ import {
   fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
   originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed,
 } from '@/lib/publish-core'
+import { getEditorialContext } from '@/lib/rag'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -129,11 +130,11 @@ const FINANCE_FEEDS = [
 
 async function fetchDadosNumero() {
   const SERIES_META: Record<string, { code: number; name: string; unit: string; story: string }> = {
-    credito_pf:    { code: 7444,  name: 'Carteira de crédito — pessoa física',  unit: 'R$ bilhões',    story: 'volume total de crédito das famílias brasileiras' },
-    inadimplencia: { code: 1406,  name: 'Inadimplência — pessoa física',         unit: '% da carteira', story: 'taxa de calote das famílias no sistema financeiro' },
-    cambio:        { code: 20786, name: 'Taxa de câmbio — dólar (venda)',        unit: 'R$/US$',        story: 'cotação do dólar no mercado interbancário' },
+    credito_pf:    { code: 20604, name: 'Carteira de crédito — pessoa física',  unit: 'R$ milhões',    story: 'volume total de crédito das famílias brasileiras' },
+    inadimplencia: { code: 15895, name: 'Inadimplência — pessoa física',         unit: '% da carteira', story: 'taxa de calote das famílias no sistema financeiro' },
+    cambio:        { code: 1,     name: 'Taxa de câmbio — dólar (venda)',        unit: 'R$/US$',        story: 'cotação do dólar no mercado interbancário (PTAX)' },
     reservas:      { code: 4380,  name: 'Reservas internacionais',              unit: 'US$ bilhões',   story: 'colchão de dólares do Banco Central' },
-    concessoes:    { code: 7384,  name: 'Concessões de crédito — pessoa física', unit: 'R$ bilhões/mês', story: 'quanto de crédito novo as famílias tomaram' },
+    concessoes:    { code: 7384,  name: 'Concessões de crédito — pessoa física', unit: 'R$ milhões/mês', story: 'quanto de crédito novo as famílias tomaram' },
     poupanca:      { code: 1361,  name: 'Captações da poupança',               unit: 'R$ bilhões',    story: 'quanto entrou ou saiu da poupança' },
     m1:            { code: 20714, name: 'M1 — papel moeda + depósitos à vista', unit: 'R$ bilhões',    story: 'dinheiro circulando na economia' },
   }
@@ -146,7 +147,7 @@ async function fetchDadosNumero() {
   const last = points[points.length - 1]
   const prev = points[points.length - 2]
   const delta = prev ? ((parseFloat(last.valor) - parseFloat(prev.valor)) / parseFloat(prev.valor) * 100).toFixed(2) : null
-  const [cambio, inad] = await Promise.all([fetchBacenSeries(20786, 3), fetchBacenSeries(1406, 2)])
+  const [cambio, inad] = await Promise.all([fetchBacenSeries(1, 3), fetchBacenSeries(15895, 2)])
 
   return {
     indicador: meta.name, valor: last.valor, unidade: meta.unit, data: last.data,
@@ -161,15 +162,15 @@ async function fetchDadosNumero() {
 async function fetchDadosSetor() {
   const setor = getSetorOfWeek()
   const news = await fetchRss(FINANCE_FEEDS, 12, setor.keywords)
-  const cambio = await fetchBacenSeries(20786, 1)
+  const cambio = await fetchBacenSeries(1, 1)
   return { setor: setor.name, news, cambio: cambio[0]?.valor ?? null }
 }
 
 async function fetchDadosPreco() {
   const [cambio, selic, inad, conc] = await Promise.all([
-    fetchBacenSeries(20786, 5),
+    fetchBacenSeries(1, 5),
     fetchBacenSeries(11, 5),
-    fetchBacenSeries(1406, 3),
+    fetchBacenSeries(15895, 3),
     fetchBacenSeries(7384, 3),
   ])
   let ipca: string[] = []
@@ -258,6 +259,15 @@ async function fetchDadosRenda() {
 
 const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "inovador", gerúndio de análise, conclusão motivacional. JAMAIS invente números, cotações, percentuais, datas ou nomes de empresas que não estejam explicitamente nos DADOS acima. Se um dado não foi fornecido, não estime nem aproxime — omita ou escreva "dados não disponíveis".'
 
+const TESE_INSTRUCAO = `
+PASSO OBRIGATÓRIO ANTES DE ESCREVER:
+Olhe os dados acima. Encontre o fato com maior TENSÃO NARRATIVA — uma contradição, uma ironia, algo que vai contra o que o leitor esperaria.
+
+Complete mentalmente esta frase antes de continuar:
+"Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+
+A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não consegue completar com algo genuinamente surpreendente, procure outro ângulo nos dados — sempre existe.`
+
 function jsonSchema(category: string) {
   return `\n\n${PROHIBICOES}
 
@@ -283,7 +293,12 @@ Retorne SOMENTE JSON válido:
 }
 
 async function callClaude(prompt: string): Promise<GeneratedPost> {
-  const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
+  const ragContext = await getEditorialContext(
+    'título post financeiro tom de voz copywriting',
+    ['titulo', 'tom', 'geral'],
+  )
+  const fullPrompt = ragContext ? `${prompt}\n${ragContext}` : prompt
+  const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: fullPrompt }] })
   const text = (msg.content[0] as { text: string }).text.trim()
   return JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
 }
@@ -323,6 +338,7 @@ ${d.inadimplencia ? `Inadimplência PF: ${d.inadimplencia}` : ''}
 ${recentBlock(recent)}
 
 Baseado nos dados acima, identifique o número MAIS SURPREENDENTE ou a TENDÊNCIA MAIS RELEVANTE e escreva um artigo inteiramente sobre isso. Um ângulo, uma história, 10-12 parágrafos de profundidade real. Não tente cobrir tudo. Tom de analista que fala como gente — o dado é o gancho, mas a análise é o produto.
+${TESE_INSTRUCAO}
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -340,6 +356,7 @@ ${d.cambio ? `Câmbio: R$ ${d.cambio}/US$` : ''}
 ${recentBlock(recent)}
 
 Baseado SOMENTE nas manchetes acima, identifique a questão mais relevante do setor AGORA — uma empresa específica, uma mudança regulatória, uma tendência de preço, uma disputa de mercado. Escreva inteiramente sobre essa questão. Não faça um panorama geral do setor. 10-13 parágrafos com análise real, não superficial.
+${TESE_INSTRUCAO}
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -359,6 +376,7 @@ Concessões crédito PF: R$ ${d.conc[0]?.valor ?? '?'} bi
 ${recentBlock(recent)}
 
 Olhando os dados, escolha UM item de consumo ou UM indicador que está tendo a variação mais impactante na vida real das pessoas. Escreva inteiramente sobre isso: por que esse preço está assim, quem é afetado, quanto custa na prática, o que explica, o que a pessoa pode fazer. 10-12 parágrafos. Concreto com números reais — não generalidades.
+${TESE_INSTRUCAO}
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -387,6 +405,7 @@ Manchetes: ${d.news.join('\n')}
 ${recentBlock(recent)}
 
 MISSÃO: escolha UM único ângulo — o mais concreto e útil para quem está aprendendo sobre finanças. Exemplos de bons ângulos: "por que o spread do banco engole boa parte da queda do dólar", "como assinaturas em dólar (Spotify, Netflix, Adobe) ficam mais baratas ou caras", "o que muda no preço do combustível quando o dólar oscila". Ruim: cobrir tudo ao mesmo tempo, fazer resumo do mercado, especular sobre próximas semanas.
+${TESE_INSTRUCAO}
 
 REGRAS RÍGIDAS:
 1. Declare o ângulo escolhido na PRIMEIRA frase do artigo. Ex: "Quando o dólar cai, muita gente acha que paga menos — mas o spread do banco pode devorar esse ganho todo."
@@ -421,6 +440,7 @@ Manchetes: ${d.news.join('\n')}
 ${recentBlock(recent)}
 
 Olhando os dados de rendimento e desocupação, identifique o movimento mais significativo e escreva inteiramente sobre ele. Pode ser a queda do desemprego num setor específico, a estagnação do salário real, ou uma tendência nova no mercado de trabalho. Um ângulo, profundidade real, 10-12 parágrafos. Não tente cobrir o mercado de trabalho inteiro.
+${TESE_INSTRUCAO}
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -438,6 +458,7 @@ Manchetes do setor: ${d.news.join('\n')}
 ${recentBlock(recent)}
 
 Escolha UM aspecto desse fundo que é genuinamente interessante ou contraintuitivo — pode ser a taxa que come o retorno, uma característica de liquidez que a maioria ignora, ou um cenário específico em que ele bate o Tesouro Direto. Escreva inteiramente sobre isso com números reais. Não faça um guia completo do fundo — escolha o ponto mais revelador e vá fundo. 10-12 parágrafos honestos.
+${TESE_INSTRUCAO}
 ${jsonSchema('investimentos')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
@@ -452,6 +473,7 @@ MANCHETES: ${d.news.join('\n')}
 ${recentBlock(recent)}
 
 Identifique o ponto mais relevante sobre ${d.fintech} agora — pode ser um produto novo, uma mudança de taxa, uma vantagem pouco conhecida, ou uma limitação real que os usuários descobrem tarde demais. Escreva inteiramente sobre isso. Não faça um review completo da fintech — escolha o ângulo mais útil para quem considera (ou já usa) ela hoje. 10-12 parágrafos com opinião embasada, não press release.
+${TESE_INSTRUCAO}
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }
@@ -467,6 +489,7 @@ Manchetes relacionadas: ${d.news.join('\n')}
 ${recentBlock(recent)}
 
 Escolha UM aspecto dessa oportunidade de renda extra que a maioria não sabe ou subestima — pode ser o tempo real até o primeiro rendimento, um custo oculto que come a margem, ou a comparação honesta com simplesmente deixar na Selic. Escreva inteiramente sobre isso com números reais. Não faça um guia de como começar — aprofunde o ângulo mais revelador, especialmente se for contraintuitivo. 10-12 parágrafos. Honesto acima de tudo.
+${TESE_INSTRUCAO}
 ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'tofu', articleType: 'news' }

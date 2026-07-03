@@ -95,7 +95,7 @@ PAUTA OBRIGATÓRIA DO EDITOR-CHEFE (prioridade máxima, acima de tudo abaixo):
 "${editorBrief}"
 Escreva a notícia SOBRE essa pauta. Se houver manchetes na lista relacionadas, use-as como fonte e cite. Se não houver nenhuma relacionada, escreva com base em conhecimento factual e atual do tema, mantendo imparcialidade e SEM inventar números, datas ou falas específicas. O título e o ângulo devem refletir a pauta do editor, não outra manchete.
 ` : ''
-  const prompt = `Você é repórter de finanças do portal Endinheirados (portalendinheirados.com.br). Escreva UMA notícia a partir das manchetes reais abaixo do mercado financeiro (Brasil e mundo).
+  const prompt = `Você é repórter de finanças do portal Endinheirados (portalendinheirados.com.br).
 ${editorBlock}
 MANCHETES DISPONÍVEIS (índice | fonte | título | resumo):
 ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
@@ -103,6 +103,14 @@ ${top.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).joi
 NÃO repita temas já publicados:
 ${recent.map(t => `- ${t}`).join('\n')}
 ${diversityBlock}
+
+PASSO OBRIGATÓRIO ANTES DE ESCREVER QUALQUER COISA:
+Leia todas as manchetes acima. Encontre a história com maior TENSÃO NARRATIVA — um fato contraditório, uma ironia, algo que vai contra o que o leitor esperaria. Não o mais importante: o mais SURPREENDENTE.
+
+Complete mentalmente esta frase antes de continuar:
+"A matéria de hoje é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+
+A segunda parte dessa frase é sua tese. O título, o lead e toda a estrutura devem PROVAR essa segunda parte. Se você não consegue completar a frase com algo genuinamente surpreendente, escolha outra manchete.
 
 IMPARCIALIDADE É MANDATÓRIA:
 - Reporte os FATOS. Sem opinião, sem adjetivos torcedores, sem especulação apresentada como certeza.
