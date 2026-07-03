@@ -261,11 +261,22 @@ const PROHIBICOES = 'PROIBIÇÕES: travessão (—), "crucial", "fundamental", "
 
 const TESE_INSTRUCAO = `
 ANTES DE ESCREVER — raciocínio INTERNO (não escreva nada ainda, só pense):
-Olhe os dados acima. Encontre o fato com maior TENSÃO NARRATIVA — uma contradição, uma ironia, algo que vai contra o que o leitor esperaria.
 
-Formule internamente: "Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+Olhe os dados. Agora faça este teste: se você fosse contar esse dado pra um amigo no WhatsApp, qual seria a parte que ele ia responder "sério?? não sabia disso"?
 
-A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não há surpresa genuína, procure outro ângulo — sempre existe.
+NÃO é a parte óbvia. NÃO é a correlação esperada ("juros altos = crédito caro"). É o que vai CONTRA a intuição — a ironia, a contradição, o detalhe que muda como o leitor vai interpretar tudo o que sabia antes.
+
+Exemplos do que NÃO é surpresa genuína:
+- "Selic alta + crédito caro = problema" → óbvio
+- "Inflação corrói o poder de compra" → qualquer um sabe
+- "Inadimplência subindo quando crédito cresce" → esperado
+
+Exemplos do que É surpresa genuína:
+- "O calote de hoje foi o crédito de 6 meses atrás — os dados atrasam, então a bomba já foi armada"
+- "O banco abaixa o spread quando a Selic cai, mas não no mesmo ritmo — a gordura fica com eles"
+- "Quem saiu da poupança para o Tesouro ganhou X% a mais, mas a maioria ainda não sabe disso"
+
+Formule internamente UMA frase: a surpresa que vai ser sua tese. Escreva o artigo inteiro para PROVAR essa frase. Não cubra múltiplos dados — escolha o que suporta a tese e descarte o resto.
 
 NÃO escreva esse raciocínio na resposta. Retorne SOMENTE o JSON.`
 

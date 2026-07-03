@@ -105,11 +105,22 @@ ${recent.map(t => `- ${t}`).join('\n')}
 ${diversityBlock}
 
 ANTES DE ESCREVER — raciocínio INTERNO (não escreva nada ainda, só pense):
-Leia todas as manchetes. Encontre a história com maior TENSÃO NARRATIVA — um fato contraditório, uma ironia, algo que vai contra o que o leitor esperaria. Não o mais importante: o mais SURPREENDENTE.
 
-Formule internamente: "Isso é sobre [FATO], mas o que a maioria não percebe é que [CONTRADIÇÃO / IRONIA / SURPRESA]."
+Leia as manchetes. Agora faça este teste: se você fosse mandar uma dessas histórias no WhatsApp pra um amigo, qual faria ele responder "sério?? não sabia disso"?
 
-A segunda parte é sua tese. Título, lead e estrutura devem PROVAR essa segunda parte. Se não há surpresa genuína, escolha outra manchete.
+NÃO é a correlação óbvia. É o que vai CONTRA a intuição — a ironia, a contradição, o detalhe que muda como o leitor interpreta o que já sabia.
+
+Exemplos do que NÃO é surpresa genuína:
+- "Empresa X lucrou mais e a ação subiu" → esperado
+- "Inflação alta prejudica o consumo" → qualquer um sabe
+- "Fed subiu juros e dólar valorizou" → previsível
+
+Exemplos do que É surpresa genuína:
+- "A empresa cresceu 40%, mas quem investiu há 2 anos ainda está no prejuízo por causa do preço de entrada"
+- "O setor que todo mundo achava que ia quebrar é o único que está contratando"
+- "O dado parece bom, mas o método de cálculo mudou — a comparação não é justa"
+
+Formule internamente UMA frase: a surpresa que vai ser sua tese. Escreva o artigo inteiro para PROVAR essa frase. Descarte dados que não servem a ela.
 
 NÃO escreva esse raciocínio na resposta. Retorne SOMENTE o JSON abaixo.
 
