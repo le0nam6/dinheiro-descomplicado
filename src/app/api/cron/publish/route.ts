@@ -11,6 +11,7 @@ import {
   tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
   adminToken,
 } from '@/lib/publish-core'
+import { getEditorialContext, getPublishedPostsByCategory, getSimilarPublishedTopics, indexPublishedPost } from '@/lib/rag'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -108,7 +109,6 @@ const TOPIC_TAXONOMY: Record<string, string[]> = {
     'como usar o FGTS de forma estratégica',
     'planejamento financeiro para autônomos e PJs',
     'como economizar no supermercado sem abrir mão de qualidade',
-    'assinaturas que você paga e não usa: o dinheiro invisível',
     'financiamento de carro: a conta que ninguém faz direito',
     'como planejar uma viagem sem entrar em dívida',
     'poupar vs investir: a diferença prática entre os dois',
@@ -276,10 +276,16 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   const focusByDay = ['ganhar dinheiro', 'investimentos', 'educação financeira', 'ganhar dinheiro', 'cartão de crédito', 'investimentos', 'ganhar dinheiro']
   const focusCategory = type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : ''
 
-  // Busca títulos já publicados na categoria + sugestões do Google em paralelo
-  const [categoryTitles, googleSuggestions] = await Promise.all([
+  // Busca contexto editorial RAG + títulos + sugestões Google em paralelo
+  const ragHint = type === 'news'
+    ? 'título de notícia financeira tom de voz contextualização histórica zoom out'
+    : `título post ${focusCategory || 'finanças pessoais'} tom de voz educativo linguagem próxima`
+
+  const [categoryTitles, googleSuggestions, ragContext, similarTopics] = await Promise.all([
     focusCategory ? getTitlesByCategory(focusCategory) : Promise.resolve([] as string[]),
     focusCategory ? fetchGoogleSuggestions(`${focusCategory} finanças pessoais Brasil`) : Promise.resolve([] as string[]),
+    getEditorialContext(ragHint, ['titulo', 'tom', 'estrutura', 'zoom-out']),
+    focusCategory ? getPublishedPostsByCategory(focusCategory) : Promise.resolve(''),
   ])
 
   // Monta guia de foco com taxonomia + títulos já cobertos
@@ -338,9 +344,9 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
   } else {
     context = `Crie um post evergreen (${funnelGuide}) sobre finanças pessoais para o público brasileiro.`
   }
-  context += focusGuide + globalAvoid
+  context += focusGuide + globalAvoid + similarTopics
 
-  const prompt = `${context}
+  const prompt = `${context}${ragContext ? '\n' + ragContext : ''}
 
 Você escreve para o blog Endinheirados (portalendinheirados.com.br), portal de finanças pessoais para brasileiros da Geração Z.
 
@@ -410,12 +416,6 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
     "Mais um parágrafo simples.",
     "## Outra seção",
     "Parágrafo puro continuando o conteúdo."
-  ],
-  "body": [
-    "## Subtítulo da primeira seção",
-    "Parágrafo com texto puro, sem asteriscos nem markdown inline.",
-    "## Outra seção",
-    "Parágrafo puro continuando o conteúdo."
   ]
 }`
 
@@ -425,8 +425,27 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const articleText = (articleMsg.content[0] as { type: string; text: string }).text.trim()
-  const article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+  let articleText = (articleMsg.content[0] as { type: string; text: string }).text.trim()
+  let article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+
+  // Valida semanticamente: se o título+excerpt for similar demais a algo já publicado, pede regeneração
+  const dupHint = `${article.title}\n${article.excerpt || ''}`
+  const dupCheck = await getSimilarPublishedTopics(dupHint, (article.category as string) || focusCategory || undefined)
+  if (dupCheck) {
+    console.log(`[cron/publish] Duplicata semântica detectada para "${article.title}" — regenerando...`)
+    const retryMsg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: articleText },
+        { role: 'user', content: `O ângulo que você gerou ("${article.title}") está semanticamente muito próximo de posts já publicados no blog:${dupCheck}\nEscolha um ângulo COMPLETAMENTE diferente — outro aspecto da categoria, outro problema do leitor, outra solução. Retorne SOMENTE o JSON válido, mesma estrutura.` },
+      ],
+    })
+    articleText = (retryMsg.content[0] as { type: string; text: string }).text.trim()
+    article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+    console.log(`[cron/publish] Regenerado: "${article.title}"`)
+  }
 
   // Segunda call: Sonnet gera o copy do Instagram (caption, título do card, slides).
   // Esses são os únicos textos que o seguidor lê no feed — qualidade aqui é tudo.
@@ -580,6 +599,7 @@ export async function GET(request: Request) {
     if (!tgConfigured()) {
       // Sem Telegram: fallback publica direto (comportamento antigo)
       const doc = await createSanityPost(post as unknown as GeneratedPost, photo)
+      await indexPublishedPost({ title: post.title as string, excerpt: post.excerpt as string, category: post.category as string, slug: post.slug as string, publishedAt: new Date().toISOString() })
       await deliverCarousel(slideUrls, caption, `${SITE}/blog/${post.slug}`)
       return NextResponse.json({ ok: true, mode: 'auto', sanityId: doc._id, slug: post.slug })
     }

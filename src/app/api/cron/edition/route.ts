@@ -11,6 +11,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto, nextQueueItem, markQueueUsed } from '@/lib/publish-core'
 import { sendEditionCampaign } from '@/lib/brevo'
+import { getEditorialContext } from '@/lib/rag'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -105,12 +106,18 @@ type Curation = {
   reflection?: string
 }
 
-async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false, recentWords: string[] = []): Promise<{ curation: Curation; news: NewsItem[] }> {
+async function curate(news: NewsItem[], previousHeadlines: string[], weekday: string, todayLabel: string, forced = false, recentWords: string[] = [], recentPunchlines: string[] = []): Promise<{ curation: Curation; news: NewsItem[] }> {
   // No modo curado (forced), o editor já escolheu — usa TODAS as manchetes recebidas.
   const pool = forced ? news : news.slice(0, 70)
   const isFriday = weekday === 'sexta-feira'
   const isSunday = weekday === 'domingo'
   const currentYear = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getFullYear()
+
+  const ragContext = await getEditorialContext(
+    'newsletter financeira tom de voz abertura estrutura título matéria',
+    ['abertura', 'tom', 'estrutura', 'titulo', 'zoom-out'],
+  )
+
   const prompt = `Você é o editor-chefe do "Endinheirados" (portalendinheirados.com.br). Monte a EDIÇÃO DIÁRIA: uma curadoria do que aconteceu de mais importante no mercado financeiro — Brasil e Mundo — que impacta a vida financeira das pessoas. Inclua POLÍTICA, mas só quando ela afeta o mercado (juros, câmbio, fiscal, eleições, regulação, etc.).
 
 HOJE É ${weekday.toUpperCase()}, ${todayLabel}.
@@ -131,7 +138,7 @@ ${pool.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).jo
 
 NÃO repita o que saiu na edição de ontem:
 ${previousHeadlines.length ? previousHeadlines.map(h => `- ${h}`).join('\n') : '(primeira edição)'}
-
+${ragContext}
 REGRAS EDITORIAIS:
 ${forced
   ? '- As manchetes acima foram ESCOLHIDAS A DEDO pelo editor-chefe. Use TODAS elas — não descarte por relevância. Apenas AGRUPE as que tratam do mesmo fato numa única matéria.\n- REGRA CRÍTICA NO MODO CURADO: o campo "headline" de cada matéria deve reproduzir o título original da fonte com fidelidade máxima — pode ajustar gramática menor, mas NUNCA mude o sentido, a ironia ou as palavras-chave. O editor escolheu aquele título por um motivo.'
@@ -169,6 +176,7 @@ PUNCHLINE ("punchline") — A PRIMEIRA COISA QUE O LEITOR VÊ:
   → "O boleto não tem dó de quem não se planejou."
   → "Quem controla o pouco hoje, comanda o muito amanhã."
 - NÃO é a manchete. NÃO é genérica/clichê vazio. Tem que ter verdade e peso, e ser entendida por todo mundo.
+${recentPunchlines.length ? `- PROIBIDO repetir — punchlines já usadas nas últimas edições (não use frases iguais nem muito parecidas): ${recentPunchlines.map(p => `"${p}"`).join(' | ')}` : ''}
 
 ESTRUTURA DA ABERTURA ("intro"):
 Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia inteligente que o leitor recebe às 5h.
@@ -220,6 +228,7 @@ REGRA DE FORMATO para TODOS os blocos extras: texto puro, sem asteriscos, sem ne
 
 "wordOfDay" — PALAVRA DO DIA: um conceito, fenômeno ou palavra de QUALQUER área do conhecimento — psicologia, filosofia, biologia, história, linguística, física, antropologia, sociologia, economia comportamental, neurociência. NÃO priorize finanças; o restante da edição já é sobre dinheiro.
   - "word": escolha um termo DIFERENTE e ORIGINAL. Evite os mais óbvios e famosos (Dunning-Kruger, Zeigarnik, viés de confirmação). Prefira conceitos menos conhecidos que sejam genuinamente interessantes.
+  - PROIBIDO usar o formato "Efeito [Nome]" ou qualquer palavra/conceito que comece com "Efeito". Há um universo enorme de conceitos — explore outros campos.
 ${recentWords.length ? `  - PROIBIDO repetir — já usados nas últimas edições: ${recentWords.join(', ')}` : ''}
   - "meaning": o que significa, em linguagem simples (1-2 frases).
   - "application": como se aplica na vida real, em EXATAMENTE 3 frases curtas e práticas.
@@ -433,11 +442,12 @@ export async function GET(request: Request) {
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
     const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
-    const recentWords: string[] = (await sanity.fetch(
-      '*[_type=="edition" && defined(wordOfDay.word)] | order(date desc)[0...30].wordOfDay.word'
-    )).filter(Boolean)
+    const [recentWords, recentPunchlines]: [string[], string[]] = await Promise.all([
+      sanity.fetch('*[_type=="edition" && defined(wordOfDay.word)] | order(date desc)[0...30].wordOfDay.word').then((r: unknown[]) => r.filter(Boolean) as string[]),
+      sanity.fetch('*[_type=="edition" && defined(punchline)] | order(date desc)[0...20].punchline').then((r: unknown[]) => r.filter(Boolean) as string[]),
+    ])
     const [{ curation, news: pool }, marketSnapshot, lastNumber] = await Promise.all([
-      curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated, recentWords),
+      curate(news, prev || [], brtWeekday(date), brtDayLabel(date), useCurated, recentWords, recentPunchlines),
       fetchMarketSnapshot(),
       sanity.fetch<number | null>('*[_type=="edition" && defined(number)] | order(number desc)[0].number'),
     ])

@@ -1,17 +1,16 @@
 /**
- * Curadoria humana da edição (noite anterior).
- * Roda ~22h BRT. Busca o TRIPLO de manchetes candidatas, salva um
- * pendingEdition e manda no Telegram com botões toggle. O editor marca quais
- * entram; o cron das 5h monta a edição só com as escolhidas (com fallback
- * automático se ninguém selecionar).
- *
- * Fontes: notícias do portal Endinheirados publicadas hoje (aparecem no topo)
- * + notícias externas dos feeds RSS do dia.
+ * Curadoria da edição (noite anterior).
+ * Roda ~22h BRT. Busca candidatos via RSS, salva pendingEdition + rascunho
+ * de edition com 3 opções de abertura geradas por IA. Notifica o Telegram.
+ * O editor monta a edição no admin (/admin/edicao) e agenda.
  */
+import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgConfigured, tgAlert } from '@/lib/publish-core'
-import { type Candidate, candidatesKeyboard, candidatesMessage } from '@/lib/editionCuration'
+import { type Candidate } from '@/lib/editionCuration'
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -124,65 +123,115 @@ export async function GET(request: Request) {
     const date = targetEditionDate()
     const force = new URL(request.url).searchParams.get('force') === '1'
 
-    // idempotência: se já existe seleção em andamento/pronta para essa data, não duplica.
-    // Com ?force=1, apaga as anteriores e recria (útil pra re-disparar/testar).
-    const existingIds: string[] = await sanity.fetch('*[_type=="pendingEdition" && date==$d && status in ["selecting","selected"]]._id', { d: date })
-    if (existingIds?.length) {
-      if (!force) return NextResponse.json({ ok: true, message: 'Já existe seleção para essa data', date })
-      for (const eid of existingIds) { try { await sanity.delete(eid) } catch { /* ignore */ } }
+    // Idempotência — com ?force=1 recria tudo
+    const existingPending: string[] = await sanity.fetch('*[_type=="pendingEdition" && date==$d]._id', { d: date })
+    const existingDraft: string[] = await sanity.fetch('*[_type=="edition" && date==$d && status in ["rascunho","agendado"]]._id', { d: date })
+    if (existingPending.length || existingDraft.length) {
+      if (!force) return NextResponse.json({ ok: true, message: 'Já existe rascunho para essa data', date })
+      for (const id of [...existingPending, ...existingDraft]) {
+        try { await sanity.delete(id) } catch { /* ignore */ }
+      }
     }
 
     const news = await fetchNews()
     if (news.length < 6) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
-    const candidates: Candidate[] = news.slice(0, 45).map((n, i) => ({
-      _key: nanoid(8), idx: i, source: n.source, title: n.title, description: n.description, url: n.url, pubDate: n.pubDate, selected: false,
-    }))
+    const allNews = news.slice(0, 45)
 
-    if (!tgConfigured()) {
-      return NextResponse.json({ ok: false, message: 'Telegram não configurado — curadoria precisa do Telegram' }, { status: 200 })
+    // Busca OG images das top 15 notícias em paralelo (melhor esforço, sem bloquear)
+    async function fetchOgImage(url: string): Promise<string | undefined> {
+      try {
+        const html = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+          signal: AbortSignal.timeout(6000),
+        }).then(r => r.text())
+        const img = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+          ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1]
+          ?? html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+        if (!img) return undefined
+        return img.startsWith('http') ? img : new URL(img, url).href
+      } catch { return undefined }
     }
 
-    const doc = await sanity.create({
+    const imageResults = await Promise.allSettled(allNews.slice(0, 15).map(n => fetchOgImage(n.url)))
+    const images = imageResults.map(r => r.status === 'fulfilled' ? r.value : undefined)
+
+    const candidates: Candidate[] = allNews.map((n, i) => ({
+      _key: nanoid(8), idx: i, source: n.source, title: n.title,
+      description: n.description, url: n.url, pubDate: n.pubDate, selected: false,
+      ...(i < 15 && images[i] ? { imageUrl: images[i] } : {}),
+    }))
+
+    // Salva pendingEdition (admin lê os candidatos daqui)
+    const pending = await sanity.create({
       _type: 'pendingEdition', date, status: 'selecting', candidates, createdAt: new Date().toISOString(),
     })
 
-    const tgPost = async (body: object) =>
-      fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, disable_web_page_preview: true, ...body }),
-      }).then(r => r.json())
+    // Gera 3 opções de abertura com Haiku
+    const top5 = candidates.slice(0, 5).map(c => `- ${c.title} (${c.source})`).join('\n')
+    let introOptions: Array<{ punchline: string; intro: string }> = []
+    try {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 700,
+        messages: [{
+          role: 'user',
+          content: `Você é editor da newsletter Endinheirados (finanças pessoais, Brasil). Com base nas manchetes do dia, escreva 3 opções de abertura para o email de amanhã.
 
-    // Parte a lista em chunks de ≤4000 chars para não bater o limite do Telegram
-    const fullText = candidatesMessage(date, candidates)
-    const LIMIT = 4000
-    const chunks: string[] = []
-    if (fullText.length <= LIMIT) {
-      chunks.push(fullText)
-    } else {
-      const lines = fullText.split('\n\n')
-      let cur = ''
-      for (const line of lines) {
-        if ((cur + '\n\n' + line).length > LIMIT && cur) { chunks.push(cur.trim()); cur = line }
-        else { cur = cur ? cur + '\n\n' + line : line }
-      }
-      if (cur.trim()) chunks.push(cur.trim())
+Cada opção:
+- punchline: frase de impacto, max 80 chars, informal e curiosa (não corporativo)
+- intro: 2-3 frases que contextualizam o dia com personalidade — como um amigo bem-informado falaria
+
+Manchetes:
+${top5}
+
+Responda SOMENTE com JSON sem markdown:
+[{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."}]`,
+        }],
+      })
+      const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
+      introOptions = JSON.parse(raw)
+    } catch (e) {
+      console.error('[edition-candidates] Erro ao gerar intros:', e)
     }
 
-    // Envia partes de texto sem teclado, exceto a última que leva o teclado
-    for (let i = 0; i < chunks.length - 1; i++) {
-      await tgPost({ text: chunks[i] })
-    }
-    const sent = await tgPost({ text: chunks[chunks.length - 1], reply_markup: candidatesKeyboard(doc._id, candidates) })
+    // Número sequencial da edição
+    const lastEdition = await sanity.fetch<{ number: number } | null>(
+      '*[_type=="edition"] | order(number desc)[0]{number}'
+    )
+    const nextNumber = (lastEdition?.number ?? 0) + 1
 
-    // guarda o id da mensagem com o teclado pra editar nos toggles
-    if (sent?.result?.message_id) {
-      await sanity.patch(doc._id).set({ chatId: sent.result.chat.id, messageId: sent.result.message_id }).commit()
+    // Cria rascunho da edition (o editor monta os blocos no admin)
+    await sanity.create({
+      _type: 'edition',
+      date,
+      number: nextNumber,
+      slug: { _type: 'slug', current: date },
+      status: 'rascunho',
+      introOptions,
+      blocks: [],
+    })
+
+    // Notificação Telegram — simples, sem botões de curadoria
+    if (tgConfigured()) {
+      const dateFormatted = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', {
+        weekday: 'long', day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo',
+      })
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text: `📋 *Edição de ${dateFormatted}* pronta para montar\n\n${candidates.length} candidatos · ${introOptions.length} opções de abertura geradas\n\n👉 ${SITE}/admin/edicao`,
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true,
+        }),
+      }).catch(() => {})
     }
 
-    return NextResponse.json({ ok: true, date, candidates: candidates.length, pendingId: doc._id })
+    return NextResponse.json({ ok: true, date, candidates: candidates.length, introOptions: introOptions.length, pendingId: pending._id })
   } catch (err) {
-    await tgAlert('Cron candidatas da edição (noite)', err)
+    await tgAlert('Cron candidatas da edição', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }

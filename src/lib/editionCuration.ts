@@ -9,6 +9,7 @@ export type Candidate = {
   url: string
   pubDate: string
   selected: boolean
+  imageUrl?: string
 }
 
 export function fmtCandidateDate(pub: string): string {

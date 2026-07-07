@@ -71,11 +71,17 @@ export async function GET(request: Request) {
 
     const caption = await buildCaption(post)
 
-    const photoRes = await fetch(`${BOT}/sendPhoto`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, photo: ogUrl }),
-    })
+    // Busca a imagem gerada pelo /api/og no próprio servidor e envia como bytes
+    // (Telegram não consegue acessar URLs do Vercel diretamente)
+    const imgRes = await fetch(ogUrl, { signal: AbortSignal.timeout(15000) })
+    if (!imgRes.ok) throw new Error(`OG image fetch failed: ${imgRes.status}`)
+    const imgBuffer = await imgRes.arrayBuffer()
+
+    const form = new FormData()
+    form.append('chat_id', CHAT_ID)
+    form.append('photo', new Blob([imgBuffer], { type: 'image/png' }), 'cover.png')
+
+    const photoRes = await fetch(`${BOT}/sendPhoto`, { method: 'POST', body: form })
     if (!photoRes.ok) throw new Error(`Telegram sendPhoto: ${await photoRes.text()}`)
 
     await fetch(`${BOT}/sendMessage`, {

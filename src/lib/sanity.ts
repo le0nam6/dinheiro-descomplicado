@@ -80,7 +80,7 @@ export async function getEditionByDate(date: string) {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "edition" && slug.current == $date][0] { date, slug, number, title, punchline, intro, closing, publishedAt, readingTime, stories, marketSnapshot, wordOfDay, curiosity, recommendation, reflection }`,
+      `*[_type == "edition" && slug.current == $date][0] { date, slug, number, title, punchline, intro, closing, publishedAt, readingTime, stories, blocks, marketSnapshot, wordOfDay, curiosity, recommendation, reflection }`,
       { date },
       { next: { revalidate: 60, tags: [`edition:${date}`] } }
     )

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient } from 'next-sanity'
-import { sendEditionPreviewEmail } from '@/lib/brevo'
+import { sendEditionPreviewEmail, sendEditionPreviewEmailFromBlocks } from '@/lib/brevo'
 
 function sessionToken(password: string) {
   const secret = process.env.CRON_SECRET || 'fallback-dev-secret'
@@ -33,8 +33,27 @@ const sanity = createClient({
 export async function POST(request: Request) {
   if (!await checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { email } = await request.json()
+  const { email, draftId } = await request.json()
   if (!email) return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
+
+  // Novo formato: envia prévia do rascunho atual (blocks[])
+  if (draftId) {
+    const draft = await sanity.fetch(
+      `*[_id==$id][0]{ _id, date, number, title, punchline, intro, closing, readingTime, blocks }`,
+      { id: draftId }
+    )
+    if (!draft) return NextResponse.json({ error: 'Rascunho não encontrado' }, { status: 404 })
+    await sendEditionPreviewEmailFromBlocks(email, {
+      date: draft.date,
+      title: draft.title,
+      punchline: draft.punchline,
+      intro: draft.intro,
+      closing: draft.closing,
+      readingTime: draft.readingTime,
+      blocks: draft.blocks ?? [],
+    })
+    return NextResponse.json({ ok: true })
+  }
 
   const [edition, featuredPosts] = await Promise.all([
     sanity.fetch(

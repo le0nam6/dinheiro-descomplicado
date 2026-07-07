@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from 'next-sanity'
-import { sendEditionCampaign } from '@/lib/brevo'
+import { sendEditionCampaign, sendEditionCampaignFromBlocks } from '@/lib/brevo'
 import { tgAlert } from '@/lib/publish-core'
 
 const sanity = createClient({
@@ -24,7 +24,8 @@ export async function GET(request: Request) {
     const [edition, featuredPosts] = await Promise.all([
       sanity.fetch(
         `*[_type=="edition" && !(_id in path("drafts.**")) && date==$date] | order(date desc)[0]{
-          date, title, punchline, intro, closing,
+          _id, date, title, punchline, intro, closing, readingTime,
+          "blocks": blocks[],
           "stories": stories[]{ emoji, tag, headline, hook, what, why, "image": image{ url, alt, credit } },
           wordOfDay, curiosity, recommendation, reflection,
           "slug": slug.current
@@ -45,20 +46,33 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: false, message: `Nenhuma edição publicada para ${date}` })
     }
 
-    await sendEditionCampaign({
-      date: edition.date,
-      title: edition.title,
-      url: `https://portalendinheirados.com.br/edicao/${edition.slug}`,
-      punchline: edition.punchline,
-      intro: edition.intro,
-      closing: edition.closing,
-      stories: edition.stories || [],
-      featuredPosts,
-      wordOfDay: edition.wordOfDay,
-      curiosity: edition.curiosity,
-      recommendation: edition.recommendation,
-      reflection: edition.reflection,
-    })
+    // Edições criadas pelo builder usam blocks[]; as do cron antigo usam stories[]
+    if (edition.blocks?.length > 0) {
+      await sendEditionCampaignFromBlocks({
+        date: edition.date,
+        title: edition.title || '',
+        punchline: edition.punchline || '',
+        intro: edition.intro || '',
+        closing: edition.closing || '',
+        readingTime: edition.readingTime,
+        blocks: edition.blocks,
+      })
+    } else {
+      await sendEditionCampaign({
+        date: edition.date,
+        title: edition.title || '',
+        url: `https://portalendinheirados.com.br/edicao/${edition.slug}`,
+        punchline: edition.punchline,
+        intro: edition.intro,
+        closing: edition.closing,
+        stories: edition.stories || [],
+        featuredPosts,
+        wordOfDay: edition.wordOfDay,
+        curiosity: edition.curiosity,
+        recommendation: edition.recommendation,
+        reflection: edition.reflection,
+      })
+    }
 
     return NextResponse.json({ ok: true, date, title: edition.title })
   } catch (err) {

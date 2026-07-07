@@ -234,6 +234,9 @@ export function AdminDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <a href="/studio" target="_blank" className="text-sm text-gray-400 hover:text-green-700">Sanity Studio ↗</a>
+          <Link href="/admin/edicao" className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors">
+            📋 Montar edição
+          </Link>
           <Link href="/admin/novo" className="bg-green-600 hover:bg-green-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors">
             + Novo artigo
           </Link>
