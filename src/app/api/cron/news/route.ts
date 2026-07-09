@@ -31,9 +31,9 @@ const FEEDS = [
   { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
 
-// Janelas de publicação (hora de Brasília). O agendador bate de hora em hora,
-// mas só geramos notícia nesses horários — 4 por dia.
-const PUBLISH_SLOTS = [8, 12, 16, 20]
+// Janelas de publicação (hora de Brasília). O agendador bate de hora em hora
+// (6h-23h) e agora geramos notícia em toda janela — cadência real de 1h em 1h.
+const PUBLISH_SLOTS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 
 type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
 
@@ -287,12 +287,12 @@ async function fetchArticleText(url: string): Promise<string> {
 async function processNews(skipRecencyLock = false, articleUrl?: string) {
   // Gate de janela + trava de recência. Em dev/force, ambos são ignorados.
   if (!skipRecencyLock && !articleUrl) {
-    // Só publica nos slots de 8h, 12h, 16h e 20h (horário de Brasília).
+    // Publica em toda janela horária (6h-23h BRT) — cadência de 1h em 1h.
     const spNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
     if (!PUBLISH_SLOTS.includes(spNow.getHours())) return
-    // Trava de recência: se já saiu notícia na última hora, não duplica o slot.
+    // Trava de recência: evita duplicar dentro da mesma janela horária (< 50min desde a última).
     const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
-    if (last && Date.now() - new Date(last).getTime() < 90 * 60 * 1000) return
+    if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
   }
 
   const news = await fetchNews()
