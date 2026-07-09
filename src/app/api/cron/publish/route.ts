@@ -9,7 +9,7 @@ import {
   sanity, SITE, type GeneratedPost,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
   tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
-  adminToken,
+  adminToken, parseJsonSafe,
 } from '@/lib/publish-core'
 import { getEditorialContext, getPublishedPostsByCategory, getSimilarPublishedTopics, indexPublishedPost } from '@/lib/rag'
 
@@ -426,7 +426,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   })
 
   let articleText = (articleMsg.content[0] as { type: string; text: string }).text.trim()
-  let article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+  let article = await parseJsonSafe<Record<string, unknown>>(articleText)
 
   // Valida semanticamente: se o título+excerpt for similar demais a algo já publicado, pede regeneração
   const dupHint = `${article.title}\n${article.excerpt || ''}`
@@ -443,7 +443,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
       ],
     })
     articleText = (retryMsg.content[0] as { type: string; text: string }).text.trim()
-    article = JSON.parse(articleText.replace(/^```json\n?|\n?```$/g, ''))
+    article = await parseJsonSafe<Record<string, unknown>>(articleText)
     console.log(`[cron/publish] Regenerado: "${article.title}"`)
   }
 
@@ -509,7 +509,7 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   })
 
   const igText = (igMsg.content[0] as { type: string; text: string }).text.trim()
-  const igAssets = JSON.parse(igText.replace(/^```json\n?|\n?```$/g, ''))
+  const igAssets = await parseJsonSafe<Record<string, unknown>>(igText)
 
   const parsed = { ...article, ...igAssets }
   if (articleImageUrl) parsed.articleImageUrl = articleImageUrl

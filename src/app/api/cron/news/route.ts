@@ -1,7 +1,7 @@
 /**
- * Cron jornalístico. O agendador (cron-job.org) bate de hora em hora, mas a
- * rota só gera notícia em 4 janelas por dia: 8h, 12h, 16h e 20h (horário de
- * Brasília). Fora desses slots, qualquer disparo é ignorado.
+ * Cron jornalístico. O agendador (cron-job.org) bate de hora em hora (6h-23h
+ * BRT) e a rota gera notícia em toda janela, com trava de recência de 50min
+ * pra não duplicar dentro da mesma hora.
  * Publica uma notícia do mercado financeiro BR + mundo, com IMPARCIALIDADE
  * mandatória, fontes discriminadas e termômetro de imparcialidade (no front).
  * Cada notícia entra como rascunho e vai pro Telegram para aprovação manual.
@@ -12,7 +12,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls, fetchPhoto, fetchSerperImages,
   tgAlert, tgConfigured, tgSendMessage, humanizePostBody, blogApprovalKeyboard,
-  nextQueueItem, markQueueUsed,
+  nextQueueItem, markQueueUsed, parseJsonSafe,
 } from '@/lib/publish-core'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -244,7 +244,7 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
     messages: [{ role: 'user', content: prompt }],
   })
   const text = (msg.content[0] as { text: string }).text.trim()
-  const parsed = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  const parsed = await parseJsonSafe<GeneratedPost & { sourceIndexes?: number[]; category?: string }>(text)
   const idxs: number[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [1]
   const newsSources = idxs.map((i: number) => top[i - 1]).filter(Boolean)
   const VALID_CATEGORIES = ['investimentos', 'educação financeira', 'notícias', 'economia']

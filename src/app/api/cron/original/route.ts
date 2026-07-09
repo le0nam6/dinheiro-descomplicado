@@ -26,7 +26,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls,
   fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
-  originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed,
+  originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed, parseJsonSafe,
 } from '@/lib/publish-core'
 import { getEditorialContext } from '@/lib/rag'
 
@@ -356,7 +356,7 @@ Responda SOMENTE com JSON:
     }],
   })
   const text = (msg.content[0] as { text: string }).text.trim()
-  const angles = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  const angles = await parseJsonSafe<ProposalAngles>(text)
 
   const doc = await sanity.create({
     _type: 'originalProposal',
@@ -416,7 +416,7 @@ async function callClaude(prompt: string): Promise<GeneratedPost> {
   const fullPrompt = [prompt, ragContext, redditContext].filter(Boolean).join('\n')
   const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: fullPrompt }] })
   const text = (msg.content[0] as { text: string }).text.trim()
-  return JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  return parseJsonSafe<GeneratedPost>(text)
 }
 
 function recentBlock(recent: string[]) {
@@ -668,7 +668,7 @@ Responda SOMENTE com JSON:
   })
 
   const text = (msg.content[0] as { text: string }).text.trim()
-  const angles: ProposalAngles = JSON.parse(text.replace(/^```json\n?|\n?```$/g, ''))
+  const angles: ProposalAngles = await parseJsonSafe<ProposalAngles>(text)
 
   const doc = await sanity.create({
     _type: 'originalProposal',

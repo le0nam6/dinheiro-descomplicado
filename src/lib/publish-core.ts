@@ -9,6 +9,29 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const SITE = 'https://portalendinheirados.com.br'
 
+// Parse tolerante de JSON gerado por IA: às vezes vem com aspas ou quebras de
+// linha não escapadas dentro de strings. Se o parse direto falhar, pede pra
+// IA reparar a sintaxe (sem alterar conteúdo) antes de desistir.
+export async function parseJsonSafe<T>(rawText: string, model = 'claude-haiku-4-5-20251001'): Promise<T> {
+  const cleaned = rawText.replace(/^```json\n?|\n?```$/g, '')
+  try {
+    return JSON.parse(cleaned) as T
+  } catch (err) {
+    console.log('[parseJsonSafe] JSON malformado, tentando reparar via IA:', err instanceof Error ? err.message : err)
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const repairMsg = await anthropic.messages.create({
+      model,
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: `O JSON abaixo veio malformado (provavelmente aspas ou quebras de linha não escapadas dentro de alguma string). Conserte a sintaxe SEM alterar nenhum conteúdo de texto. Retorne SOMENTE o JSON válido, sem markdown, sem explicação:\n\n${cleaned}`,
+      }],
+    })
+    const repairedText = (repairMsg.content[0] as { type: string; text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
+    return JSON.parse(repairedText) as T
+  }
+}
+
 async function notifyGoogleIndexing(url: string) {
   const privateKey = process.env.GOOGLE_INDEXING_PRIVATE_KEY?.replace(/\\n/g, '\n')
   const clientEmail = process.env.GOOGLE_INDEXING_CLIENT_EMAIL
