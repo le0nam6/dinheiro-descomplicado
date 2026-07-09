@@ -86,29 +86,32 @@ Escolha UM termo financeiro relevante para o contexto acima (pode ser técnico m
 
 ${context}
 
-Gere 3 opções de abertura para a edição de hoje. Cada opção:
+Gere 3 opções de abertura para a edição de hoje, mais um título temático único para a edição. Cada opção de abertura:
 - punchline: frase de impacto max 80 chars, informal e curiosa — baseada nas histórias acima, não genérica
 - intro: 2-3 frases conectando as histórias do dia com personalidade, max 120 palavras
 
+O título (campo "title", único, não por opção): resume o tema central da edição em poucas palavras, max 60 chars, sem ser genérico tipo "Edição de hoje". Baseie-se no fio condutor das manchetes.
+
 Retorne JSON puro, sem markdown:
-[{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."}]`,
+{"title":"...","options":[{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."}]}`,
       }],
     })
     const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
-    let introOptions: Array<{ punchline: string; intro: string }>
+    let parsed: { title: string; options: Array<{ punchline: string; intro: string }> }
     try {
-      introOptions = JSON.parse(raw)
+      parsed = JSON.parse(raw)
     } catch {
       return NextResponse.json({ error: 'Falha ao parsear resposta', raw }, { status: 500 })
     }
 
-    const withKeys = introOptions.map(o => ({ ...o, _key: nanoid(8) }))
+    const title = parsed.title
+    const withKeys = parsed.options.map(o => ({ ...o, _key: nanoid(8) }))
 
     if (draftId) {
-      await sanity.patch(draftId).set({ introOptions: withKeys, selectedIntroIndex: null }).commit()
+      await sanity.patch(draftId).set({ introOptions: withKeys, selectedIntroIndex: null, title }).commit()
     }
 
-    return NextResponse.json({ ok: true, introOptions: withKeys })
+    return NextResponse.json({ ok: true, introOptions: withKeys, title })
   }
 
   return NextResponse.json({ error: 'type inválido' }, { status: 400 })

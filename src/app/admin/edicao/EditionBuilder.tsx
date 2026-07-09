@@ -425,6 +425,7 @@ export function EditionBuilder() {
         id: draft._id, blocks: b, selectedIntroIndex: introIdx,
         punchline: intro?.punchline ?? draft.punchline ?? '',
         intro: intro?.intro ?? draft.intro ?? '',
+        title: draft.title ?? '',
         ...extra,
       }),
     })
@@ -550,7 +551,7 @@ export function EditionBuilder() {
         body: JSON.stringify({ type: 'intro', headlines: storyHeadlines, draftId: draft._id }),
       }).then(r => r.json())
       if (res.error) { setError(res.error); return }
-      setDraft(d => d ? { ...d, introOptions: res.introOptions, selectedIntroIndex: undefined } : d)
+      setDraft(d => d ? { ...d, introOptions: res.introOptions, selectedIntroIndex: undefined, title: res.title ?? d.title } : d)
       setSelectedIntro(null)
     } catch (e) { setError(String(e)) }
     finally { setGeneratingIntro(false) }
