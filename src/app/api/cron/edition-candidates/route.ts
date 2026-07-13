@@ -1,14 +1,15 @@
 /**
  * Curadoria da edição (noite anterior).
  * Roda ~22h BRT. Busca candidatos via RSS, salva pendingEdition + rascunho
- * de edition com 3 opções de abertura geradas por IA. Notifica o Telegram.
- * O editor monta a edição no admin (/admin/edicao) e agenda.
+ * de edition com 3 opções de abertura geradas por IA. Manda o teclado de
+ * seleção pro Telegram — o editor marca as manchetes direto no celular e
+ * o cron de edição (5h) monta a edição automaticamente com as escolhidas.
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgConfigured, tgAlert } from '@/lib/publish-core'
-import { type Candidate } from '@/lib/editionCuration'
+import { type Candidate, candidatesMessage, candidatesKeyboard } from '@/lib/editionCuration'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -27,6 +28,13 @@ const FEEDS = [
   { source: 'Money Times', url: 'https://www.moneytimes.com.br/feed/' },
   { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
   { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
+  // Fontes usadas pelo The News (Geral/Night) e TNS Money — mapeadas lendo edições reais
+  { source: 'Folha (Mercado)', url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml' },
+  { source: 'CNN Brasil', url: 'https://admin.cnnbrasil.com.br/feed/' },
+  { source: 'Estadão Economia', url: 'https://www.estadao.com.br/arc/outboundfeeds/feeds/rss/sections/economia/' },
+  { source: 'BBC Brasil', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' },
+  { source: 'The Guardian Business', url: 'https://www.theguardian.com/uk/business/rss' },
+  { source: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
 ]
 
 const STOPWORDS = new Set(['de','do','da','dos','das','e','o','a','os','as','em','no','na','nos','nas','por','para','com','que','um','uma','se','ao','à','ou','foi','são','mais','mas','este','esta','esse','essa','pelo','pela','como','está','pelo','num','numa','entre','já','não','isso','isso','sua','seu','suas','seus','também'])
@@ -212,19 +220,18 @@ Responda SOMENTE com JSON sem markdown:
       blocks: [],
     })
 
-    // Notificação Telegram — simples, sem botões de curadoria
+    // Notificação Telegram — teclado de curadoria: marca as manchetes direto no celular.
+    // Limita aos 20 primeiros candidatos pra não estourar o limite de 4096 chars da
+    // mensagem do Telegram (o restante continua salvo e disponível no /admin/edicao).
     if (tgConfigured()) {
-      const dateFormatted = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', {
-        weekday: 'long', day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo',
-      })
+      const telegramCandidates = candidates.slice(0, 20)
       await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: process.env.TELEGRAM_CHAT_ID,
-          text: `📋 *Edição de ${dateFormatted}* pronta para montar\n\n${candidates.length} candidatos · ${introOptions.length} opções de abertura geradas\n\n👉 ${SITE}/admin/edicao`,
-          parse_mode: 'Markdown',
-          disable_web_page_preview: true,
+          text: candidatesMessage(date, telegramCandidates),
+          reply_markup: candidatesKeyboard(pending._id, telegramCandidates),
         }),
       }).catch(() => {})
     }

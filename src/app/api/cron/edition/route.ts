@@ -32,6 +32,13 @@ const FEEDS = [
   { source: 'InvestNews', url: 'https://investnews.com.br/feed/' },
   { source: 'Seu Dinheiro', url: 'https://www.seudinheiro.com/feed/' },
   { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
+  // Fontes usadas pelo The News (Geral/Night) e TNS Money — mapeadas lendo edições reais
+  { source: 'Folha (Mercado)', url: 'https://feeds.folha.uol.com.br/mercado/rss091.xml' },
+  { source: 'CNN Brasil', url: 'https://admin.cnnbrasil.com.br/feed/' },
+  { source: 'Estadão Economia', url: 'https://www.estadao.com.br/arc/outboundfeeds/feeds/rss/sections/economia/' },
+  { source: 'BBC Brasil', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' },
+  { source: 'The Guardian Business', url: 'https://www.theguardian.com/uk/business/rss' },
+  { source: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
 ]
 
 // Termos no título que indicam conteúdo completamente fora de pauta (esportes, entretenimento)
