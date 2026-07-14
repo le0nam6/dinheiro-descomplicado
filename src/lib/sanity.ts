@@ -58,7 +58,7 @@ export async function getEditions(limit = 30) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, number, title, intro, readingTime, "storyCount": count(stories) }`,
+      `*[_type == "edition"] | order(date desc) [0...$limit] { date, slug, number, title, intro, readingTime, "storyCount": count(stories) + count(blocks[_type == "storyBlock"]) }`,
       { limit },
       { next: { revalidate: 60, tags: ['edition'] } }
     )

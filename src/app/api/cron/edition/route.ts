@@ -10,7 +10,7 @@ import { NextResponse, after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto, nextQueueItem, markQueueUsed } from '@/lib/publish-core'
-import { sendEditionCampaign } from '@/lib/brevo'
+import { sendEditionCampaignFromBlocks, type EditionBlock } from '@/lib/brevo'
 import { getEditorialContext } from '@/lib/rag'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -89,7 +89,9 @@ async function fetchNews(): Promise<NewsItem[]> {
   return items
 }
 
+type StoryFormat = 'standard' | 'brief' | 'deep' | 'stat'
 type Story = {
+  format: StoryFormat
   emoji: string
   tag: string
   headline: string
@@ -98,6 +100,11 @@ type Story = {
   why: string
   imageQuery?: string
   sourceIndexes: number[]
+  deepStat?: string
+  deepImplication?: string
+  deepQuote?: string
+  statNumber?: string
+  statLabel?: string
 }
 type WordOfDay = { word: string; meaning: string; application: string }
 type Curation = {
@@ -198,9 +205,17 @@ Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia in
   → "O mundo financeiro não tirou férias. O brasileiro também não pode. Por isso você tá aqui às 5h lendo isso."
 
 ESTRUTURA DE CADA MATÉRIA — VARIE, não use sempre o mesmo molde:
-O leitor NÃO pode sentir que todas as matérias têm a mesma forma. Algumas são curtas e diretas, outras têm o impacto tecido na narrativa, outras separam fato e consequência. Escolha por matéria.
+O leitor NÃO pode sentir que todas as matérias têm a mesma forma. Escolha o "format" mais adequado para CADA matéria dentre os 4 abaixo — numa edição com 5-7 matérias, varie: não deixe tudo "standard".
 
-Campos:
+FORMATOS DISPONÍVEIS ("format"):
+- "standard": o padrão — hook + what + why. Use na maioria das matérias, quando o assunto pede desenvolvimento equilibrado.
+- "brief": matéria rápida e seca, sem grande desdobramento. Use para notícias informativas onde não há muito o que aprofundar. Pode deixar "why" vazio.
+- "deep": quando a matéria pede mais contexto/análise — histórico relevante, múltiplas camadas, ou consequências que vão além do óbvio. Preencha TAMBÉM: "deepStat" (um dado numérico marcante que sustenta a análise), "deepImplication" (1 frase sobre o que isso muda daqui pra frente), "deepQuote" (1 frase de efeito/reflexão do editor sobre o tema — NUNCA uma citação atribuída a alguém real, é uma frase de destaque, não uma fonte).
+- "stat": quando o centro da notícia é um NÚMERO que fala por si. Preencha TAMBÉM: "statNumber" (o número em destaque, ex: "R$ 1,2 trilhão", "37%"), "statLabel" (1 frase curta explicando o que esse número significa).
+
+Use "deep" ou "stat" em no máximo 2-3 matérias da edição — são os destaques visuais, não podem virar a maioria.
+
+Campos comuns a todos os formatos:
 
 1. "hook" — 1 frase de abertura que fisga antes dos fatos. Não é a manchete — é o ângulo humano, a ironia, ou o número mais impactante. NEM TODA matéria precisa de hook: deixe vazio ("") nas mais secas/técnicas, para criar contraste de ritmo. Exemplos:
    → "Essa decisão vai aparecer na sua conta de luz em breve."
@@ -261,6 +276,7 @@ Retorne SOMENTE JSON válido:
   "readingTime": 4,
   "stories": [
     {
+      "format": "standard",
       "emoji": "📈",
       "tag": "Juros",
       "headline": "manchete curta e descritiva",
@@ -269,12 +285,33 @@ Retorne SOMENTE JSON válido:
       "why": "impacto no bolso (ou \"\" quando já está óbvio no what)",
       "imageQuery": "termo em inglês p/ foto, específico ao tema (sempre preencher)",
       "sourceIndexes": [1, 4]
+    },
+    {
+      "format": "deep",
+      "emoji": "🛢️",
+      "tag": "Global",
+      "headline": "manchete curta e descritiva",
+      "hook": "", "what": "...", "why": "...",
+      "deepStat": "dado numérico marcante (só quando format é deep)",
+      "deepImplication": "1 frase sobre o que muda daqui pra frente (só quando format é deep)",
+      "deepQuote": "1 frase de efeito do editor, sem atribuição (só quando format é deep)",
+      "imageQuery": "...", "sourceIndexes": [2]
+    },
+    {
+      "format": "stat",
+      "emoji": "💰",
+      "tag": "Economia",
+      "headline": "manchete curta e descritiva",
+      "hook": "", "what": "...", "why": "...",
+      "statNumber": "o número em destaque (só quando format é stat)",
+      "statLabel": "1 frase curta explicando o número (só quando format é stat)",
+      "imageQuery": "...", "sourceIndexes": [3]
     }
   ],
   "wordOfDay": { "word": "...", "meaning": "...", "application": "três frases." },
   "curiosity": "..."${isFriday ? ',\n  "recommendation": "..."' : ''}${isSunday ? ',\n  "reflection": "..."' : ''}
 }
-LEMBRE: deixe hook vazio em algumas e why vazio em 1-2 — a variação no texto é o que diferencia a edição de um molde repetido. imageQuery sempre preenchido.
+LEMBRE: os 3 exemplos acima são só ilustração de formato — gere as 5-7 matérias reais da edição de hoje, variando "format" entre elas (a maioria "standard"/"brief", no máximo 2-3 em "deep" ou "stat"). Deixe hook vazio em algumas e why vazio em 1-2 — a variação no texto é o que diferencia a edição de um molde repetido. imageQuery sempre preenchido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
 
   const msg = await anthropic.messages.create({
@@ -452,7 +489,12 @@ export async function GET(request: Request) {
     const news = useCurated ? forcedNews : [...todayAsNews, ...rawNews]
     if (news.length < 4) return NextResponse.json({ ok: false, message: 'Notícias insuficientes' }, { status: 200 })
 
-    const prev: string[] = await sanity.fetch('*[_type=="edition"] | order(date desc)[0].stories[].headline')
+    const lastEdition: { stories?: Array<{ headline?: string }>; blocks?: Array<{ _type: string; headline?: string }> } | null =
+      await sanity.fetch('*[_type=="edition"] | order(date desc)[0]{stories, blocks}')
+    const prev: string[] = [
+      ...(lastEdition?.stories || []).map(s => s.headline).filter(Boolean) as string[],
+      ...(lastEdition?.blocks || []).filter(b => b._type === 'storyBlock').map(b => b.headline).filter(Boolean) as string[],
+    ]
     const [recentWords, recentPunchlines]: [string[], string[]] = await Promise.all([
       sanity.fetch('*[_type=="edition" && defined(wordOfDay.word)] | order(date desc)[0...30].wordOfDay.word').then((r: unknown[]) => r.filter(Boolean) as string[]),
       sanity.fetch('*[_type=="edition" && defined(punchline)] | order(date desc)[0...20].punchline').then((r: unknown[]) => r.filter(Boolean) as string[]),
@@ -469,29 +511,55 @@ export async function GET(request: Request) {
     // Imagem em TODAS as matérias. Prioridade: foto da própria matéria (RSS) →
     // og:image da página → Pexels/Unsplash. Sequencial p/ não repetir imagem.
     const usedPhotoUrls = new Set<string>()
-    const stories: Array<Record<string, unknown>> = []
+    const VALID_FORMATS: StoryFormat[] = ['standard', 'brief', 'deep', 'stat']
+    const storyBlocks: Array<Record<string, unknown>> = []
     for (const s of curation.stories || []) {
       const idxs = Array.isArray(s.sourceIndexes) ? s.sourceIndexes : []
       const srcItems = idxs.map(i => pool[i - 1]).filter(Boolean)
-      const sources = srcItems.map(n => ({ _type: 'source', _key: nanoid(6), name: n.source, url: n.url }))
       const fallbackQuery = `${s.tag || ''} finance brazil`.trim()
       const image = await resolveStoryImage(srcItems, s.imageQuery || '', fallbackQuery, usedPhotoUrls)
-      stories.push({
-        _type: 'story', _key: nanoid(8),
+      const format: StoryFormat = VALID_FORMATS.includes(s.format) ? s.format : 'standard'
+      storyBlocks.push({
+        _type: 'storyBlock', _key: nanoid(8), format,
         emoji: s.emoji || '•', tag: s.tag || '', headline: s.headline,
+        sourceUrl: srcItems[0]?.url || '',
         hook: s.hook || '',
-        what: s.what, why: s.why, sources,
+        what: s.what, why: s.why,
+        ...(format === 'deep' ? { deepStat: s.deepStat || '', deepImplication: s.deepImplication || '', deepQuote: s.deepQuote || '' } : {}),
+        ...(format === 'stat' ? { statNumber: s.statNumber || '', statLabel: s.statLabel || '' } : {}),
         ...(image ? { image } : {}),
       })
     }
-
-    const queuedCuriosity = null // fila editorial é para conteúdo separado, não para a edição
 
     const wod = curation.wordOfDay
     const slugValue = preview ? previewSlug : date
     const thematicTitle = (curation.title && curation.title.length <= 120 && !curation.title.startsWith('Edição de'))
       ? curation.title
       : editionTitle(date)
+    const readingTime = curation.readingTime || Math.max(3, Math.round(storyBlocks.length * 0.8))
+
+    // Monta os blocos extras (mercado, palavra do dia, curiosidade, recomendação, reflexão)
+    // e concatena com as matérias — mesmo formato usado pelo builder web.
+    const blocks: Array<Record<string, unknown>> = [...storyBlocks]
+    if (marketSnapshot.length > 0) {
+      blocks.push({
+        _type: 'marketBlock', _key: nanoid(8),
+        items: marketSnapshot.map(m => ({ _type: 'quote', _key: nanoid(6), ...m })),
+      })
+    }
+    if (curation.curiosity) {
+      blocks.push({ _type: 'curiosidadeBlock', _key: nanoid(8), text: curation.curiosity })
+    }
+    if (wod?.word) {
+      blocks.push({ _type: 'palavraBlock', _key: nanoid(8), word: wod.word, meaning: wod.meaning || '', application: wod.application || '' })
+    }
+    if (curation.recommendation) {
+      blocks.push({ _type: 'recomendacaoBlock', _key: nanoid(8), text: curation.recommendation })
+    }
+    if (curation.reflection) {
+      blocks.push({ _type: 'reflexaoBlock', _key: nanoid(8), text: curation.reflection })
+    }
+
     // publishedAt = 5h BRT (UTC-3 = 8h UTC) da data da edição, independente de quando o cron rodou
     const publishedAt = new Date(`${date}T08:00:00.000Z`).toISOString()
     await sanity.create({
@@ -504,13 +572,8 @@ export async function GET(request: Request) {
       punchline: curation.punchline || '',
       intro: curation.intro || '',
       closing: curation.closing || '',
-      readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
-      stories,
-      marketSnapshot: marketSnapshot.map(m => ({ _type: 'quote', _key: nanoid(6), ...m })),
-      ...(wod?.word ? { wordOfDay: { _type: 'wordOfDay', word: wod.word, meaning: wod.meaning || '', application: wod.application || '' } } : {}),
-      ...(curation.curiosity ? { curiosity: curation.curiosity } : {}),
-      ...(curation.recommendation ? { recommendation: curation.recommendation } : {}),
-      ...(curation.reflection ? { reflection: curation.reflection } : {}),
+      readingTime,
+      blocks,
     })
 
     const url = `${SITE}/edicao/${slugValue}`
@@ -526,29 +589,23 @@ export async function GET(request: Request) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: process.env.TELEGRAM_CHAT_ID,
-            text: `🗞️ Edição publicada (${stories.length} matérias)\n\n${curation.title}\n${url}`,
+            text: `🗞️ Edição publicada (${storyBlocks.length} matérias)\n\n${curation.title}\n${url}`,
           }),
         }).catch(() => {})
       }
       // Envia campanha de e-mail para inscritos no Brevo
-      sendEditionCampaign({
+      sendEditionCampaignFromBlocks({
         date,
         title: curation.title || '',
-        url,
         punchline: curation.punchline,
         intro: curation.intro,
         closing: curation.closing,
-        readingTime: curation.readingTime || Math.max(3, Math.round(stories.length * 0.8)),
-        marketSnapshot,
-        stories,
-        wordOfDay: curation.wordOfDay,
-        curiosity: curation.curiosity,
-        recommendation: curation.recommendation,
-        reflection: curation.reflection,
-      }).catch(e => tgAlert('Brevo sendEditionCampaign', e))
+        readingTime,
+        blocks: blocks as unknown as EditionBlock[],
+      }).catch(e => tgAlert('Brevo sendEditionCampaignFromBlocks', e))
     }
 
-    return NextResponse.json({ ok: true, preview, date, stories: stories.length, url })
+    return NextResponse.json({ ok: true, preview, date, stories: storyBlocks.length, url })
   } catch (err) {
     await tgAlert('Cron edição diária (5h)', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })

@@ -294,7 +294,7 @@ type PalavraBlock = { _type: 'palavraBlock'; _key: string; word?: string; meanin
 type FeaturedPostsBlock = { _type: 'featuredPostsBlock'; _key: string; posts?: Array<{ title: string; slug: string; excerpt?: string; category?: string }> }
 type RecomendacaoBlock = { _type: 'recomendacaoBlock'; _key: string; text?: string }
 type ReflexaoBlock = { _type: 'reflexaoBlock'; _key: string; text?: string }
-type EditionBlock = StoryBlock | HeadlinesBlock | PubliBlock | MarketBlock | CuriosidadeBlock | PalavraBlock | FeaturedPostsBlock | RecomendacaoBlock | ReflexaoBlock
+export type EditionBlock = StoryBlock | HeadlinesBlock | PubliBlock | MarketBlock | CuriosidadeBlock | PalavraBlock | FeaturedPostsBlock | RecomendacaoBlock | ReflexaoBlock
 
 export type EditionBlocksParams = {
   date: string
