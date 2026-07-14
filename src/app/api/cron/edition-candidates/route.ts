@@ -1,17 +1,15 @@
 /**
  * Curadoria da edição (noite anterior).
- * Roda ~22h BRT. Busca candidatos via RSS, salva pendingEdition + rascunho
- * de edition com 3 opções de abertura geradas por IA. Manda o teclado de
- * seleção pro Telegram — o editor marca as manchetes direto no celular e
- * o cron de edição (5h) monta a edição automaticamente com as escolhidas.
+ * Roda ~22h BRT. Busca candidatos via RSS, salva pendingEdition e manda o
+ * teclado de seleção pro Telegram — o editor marca as manchetes direto no
+ * celular e o cron de edição (5h) monta a edição automaticamente com as
+ * escolhidas (não cria mais rascunho de edition aqui: isso fazia o cron das
+ * 5h achar que a edição do dia já existia e pular a geração real).
  */
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgConfigured, tgAlert } from '@/lib/publish-core'
 import { type Candidate, candidatesMessage, candidatesKeyboard } from '@/lib/editionCuration'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -175,51 +173,6 @@ export async function GET(request: Request) {
       _type: 'pendingEdition', date, status: 'selecting', candidates, createdAt: new Date().toISOString(),
     })
 
-    // Gera 3 opções de abertura com Haiku
-    const top5 = candidates.slice(0, 5).map(c => `- ${c.title} (${c.source})`).join('\n')
-    let introOptions: Array<{ punchline: string; intro: string }> = []
-    try {
-      const msg = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 700,
-        messages: [{
-          role: 'user',
-          content: `Você é editor da newsletter Endinheirados (finanças pessoais, Brasil). Com base nas manchetes do dia, escreva 3 opções de abertura para o email de amanhã.
-
-Cada opção:
-- punchline: frase de impacto, max 80 chars, informal e curiosa (não corporativo)
-- intro: 2-3 frases que contextualizam o dia com personalidade — como um amigo bem-informado falaria
-
-Manchetes:
-${top5}
-
-Responda SOMENTE com JSON sem markdown:
-[{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."}]`,
-        }],
-      })
-      const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
-      introOptions = JSON.parse(raw)
-    } catch (e) {
-      console.error('[edition-candidates] Erro ao gerar intros:', e)
-    }
-
-    // Número sequencial da edição
-    const lastEdition = await sanity.fetch<{ number: number } | null>(
-      '*[_type=="edition"] | order(number desc)[0]{number}'
-    )
-    const nextNumber = (lastEdition?.number ?? 0) + 1
-
-    // Cria rascunho da edition (o editor monta os blocos no admin)
-    await sanity.create({
-      _type: 'edition',
-      date,
-      number: nextNumber,
-      slug: { _type: 'slug', current: date },
-      status: 'rascunho',
-      introOptions,
-      blocks: [],
-    })
-
     // Notificação Telegram — teclado de curadoria: marca as manchetes direto no celular.
     // Limita aos 20 primeiros candidatos pra não estourar o limite de 4096 chars da
     // mensagem do Telegram (o restante continua salvo e disponível no /admin/edicao).
@@ -236,7 +189,7 @@ Responda SOMENTE com JSON sem markdown:
       }).catch(() => {})
     }
 
-    return NextResponse.json({ ok: true, date, candidates: candidates.length, introOptions: introOptions.length, pendingId: pending._id })
+    return NextResponse.json({ ok: true, date, candidates: candidates.length, pendingId: pending._id })
   } catch (err) {
     await tgAlert('Cron candidatas da edição', err)
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })

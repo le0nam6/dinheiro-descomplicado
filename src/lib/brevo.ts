@@ -169,7 +169,7 @@ export async function sendEditionCampaign(p: EditionParams): Promise<void> {
   const contacts = await fetchListContacts()
   if (contacts.length === 0) throw new Error('Lista Brevo vazia — nenhum contacto encontrado')
 
-  const subject = p.title || p.punchline
+  const subject = p.title || p.punchline || `Endinheirados — ${p.date}`
   const templateHtml = buildEditionHtml(p)
 
   // Brevo messageVersions: até 1000 destinatários, cada um com params individuais

@@ -411,7 +411,11 @@ export async function GET(request: Request) {
     const previewSlug = `rascunho-${Date.now().toString(36).slice(-5)}`
 
     if (!preview) {
-      const existing = await sanity.fetch('*[_type=="edition" && slug.current==$d][0]._id', { d: date })
+      // Só considera "já publicada" se tiver conteúdo real — evita que um rascunho
+      // vazio (de outro fluxo) faça esse cron pular a geração da edição do dia.
+      const existing = await sanity.fetch(
+        '*[_type=="edition" && slug.current==$d && (count(blocks)>0 || count(stories)>0)][0]._id', { d: date }
+      )
       if (existing) return NextResponse.json({ ok: true, message: 'Edição de hoje já publicada', date })
     }
 
