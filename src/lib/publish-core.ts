@@ -44,13 +44,18 @@ async function notifyGoogleIndexing(url: string) {
     })
     const client = await auth.getClient()
     const token = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken()
-    await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+    const res = await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.token}` },
       body: JSON.stringify({ url, type: 'URL_UPDATED' }),
     })
-  } catch {
-    // não bloqueia a publicação se a indexação falhar
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error(`[notifyGoogleIndexing] ${res.status} para ${url}: ${body}`)
+    }
+  } catch (err) {
+    // não bloqueia a publicação se a indexação falhar, mas registra pra não ficar invisível
+    console.error('[notifyGoogleIndexing] erro:', err instanceof Error ? err.message : err)
   }
 }
 
