@@ -211,7 +211,7 @@ FORMATOS DISPONÍVEIS ("format"):
 - "standard": o padrão — hook + what + why. Use na maioria das matérias, quando o assunto pede desenvolvimento equilibrado.
 - "brief": matéria rápida e seca, sem grande desdobramento. Use para notícias informativas onde não há muito o que aprofundar. Pode deixar "why" vazio.
 - "deep": quando a matéria pede mais contexto/análise — histórico relevante, múltiplas camadas, ou consequências que vão além do óbvio. Preencha TAMBÉM: "deepStat" (um dado numérico marcante que sustenta a análise), "deepImplication" (1 frase sobre o que isso muda daqui pra frente), "deepQuote" (1 frase de efeito/reflexão do editor sobre o tema — NUNCA uma citação atribuída a alguém real, é uma frase de destaque, não uma fonte).
-- "stat": quando o centro da notícia é um NÚMERO que fala por si. Preencha TAMBÉM: "statNumber" (o número em destaque, ex: "R$ 1,2 trilhão", "37%"), "statLabel" (1 frase curta explicando o que esse número significa).
+- "stat": USE APENAS quando a matéria tiver um NÚMERO REAL, curto e concreto que sustente a notícia sozinho (ex: "R$ 1,2 trilhão", "37%", "153 operações", "US$ 60,5 bi"). Preencha "statNumber" com ESSE número (nunca uma frase, nunca mais de ~6 palavras) e "statLabel" com 1 frase curta explicando o que ele significa. SE A MATÉRIA NÃO TIVER UM NÚMERO CENTRAL CLARO, NÃO USE "stat" — use "standard" ou "brief" em vez disso. Errado: statNumber = "2 gigantes, 2 resultados opostos" (isso é uma frase, não um número — nunca faça isso). Certo: statNumber = "US$ 110 bilhões".
 
 Use "deep" ou "stat" em no máximo 2-3 matérias da edição — são os destaques visuais, não podem virar a maioria.
 
@@ -512,13 +512,19 @@ export async function GET(request: Request) {
     // og:image da página → Pexels/Unsplash. Sequencial p/ não repetir imagem.
     const usedPhotoUrls = new Set<string>()
     const VALID_FORMATS: StoryFormat[] = ['standard', 'brief', 'deep', 'stat']
+    // O formato "stat" só faz sentido com um número real e curto em destaque
+    // (ex: "R$ 1,2 trilhão", "37%"). Se a IA colocar uma frase no lugar
+    // (ex: "2 gigantes, 2 resultados opostos"), o design mostra isso como
+    // número gigante fora de contexto — reverte pra "standard" nesse caso.
+    const looksLikeRealStat = (v?: string) => !!v && v.length <= 20 && v.trim().split(/\s+/).length <= 4 && /\d/.test(v)
     const storyBlocks: Array<Record<string, unknown>> = []
     for (const s of curation.stories || []) {
       const idxs = Array.isArray(s.sourceIndexes) ? s.sourceIndexes : []
       const srcItems = idxs.map(i => pool[i - 1]).filter(Boolean)
       const fallbackQuery = `${s.tag || ''} finance brazil`.trim()
       const image = await resolveStoryImage(srcItems, s.imageQuery || '', fallbackQuery, usedPhotoUrls)
-      const format: StoryFormat = VALID_FORMATS.includes(s.format) ? s.format : 'standard'
+      let format: StoryFormat = VALID_FORMATS.includes(s.format) ? s.format : 'standard'
+      if (format === 'stat' && !looksLikeRealStat(s.statNumber)) format = 'standard'
       storyBlocks.push({
         _type: 'storyBlock', _key: nanoid(8), format,
         emoji: s.emoji || '•', tag: s.tag || '', headline: s.headline,
