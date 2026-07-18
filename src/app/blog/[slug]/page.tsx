@@ -68,7 +68,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const post = await getPostBySlug(slug)
-  if (!post) notFound()
+  if (!post) {
+    console.error('[DEBUG blog/[slug]] not found. slug recebido:', JSON.stringify(slug), 'codePoints:', Array.from(slug).map(c => c.codePointAt(0)?.toString(16)))
+    notFound()
+  }
 
   const related = await getRelatedPosts(slug, post.category ?? '', 4)
   const headings = extractHeadings(post.body || [])
