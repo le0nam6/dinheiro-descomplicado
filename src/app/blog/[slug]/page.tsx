@@ -33,8 +33,20 @@ function imgProxy(url: string | null | undefined): string | undefined {
   return `${SITE}/api/img?url=${encodeURIComponent(url)}`
 }
 
+// Alguns slugs com acento chegam ao Next.js ainda percent-encoded (bug de
+// roteamento observado com caracteres não-ASCII no segmento dinâmico) — decodifica
+// com segurança, sem afetar slugs que já chegam decodificados normalmente.
+function safeDecode(slug: string): string {
+  try {
+    return decodeURIComponent(slug)
+  } catch {
+    return slug
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = safeDecode(rawSlug)
   const post = await getPostBySlug(slug)
   if (!post) return {}
   const proxied = imgProxy(post.coverImage?.url)
@@ -66,12 +78,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+  const { slug: rawSlug } = await params
+  const slug = safeDecode(rawSlug)
   const post = await getPostBySlug(slug)
-  if (!post) {
-    console.error('[DEBUG blog/[slug]] not found. slug recebido:', JSON.stringify(slug), 'codePoints:', Array.from(slug).map(c => c.codePointAt(0)?.toString(16)))
-    notFound()
-  }
+  if (!post) notFound()
 
   const related = await getRelatedPosts(slug, post.category ?? '', 4)
   const headings = extractHeadings(post.body || [])
