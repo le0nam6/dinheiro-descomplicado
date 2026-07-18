@@ -198,29 +198,64 @@ async function fetchGoogleSuggestions(query: string): Promise<string[]> {
 }
 
 // --- Calendário de conteúdo ---
-
-const EVERGREEN_FUNNEL: Record<number, Record<number, string>> = {
-  0: { 12: 'tofu', 18: 'mofu' },
-  1: { 12: 'mofu', 18: 'bofu' },
-  2: { 12: 'bofu', 18: 'tofu' },
-  3: { 12: 'tofu', 18: 'mofu' },
-  4: { 12: 'mofu', 18: 'bofu' },
-  5: { 12: 'bofu', 18: 'tofu' },
-  6: { 12: 'tofu', 18: 'mofu' },
-}
-
-const CATEGORY_MAP: Record<string, string> = {
-  tofu: 'educação financeira',
-  mofu: 'investimentos',
-  bofu: 'cartão de crédito',
+// Rebalanceado em 07/2026: dados mostraram 80% do blog como TOFU no geral, mas
+// as categorias de maior volume (investimentos, educação financeira) tinham só
+// 16% e 32% de conteúdo evergreen — o resto é notícia efêmera. E 3 categorias
+// inteiras (empréstimo, financiamento, previdência) praticamente não tinham
+// evergreen. Este calendário prioriza TOFU nas categorias de maior potencial de
+// busca e abre espaço regular pras categorias vazias.
+type Funnel = 'tofu' | 'mofu' | 'bofu'
+const WEEKLY_SCHEDULE: Record<number, Record<number, { funnel: Funnel; category: string }>> = {
+  0: { // domingo
+    9:  { funnel: 'tofu', category: 'investimentos' },
+    12: { funnel: 'tofu', category: 'empréstimo' },
+    15: { funnel: 'mofu', category: 'educação financeira' },
+    18: { funnel: 'tofu', category: 'ganhar dinheiro' },
+  },
+  1: { // segunda
+    9:  { funnel: 'tofu', category: 'educação financeira' },
+    12: { funnel: 'mofu', category: 'investimentos' },
+    15: { funnel: 'tofu', category: 'financiamento' },
+    18: { funnel: 'mofu', category: 'empréstimo' },
+  },
+  2: { // terça
+    9:  { funnel: 'tofu', category: 'investimentos' },
+    12: { funnel: 'tofu', category: 'previdência' },
+    15: { funnel: 'mofu', category: 'educação financeira' },
+    18: { funnel: 'bofu', category: 'cartão de crédito' },
+  },
+  3: { // quarta
+    9:  { funnel: 'tofu', category: 'educação financeira' },
+    12: { funnel: 'tofu', category: 'financiamento' },
+    15: { funnel: 'mofu', category: 'investimentos' },
+    18: { funnel: 'mofu', category: 'previdência' },
+  },
+  4: { // quinta
+    9:  { funnel: 'tofu', category: 'investimentos' },
+    12: { funnel: 'tofu', category: 'empréstimo' },
+    15: { funnel: 'bofu', category: 'educação financeira' },
+    18: { funnel: 'mofu', category: 'ganhar dinheiro' },
+  },
+  5: { // sexta
+    9:  { funnel: 'tofu', category: 'educação financeira' },
+    12: { funnel: 'tofu', category: 'investimentos' },
+    15: { funnel: 'mofu', category: 'previdência' },
+    18: { funnel: 'bofu', category: 'financiamento' },
+  },
+  6: { // sábado
+    9:  { funnel: 'tofu', category: 'investimentos' },
+    12: { funnel: 'tofu', category: 'educação financeira' },
+    15: { funnel: 'mofu', category: 'empréstimo' },
+    18: { funnel: 'mofu', category: 'cartão de crédito' },
+  },
 }
 
 function getSchedule() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
   const hour = now.getHours()
   const day  = now.getDay()
-  const funnel = EVERGREEN_FUNNEL[day]?.[hour] ?? 'mofu'
-  return { type: 'evergreen', funnel, hour }
+  const slot = WEEKLY_SCHEDULE[day]?.[hour] ?? { funnel: 'mofu' as Funnel, category: 'investimentos' }
+  return { type: 'evergreen', funnel: slot.funnel, category: slot.category, hour }
 }
 
 // --- Buscar notícias ---
@@ -273,8 +308,7 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
     bofu: 'fundo de funil (decision): recomendações específicas, ranking, melhores opções do momento',
   }[funnel]
 
-  const focusByDay = ['ganhar dinheiro', 'investimentos', 'educação financeira', 'ganhar dinheiro', 'cartão de crédito', 'investimentos', 'ganhar dinheiro']
-  const focusCategory = type === 'evergreen' ? focusByDay[new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()] : ''
+  const focusCategory = type === 'evergreen' ? schedule.category : ''
 
   // Busca contexto editorial RAG + títulos + sugestões Google em paralelo
   const ragHint = type === 'news'
