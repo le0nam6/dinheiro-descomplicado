@@ -1,5 +1,5 @@
+import { askLLM } from '@/lib/llm'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { sanity } from '@/lib/publish-core'
 import { cookies } from 'next/headers'
 import { createHmac, timingSafeEqual } from 'crypto'
@@ -23,8 +23,6 @@ async function checkAuth() {
   return timingSafeEqual(a, b)
 }
 
-const anthropic = new Anthropic()
-
 // POST /api/admin/edition-generate-extras
 // type: 'curiosidade' | 'palavra' | 'intro'
 // headlines: string[] (story headlines já selecionadas)
@@ -39,36 +37,30 @@ export async function POST(request: Request) {
     : 'Edição geral de finanças brasileiras'
 
   if (type === 'curiosidade') {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
-      messages: [{
-        role: 'user',
-        content: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal e direto.
+    const msgText = await askLLM({
+      label: 'extras-intro',
+      maxTokens: 200,
+      prompt: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal e direto.
 
 ${context}
 
 Gere UMA curiosidade financeira surpreendente e relevante para o contexto acima. Pode ser um dado histórico, uma estatística inusitada, uma comparação inesperada. Max 80 palavras. Tom: amigo bem-informado. Sem título ou prefixo — só o texto da curiosidade.`,
-      }],
     })
-    return NextResponse.json({ ok: true, text: (msg.content[0] as { text: string }).text.trim() })
+    return NextResponse.json({ ok: true, text: msgText.trim() })
   }
 
   if (type === 'palavra') {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 250,
-      messages: [{
-        role: 'user',
-        content: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal e direto.
+    const msgText = await askLLM({
+      label: 'extras-palavra',
+      maxTokens: 250,
+      prompt: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal e direto.
 
 ${context}
 
 Escolha UM termo financeiro relevante para o contexto acima (pode ser técnico mas deve ser útil no dia a dia). Retorne JSON puro, sem markdown:
 {"word":"...","meaning":"explicação simples em 1-2 frases, máx 60 palavras","application":"como isso aparece na vida do leitor, 1-2 frases práticas, máx 60 palavras"}`,
-      }],
     })
-    const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
+    const raw = msgText.trim().replace(/^```json\n?|\n?```$/g, '')
     try {
       return NextResponse.json({ ok: true, fields: JSON.parse(raw) })
     } catch {
@@ -77,12 +69,10 @@ Escolha UM termo financeiro relevante para o contexto acima (pode ser técnico m
   }
 
   if (type === 'intro') {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 700,
-      messages: [{
-        role: 'user',
-        content: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal, direto, como um amigo bem-informado.
+    const msgText = await askLLM({
+      label: 'extras-curiosidade',
+      maxTokens: 700,
+      prompt: `Você é redator da newsletter Endinheirados — finanças para brasileiros, tom informal, direto, como um amigo bem-informado.
 
 ${context}
 
@@ -94,9 +84,8 @@ O título (campo "title", único, não por opção): resume o tema central da ed
 
 Retorne JSON puro, sem markdown:
 {"title":"...","options":[{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."},{"punchline":"...","intro":"..."}]}`,
-      }],
     })
-    const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
+    const raw = msgText.trim().replace(/^```json\n?|\n?```$/g, '')
     let parsed: { title: string; options: Array<{ punchline: string; intro: string }> }
     try {
       parsed = JSON.parse(raw)

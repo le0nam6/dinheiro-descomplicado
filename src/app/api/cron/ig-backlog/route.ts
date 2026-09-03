@@ -2,9 +2,9 @@
  * Vercel Cron: para cada notícia nova, gera imagem via /api/og com a capa da matéria
  * e manda pro Telegram. Admin posta no Instagram manualmente.
  */
+import { askLLM } from '@/lib/llm'
 import { NextResponse } from 'next/server'
 import { sanity, fetchPhoto, tgAlert } from '@/lib/publish-core'
-import Anthropic from '@anthropic-ai/sdk'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://portalendinheirados.com.br'
 const BOT = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
@@ -22,13 +22,11 @@ async function getNextPost() {
 }
 
 async function buildCaption(post: { title: string; excerpt: string; slug: string }): Promise<string> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const msg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: `Crie uma legenda para o Instagram sobre este post do blog Endinheirados.
+  
+  const msgText = await askLLM({
+    label: 'ig-backlog-caption',
+    maxTokens: 600,
+    prompt: `Crie uma legenda para o Instagram sobre este post do blog Endinheirados.
 
 Título: ${post.title}
 Resumo: ${post.excerpt}
@@ -46,9 +44,8 @@ Formato (3 parágrafos + link + hashtags):
 #mercadofinanceiro #HASHTAG2 #HASHTAG3 #HASHTAG4 #endinheirados
 
 Regras: português BR coloquial, ZERO travessão, sem emojis no corpo, 5 hashtags minúsculas sem acento. Máximo 850 caracteres. Retorne APENAS a legenda.`,
-    }],
   })
-  return (msg.content[0] as { text: string }).text.trim().slice(0, 1024)
+  return msgText.trim().slice(0, 1024)
 }
 
 export async function GET(request: Request) {

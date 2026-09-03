@@ -1,5 +1,5 @@
+import { askLLM } from '@/lib/llm'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { cookies } from 'next/headers'
 import { createHmac, timingSafeEqual } from 'crypto'
 
@@ -20,8 +20,6 @@ async function checkAuth() {
   if (a.length !== b.length) return false
   return timingSafeEqual(a, b)
 }
-
-const anthropic = new Anthropic()
 
 export async function POST(request: Request) {
   if (!await checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -59,13 +57,13 @@ ${fieldsByFormat[fmt] || fieldsByFormat.standard}
 
 Retorne JSON puro, sem markdown, sem código fence.`
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{ role: 'user', content: prompt }],
+  const msgText = await askLLM({
+    label: 'edition-story',
+    maxTokens: 600,
+    prompt: prompt,
   })
 
-  const raw = (msg.content[0] as { text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
+  const raw = msgText.trim().replace(/^```json\n?|\n?```$/g, '')
 
   let fields: Record<string, string>
   try {

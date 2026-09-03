@@ -5,30 +5,25 @@ import { createClient } from '@sanity/client'
 import { nanoid } from 'nanoid'
 import { createHmac } from 'crypto'
 import { GoogleAuth } from 'google-auth-library'
-import Anthropic from '@anthropic-ai/sdk'
+import { askLLM } from './llm'
 
 export const SITE = 'https://portalendinheirados.com.br'
 
 // Parse tolerante de JSON gerado por IA: às vezes vem com aspas ou quebras de
 // linha não escapadas dentro de strings. Se o parse direto falhar, pede pra
 // IA reparar a sintaxe (sem alterar conteúdo) antes de desistir.
-export async function parseJsonSafe<T>(rawText: string, model = 'claude-haiku-4-5-20251001'): Promise<T> {
+export async function parseJsonSafe<T>(rawText: string): Promise<T> {
   const cleaned = rawText.replace(/^```json\n?|\n?```$/g, '')
   try {
     return JSON.parse(cleaned) as T
   } catch (err) {
     console.log('[parseJsonSafe] JSON malformado, tentando reparar via IA:', err instanceof Error ? err.message : err)
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const repairMsg = await anthropic.messages.create({
-      model,
-      max_tokens: 4096,
-      messages: [{
-        role: 'user',
-        content: `O JSON abaixo veio malformado (provavelmente aspas ou quebras de linha não escapadas dentro de alguma string). Conserte a sintaxe SEM alterar nenhum conteúdo de texto. Retorne SOMENTE o JSON válido, sem markdown, sem explicação:\n\n${cleaned}`,
-      }],
+    const repaired = await askLLM({
+      label: 'parse-json-repair',
+      maxTokens: 4096,
+      prompt: `O JSON abaixo veio malformado (provavelmente aspas ou quebras de linha não escapadas dentro de alguma string). Conserte a sintaxe SEM alterar nenhum conteúdo de texto. Retorne SOMENTE o JSON válido, sem markdown, sem explicação:\n\n${cleaned}`,
     })
-    const repairedText = (repairMsg.content[0] as { type: string; text: string }).text.trim().replace(/^```json\n?|\n?```$/g, '')
-    return JSON.parse(repairedText) as T
+    return JSON.parse(repaired.replace(/^```json\n?|\n?```$/g, '')) as T
   }
 }
 
@@ -214,21 +209,15 @@ REGRAS ABSOLUTAS:
 Retorne APENAS o texto humanizado, sem comentários, sem explicações, sem prefácio. Só o texto.`
 
 export async function humanizePostBody(lines: string[]): Promise<string[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return lines
-
-  const client = new Anthropic({ apiKey })
   const rawText = lines.join('\n\n')
 
   try {
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+    const humanized = await askLLM({
+      label: 'humanizer',
+      maxTokens: 4096,
       system: HUMANIZER_SYSTEM,
-      messages: [{ role: 'user', content: rawText }],
+      prompt: rawText,
     })
-
-    const humanized = (msg.content[0] as { type: string; text: string }).text?.trim()
     if (!humanized) return lines
 
     // Divide de volta em linhas preservando marcadores de subtítulo e listas
