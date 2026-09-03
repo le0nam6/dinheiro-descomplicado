@@ -3,7 +3,7 @@
  * Roda 4x/dia: 9h (notícia), 12h (evergreen), 15h (notícia), 18h (evergreen)
  * Configurado em vercel.json
  */
-import Anthropic from '@anthropic-ai/sdk'
+import { askLLM } from '@/lib/llm'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost,
@@ -12,8 +12,6 @@ import {
   adminToken, parseJsonSafe,
 } from '@/lib/publish-core'
 import { getEditorialContext, getPublishedPostsByCategory, getSimilarPublishedTopics, indexPublishedPost } from '@/lib/rag'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // --- Taxonomia de tópicos por categoria ---
 // Cada entrada é um ângulo específico ainda não coberto pelo blog.
@@ -453,13 +451,13 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   ]
 }`
 
-  const articleMsg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
+  const articleMsgText = await askLLM({
+    label: 'publish-ig',
+    maxTokens: 4096,
+    prompt: prompt,
   })
 
-  let articleText = (articleMsg.content[0] as { type: string; text: string }).text.trim()
+  let articleText = articleMsgText.trim()
   let article = await parseJsonSafe<Record<string, unknown>>(articleText)
 
   // Valida semanticamente: se o título+excerpt for similar demais a algo já publicado, pede regeneração
@@ -467,16 +465,12 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   const dupCheck = await getSimilarPublishedTopics(dupHint, (article.category as string) || focusCategory || undefined)
   if (dupCheck) {
     console.log(`[cron/publish] Duplicata semântica detectada para "${article.title}" — regenerando...`)
-    const retryMsg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [
-        { role: 'user', content: prompt },
-        { role: 'assistant', content: articleText },
-        { role: 'user', content: `O ângulo que você gerou ("${article.title}") está semanticamente muito próximo de posts já publicados no blog:${dupCheck}\nEscolha um ângulo COMPLETAMENTE diferente — outro aspecto da categoria, outro problema do leitor, outra solução. Retorne SOMENTE o JSON válido, mesma estrutura.` },
-      ],
+    const retryMsgText = await askLLM({
+      label: 'publish-article-retry',
+      maxTokens: 4096,
+      prompt: prompt,
     })
-    articleText = (retryMsg.content[0] as { type: string; text: string }).text.trim()
+    articleText = retryMsgText.trim()
     article = await parseJsonSafe<Record<string, unknown>>(articleText)
     console.log(`[cron/publish] Regenerado: "${article.title}"`)
   }
@@ -536,13 +530,14 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
   ]
 }`
 
-  const igMsg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    messages: [{ role: 'user', content: igPrompt }],
+  const igMsgText = await askLLM({
+    label: 'publish-article',
+    tier: 'smart',
+    maxTokens: 2048,
+    prompt: igPrompt,
   })
 
-  const igText = (igMsg.content[0] as { type: string; text: string }).text.trim()
+  const igText = igMsgText.trim()
   const igAssets = await parseJsonSafe<Record<string, unknown>>(igText)
 
   const parsed = { ...article, ...igAssets }
@@ -551,7 +546,6 @@ Retorne SOMENTE um JSON válido (sem texto fora do JSON):
 }
 
 // --- Foto: Pexels (primário) → Unsplash (fallback) ---
-
 
 // --- Handler principal ---
 

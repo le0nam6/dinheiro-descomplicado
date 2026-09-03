@@ -1,8 +1,8 @@
+import { askLLM } from '@/lib/llm'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient } from '@sanity/client'
-import Anthropic from '@anthropic-ai/sdk'
 
 function sessionToken(password: string) {
   const secret = process.env.CRON_SECRET || 'fallback-dev-secret'
@@ -23,14 +23,12 @@ async function checkAuth() {
 }
 
 async function generateTitle(headlines: string[], tags: string[]): Promise<string> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  
   const context = headlines.map((h, i) => `${tags[i] ? `[${tags[i]}] ` : ''}${h}`).join(' | ')
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 100,
-    messages: [{
-      role: 'user',
-      content: `Com base nessas manchetes de uma edição diária de finanças pessoais brasileira, gere UM título jornalístico temático.
+  const msgText = await askLLM({
+    label: 'edition-title-migrate',
+    maxTokens: 100,
+    prompt: `Com base nessas manchetes de uma edição diária de finanças pessoais brasileira, gere UM título jornalístico temático.
 
 Manchetes: ${context}
 
@@ -40,9 +38,8 @@ Regras:
 - Tom direto, sem clickbait, sem ponto de exclamação
 - Exemplos: "Dólar sobe e Copom mantém juros: o que muda no seu bolso" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde"
 - Retorne APENAS o título, sem aspas, sem explicação`,
-    }],
   })
-  return ((msg.content[0] as { text: string }).text || '').trim().replace(/^["']|["']$/g, '')
+  return (msgText || '').trim().replace(/^["']|["']$/g, '')
 }
 
 export async function POST() {

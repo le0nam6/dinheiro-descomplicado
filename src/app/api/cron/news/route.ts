@@ -6,7 +6,7 @@
  * mandatória, fontes discriminadas e termômetro de imparcialidade (no front).
  * Cada notícia entra como rascunho e vai pro Telegram para aprovação manual.
  */
-import Anthropic from '@anthropic-ai/sdk'
+import { askLLM } from '@/lib/llm'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
@@ -14,8 +14,6 @@ import {
   tgAlert, tgConfigured, tgSendMessage, humanizePostBody, blogApprovalKeyboard,
   nextQueueItem, markQueueUsed, parseJsonSafe,
 } from '@/lib/publish-core'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -239,11 +237,12 @@ Escolha as 1 a 3 manchetes que tratam do MESMO fato. Retorne SOMENTE JSON válid
 }
 sourceIndexes = índices das manchetes da lista usadas como fonte.`
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001', max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
+  const msgText = await askLLM({
+    label: 'news-post',
+    maxTokens: 4096,
+    prompt: prompt,
   })
-  const text = (msg.content[0] as { text: string }).text.trim()
+  const text = msgText.trim()
   const parsed = await parseJsonSafe<GeneratedPost & { sourceIndexes?: number[]; category?: string }>(text)
   const idxs: number[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [1]
   const newsSources = idxs.map((i: number) => top[i - 1]).filter(Boolean)

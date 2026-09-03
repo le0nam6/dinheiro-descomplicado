@@ -14,7 +14,37 @@ SANITY_API_TOKEN=cole_aqui_o_token
 NEXT_PUBLIC_ADSENSE_ID=ca-pub-SEU_ID (depois do AdSense aprovar)
 UNSPLASH_ACCESS_KEY=cole_aqui (pegar em unsplash.com/developers)
 ANTHROPIC_API_KEY=sua_chave_anthropic
+OPENROUTER_API_KEY=sua_chave_openrouter
 ```
+
+## 2.1 Fallback de LLM (pra pipeline nao parar)
+
+Todo acesso a modelo passa por `src/lib/llm.ts`. A Anthropic e a primaria; se ela
+falhar por chave invalida, credito zerado, rate limit ou instabilidade, a chamada
+cai sozinha nos modelos gratuitos do OpenRouter e o cron termina o trabalho.
+
+Pegue a chave em https://openrouter.ai/keys (o free tier nao pede cartao).
+
+Variaveis opcionais:
+
+| Variavel | Efeito |
+|---|---|
+| `OPENROUTER_MODELS` | Sobrescreve a cadeia gratuita padrao (separado por virgula) |
+| `LLM_SKIP_ANTHROPIC=1` | Tira a Anthropic da cadeia enquanto o saldo estiver zerado, evitando uma ida-e-volta perdida por chamada |
+| `GROQ_API_KEY` + `GROQ_MODEL` | Adiciona a Groq como ultimo degrau da cadeia |
+
+A cadeia gratuita padrao saiu de um teste real com o prompt do pipeline, medindo
+JSON valido no schema, portugues e tamanho de corpo. Se um modelo gratuito sair
+do ar, so trocar a lista em `OPENROUTER_MODELS` — sem mexer em codigo.
+
+**Limite do free tier do OpenRouter:** modelos `:free` valem ~50 requisicoes/dia
+enquanto a conta nunca tiver comprado credito (sobe pra ~1000/dia depois de
+US$ 10 em creditos, uma vez). O pipeline atual gasta bem menos que isso por dia,
+mas e o teto a vigiar se voce adicionar mais crons.
+
+**Como saber que caiu no fallback:** o log da Vercel mostra
+`[llm:<label>] respondido por openrouter/<modelo> (fallback, degrau N)`, e um
+aviso em destaque quando o motivo foi credito da Anthropic.
 
 ## 3. Criar conta Unsplash Developers (2 min)
 1. https://unsplash.com/developers → New Application

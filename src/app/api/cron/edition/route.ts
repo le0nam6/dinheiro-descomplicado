@@ -5,15 +5,13 @@
  * mercado financeiro (inclusive política). Objetivo: o leitor sair mais
  * inteligente em poucos minutos. Publica em /edicao/[data] e avisa no Telegram.
  */
-import Anthropic from '@anthropic-ai/sdk'
+import { askLLM } from '@/lib/llm'
 import { NextResponse, after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgAlert, tgConfigured, fetchPhoto, nextQueueItem, markQueueUsed } from '@/lib/publish-core'
 import { sendEditionCampaignFromBlocks, type EditionBlock } from '@/lib/brevo'
 import { getEditorialContext } from '@/lib/rag'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -314,11 +312,13 @@ Retorne SOMENTE JSON válido:
 LEMBRE: os 3 exemplos acima são só ilustração de formato — gere as 5-7 matérias reais da edição de hoje, variando "format" entre elas (a maioria "standard"/"brief", no máximo 2-3 em "deep" ou "stat"). Deixe hook vazio em algumas e why vazio em 1-2 — a variação no texto é o que diferencia a edição de um molde repetido. imageQuery sempre preenchido.
 sourceIndexes = números das manchetes (da lista) usadas como fonte de cada matéria.`
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 8000,
-    messages: [{ role: 'user', content: prompt }],
+  const msgText = await askLLM({
+    label: 'edition-curation',
+    tier: 'smart',
+    maxTokens: 8000,
+    prompt: prompt,
   })
-  const text = (msg.content[0] as { text: string }).text.trim()
+  const text = msgText.trim()
   const curation = JSON.parse(text.replace(/^```json\n?|\n?```$/g, '')) as Curation
 
   // Rede de segurança: remove markdown/marcadores que o modelo às vezes insere

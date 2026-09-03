@@ -20,7 +20,7 @@
  *
  * ?dry=true → busca dados, retorna JSON sem chamar Claude nem publicar
  */
-import Anthropic from '@anthropic-ai/sdk'
+import { askLLM } from '@/lib/llm'
 import { NextResponse, after } from 'next/server'
 import {
   sanity, SITE, type GeneratedPost, type Photo,
@@ -29,8 +29,6 @@ import {
   originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed, parseJsonSafe,
 } from '@/lib/publish-core'
 import { getEditorialContext } from '@/lib/rag'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -158,7 +156,6 @@ async function fetchDadosNumero() {
   }
 }
 
-
 async function fetchDadosSetor() {
   const setor = getSetorOfWeek()
   const news = await fetchRss(FINANCE_FEEDS, 12, setor.keywords)
@@ -219,7 +216,6 @@ async function fetchDadosEmprego() {
   const news = await fetchRss(FINANCE_FEEDS, 8, ['caged', 'emprego', 'desemprego', 'pnad', 'mercado de trabalho', 'salário', 'admissão'])
   return { rendimento: rend, desocupacao: desemp, news }
 }
-
 
 async function fetchDadosFundo() {
   const FUNDOS = [
@@ -336,12 +332,10 @@ async function proposeAngles(
   config: SeriesConfig,
   data: unknown
 ): Promise<{ proposalId: string; angles: Array<{ title: string; pitch: string; context: string }> }> {
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 700,
-    messages: [{
-      role: 'user',
-      content: `Editor de finanças pessoais. Analise os dados abaixo e proponha 3 ângulos editoriais completamente diferentes.
+  const msgText = await askLLM({
+    label: 'original-angles',
+    maxTokens: 700,
+    prompt: `Editor de finanças pessoais. Analise os dados abaixo e proponha 3 ângulos editoriais completamente diferentes.
 
 Série: ${config.label}
 Dados: ${JSON.stringify(data).slice(0, 2500)}
@@ -353,9 +347,8 @@ Cada ângulo deve ser:
 
 Responda SOMENTE com JSON:
 [{"title":"título curto max 55 chars","pitch":"por que é interessante — uma frase direta","context":"qual dado específico sustenta isso e por que vai contra a intuição do leitor — 2 frases"}]`,
-    }],
   })
-  const text = (msg.content[0] as { text: string }).text.trim()
+  const text = msgText.trim()
   const angles = await parseJsonSafe<ProposalAngles>(text)
 
   const doc = await sanity.create({
@@ -414,8 +407,13 @@ async function callClaude(prompt: string): Promise<GeneratedPost> {
     fetchRedditQuestions(),
   ])
   const fullPrompt = [prompt, ragContext, redditContext].filter(Boolean).join('\n')
-  const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-6', max_tokens: 8000, messages: [{ role: 'user', content: fullPrompt }] })
-  const text = (msg.content[0] as { text: string }).text.trim()
+  const msgText = await askLLM({
+    label: 'original-post',
+    tier: 'smart',
+    maxTokens: 8000,
+    prompt: fullPrompt,
+  })
+  const text = msgText.trim()
   return parseJsonSafe<GeneratedPost>(text)
 }
 
@@ -459,7 +457,6 @@ ${jsonSchema('educação financeira')}`
   const p = await callClaude(prompt)
   return { ...p, funnel: 'mofu', articleType: 'news' }
 }
-
 
 async function generateSetor(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosSetor()
@@ -562,7 +559,6 @@ ${jsonSchema('educação financeira')}`
   return { ...p, funnel: 'mofu', articleType: 'news' }
 }
 
-
 async function generateFundo(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosFundo()
   const prompt = `Você é analista de fundos do Endinheirados. Escreva "Fundo no Microscópio" — análise para o investidor pessoa física.
@@ -647,12 +643,10 @@ async function proposeAlternativeAngles(
   const config = SERIES_MAP[series]
   const previousTitles = (original.angles as ProposalAngles).map(a => a.title).join('; ')
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 700,
-    messages: [{
-      role: 'user',
-      content: `Editor de finanças pessoais. Os ângulos abaixo foram rejeitados. Proponha 3 ângulos COMPLETAMENTE DIFERENTES.
+  const msgText = await askLLM({
+    label: 'original-angles-alt',
+    maxTokens: 700,
+    prompt: `Editor de finanças pessoais. Os ângulos abaixo foram rejeitados. Proponha 3 ângulos COMPLETAMENTE DIFERENTES.
 
 Série: ${config.label}
 Dados: ${String(original.dataSnapshot).slice(0, 2500)}
@@ -664,10 +658,9 @@ Novos ângulos devem ter foco completamente diferente dos rejeitados, ser surpre
 
 Responda SOMENTE com JSON:
 [{"title":"título curto max 55 chars","pitch":"por que é interessante — uma frase direta","context":"qual dado específico sustenta isso e por que vai contra a intuição — 2 frases"}]`,
-    }],
   })
 
-  const text = (msg.content[0] as { text: string }).text.trim()
+  const text = msgText.trim()
   const angles: ProposalAngles = await parseJsonSafe<ProposalAngles>(text)
 
   const doc = await sanity.create({
