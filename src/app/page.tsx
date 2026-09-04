@@ -1,22 +1,12 @@
 import { getPosts, getLatestEdition } from '@/lib/sanity'
 import { AdUnit } from '@/components/AdUnit'
 import { ReferralBanner } from '@/components/ReferralBanner'
+import { ButtonLink } from '@/components/Button'
 import Link from 'next/link'
 import { IconArrowRight, IconBook2, IconChartLine, IconCoins, IconNews, IconPencil, IconTool } from '@tabler/icons-react'
 
 export const revalidate = 60
 
-// Ícone em vez de emoji: emoji muda de desenho em cada sistema operacional e o
-// leitor de tela lê "jornal enrolado" no meio do nome da seção. Tabler é a
-// família que o projeto já usa nos outros 26 ícones.
-const categories = [
-  { label: 'Notícias', href: '/categoria/noticias', Icon: IconNews },
-  { label: 'Blog', href: '/blog', Icon: IconPencil },
-  { label: 'Educação Financeira', href: '/categoria/educacao-financeira', Icon: IconBook2 },
-  { label: 'Ganhe Dinheiro', href: '/categoria/ganhar-dinheiro', Icon: IconCoins },
-  { label: 'Investimentos', href: '/categoria/investimentos', Icon: IconChartLine },
-  { label: 'Ferramentas', href: '/ferramentas', Icon: IconTool },
-]
 
 type Post = {
   title: string
@@ -87,6 +77,7 @@ export default async function Home() {
   return (
     <div className="max-w-5xl mx-auto space-y-10">
 
+
       {/* ── EDIÇÃO DO DIA ─────────────────────────────────────────────── */}
       {edition && (
         <Link href={`/edicao/${edition.slug.current}`} className="group block">
@@ -108,201 +99,202 @@ export default async function Home() {
         </Link>
       )}
 
-      {/* ── HERO + SECUNDÁRIOS ────────────────────────────────────────── */}
-      {featured && (
-        <section>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ── CORPO EM DUAS COLUNAS ─────────────────────────────────────
+           Notícia corre na coluna larga; o que é permanente (guias,
+           glossário, newsletter) fica na lateral fixa. A faixa de
+           categorias saiu daqui: os seis itens dela repetiam o menu do
+           topo, e é a lateral que agora faz o papel de índice. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,2.1fr)_300px] lg:gap-10 lg:items-start space-y-10 lg:space-y-0">
 
-            {/* Featured: ocupa 2/3 */}
-            <Link href={`/blog/${featured.slug.current}`} className="group md:col-span-2">
-              <article className="relative rounded-2xl overflow-hidden h-[280px] sm:h-[340px]">
-                <PostCover post={featured} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-                <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end">
-                  <CategoryBadge category={featured.category} onImage />
-                  <h2 className="text-white font-extrabold text-lg sm:text-2xl leading-tight mt-1 mb-2 line-clamp-3">
-                    {featured.title}
-                  </h2>
-                  <p className="text-white/70 text-xs">{formatDate(featured.publishedAt)}{featured.readingTime ? ` · ${featured.readingTime} min` : ''}</p>
-                </div>
-              </article>
-            </Link>
+        {/* Coluna principal */}
+        <div className="min-w-0 space-y-10">
+        {/* ── HERO + SECUNDÁRIOS ────────────────────────────────────────── */}
+        {featured && (
+          <section>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-            {/* Secundários: 1/3, empilhados */}
-            <div className="flex flex-col gap-4">
-              {secondary.map(post => (
-                <Link key={post.slug.current} href={`/blog/${post.slug.current}`} className="group flex-1">
-                  <article className="relative rounded-2xl overflow-hidden h-[130px] sm:h-[160px]">
-                    <PostCover post={post} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                      <CategoryBadge category={post.category} onImage />
-                      <h3 className="text-white font-bold text-sm leading-snug mt-0.5 line-clamp-2">
+              {/* Featured: ocupa 2/3 */}
+              <Link href={`/blog/${featured.slug.current}`} className="group md:col-span-2">
+                <article className="relative rounded-2xl overflow-hidden h-[280px] sm:h-[340px]">
+                  <PostCover post={featured} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+                  <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end">
+                    <CategoryBadge category={featured.category} onImage />
+                    <h2 className="text-white font-extrabold text-lg sm:text-2xl leading-tight mt-1 mb-2 line-clamp-3">
+                      {featured.title}
+                    </h2>
+                    <p className="text-white/70 text-xs">{formatDate(featured.publishedAt)}{featured.readingTime ? ` · ${featured.readingTime} min` : ''}</p>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Secundários: 1/3, empilhados */}
+              <div className="flex flex-col gap-4">
+                {secondary.map(post => (
+                  <Link key={post.slug.current} href={`/blog/${post.slug.current}`} className="group flex-1">
+                    <article className="relative rounded-2xl overflow-hidden h-[130px] sm:h-[160px]">
+                      <PostCover post={post} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                        <CategoryBadge category={post.category} onImage />
+                        <h3 className="text-white font-bold text-sm leading-snug mt-0.5 line-clamp-2">
+                          {post.title}
+                        </h3>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <AdUnit placeholderId={101} />
+
+        {/* ── GRID DE ARTIGOS ───────────────────────────────────────────── */}
+        {grid.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-gray-900">Últimas publicações</h2>
+              <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-green-700 font-medium hover:underline">Ver todos <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden /></Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {grid.map(post => (
+                <Link key={post.slug.current} href={`/blog/${post.slug.current}`} className="group">
+                  <article className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md hover:border-green-200 transition-all h-full flex flex-col">
+                    <div className="relative h-44 shrink-0 overflow-hidden">
+                      <PostCover post={post} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    </div>
+                    <div className="p-4 flex flex-col flex-1">
+                      <CategoryBadge category={post.category} />
+                      <h3 className="font-bold text-gray-900 text-sm leading-snug mt-1.5 mb-2 line-clamp-2 group-hover:text-green-700 transition-colors flex-1">
                         {post.title}
                       </h3>
+                      <p className="text-gray-400 text-xs line-clamp-2 mb-3">{post.excerpt}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}
+                      </p>
                     </div>
                   </article>
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* ── CATEGORIAS ────────────────────────────────────────────────── */}
-      <section>
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {categories.map(cat => (
-            <Link
-              key={cat.href}
-              href={cat.href}
-              className="flex-none flex items-center gap-1.5 border border-gray-200 rounded-xl px-3 py-2 hover:border-green-400 hover:bg-green-50 transition-all bg-white whitespace-nowrap"
-            >
-              <cat.Icon size={17} stroke={1.8} className="shrink-0 text-green-700" aria-hidden />
-              <span className="font-semibold text-sm text-gray-800">{cat.label}</span>
-            </Link>
-          ))}
+          {rest.length > 0 && (
+            <section>
+              {/* Mais artigos */}
+              <div>
+                <h2 className="text-base font-bold text-gray-900 mb-4">Mais artigos</h2>
+                <div className="divide-y divide-gray-100">
+                  {rest.map(post => (
+                    <Link
+                      key={post.slug.current}
+                      href={`/blog/${post.slug.current}`}
+                      className="flex gap-4 py-4 group hover:bg-gray-50 -mx-3 px-3 rounded-xl transition-colors"
+                    >
+                      {post.coverImage?.url ? (
+                        <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-20 h-14 object-cover rounded-xl shrink-0" />
+                      ) : (
+                        <div className="w-20 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl shrink-0 flex items-center justify-center text-xl">💰</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CategoryBadge category={post.category} />
+                        <h3 className="font-bold text-gray-900 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-green-700 transition-colors">
+                          {post.title}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-1">{formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
         </div>
-      </section>
 
-      <AdUnit placeholderId={101} />
+        {/* Lateral fixa */}
+        <aside className="space-y-4 lg:sticky lg:top-[148px] lg:max-h-[calc(100vh-165px)] lg:overflow-y-auto lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
+            {/* Guias */}
+            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+              <div className="bg-gradient-to-br from-green-700 to-green-900 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-green-300 mb-0.5">Educação financeira</p>
+                <h2 className="text-white font-extrabold text-sm leading-snug">Guias completos</h2>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { href: '/guias/como-sair-das-dividas', label: 'Como sair das dívidas', tag: 'Dívidas', tagColor: 'text-red-600' },
+                  { href: '/guias/como-economizar-dinheiro', label: 'Como economizar dinheiro', tag: 'Organização', tagColor: 'text-blue-600' },
+                  { href: '/guias/fundo-de-emergencia', label: 'Fundo de emergência', tag: 'Organização', tagColor: 'text-blue-600' },
+                  { href: '/guias/como-investir-do-zero', label: 'Como investir do zero', tag: 'Investimentos', tagColor: 'text-green-700' },
+                  { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-700' },
+                  { href: '/guias/imposto-de-renda', label: 'Imposto de Renda 2025', tag: 'Impostos', tagColor: 'text-yellow-700' },
+                ].map(g => (
+                  <Link key={g.href} href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[10px] font-bold uppercase tracking-wide ${g.tagColor} mb-0.5`}>{g.tag}</p>
+                      <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700 transition-colors leading-snug">{g.label}</p>
+                    </div>
+                    <span className="text-gray-300 group-hover:text-green-500 shrink-0 text-sm">→</span>
+                  </Link>
+                ))}
+              </div>
+              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
+                <Link href="/guias" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">Ver todos os guias →</Link>
+              </div>
+            </div>
+
+            {/* Glossário */}
+            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+              <div className="bg-gradient-to-br from-slate-700 to-slate-900 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Dicionário financeiro</p>
+                <h2 className="text-white font-extrabold text-sm leading-snug">Glossário</h2>
+              </div>
+              <div className="px-4 pt-3 pb-2">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Termos populares</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { slug: 'selic', label: 'Selic' },
+                    { slug: 'cdi', label: 'CDI' },
+                    { slug: 'juros-compostos', label: 'Juros compostos' },
+                    { slug: 'score-de-credito', label: 'Score' },
+                    { slug: 'tesouro-direto', label: 'Tesouro Direto' },
+                    { slug: 'renda-fixa', label: 'Renda fixa' },
+                    { slug: 'acoes', label: 'Ações' },
+                    { slug: 'pix', label: 'Pix' },
+                  ].map(t => (
+                    <Link
+                      key={t.slug}
+                      href={`/glossario/${t.slug}`}
+                      className="text-xs font-medium px-2 py-0.5 border border-gray-200 rounded-full text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors"
+                    >
+                      {t.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 mt-2">
+                <Link href="/glossario" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">Explorar o glossário completo →</Link>
+              </div>
+            </div>
+              {/* Newsletter */}
+              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-green-700 mb-0.5">A edição diária</p>
+                  <h2 className="font-extrabold text-sm leading-snug text-gray-900">Receba às 5h</h2>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-xs text-gray-600 leading-relaxed mb-3">O que move o mercado, sem enrolação, direto no seu e-mail.</p>
+                  <ButtonLink href="/#newsletter" size="sm" full>Quero receber</ButtonLink>
+                </div>
+              </div>
+        </aside>
+      </div>
 
       {/* ── SORTEIO / INDICAÇÃO ───────────────────────────────────────── */}
       <ReferralBanner />
 
-      {/* ── GRID DE ARTIGOS ───────────────────────────────────────────── */}
-      {grid.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-gray-900">Últimas publicações</h2>
-            <Link href="/blog" className="text-sm text-green-700 font-medium hover:underline">Ver todos <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden /></Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {grid.map(post => (
-              <Link key={post.slug.current} href={`/blog/${post.slug.current}`} className="group">
-                <article className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md hover:border-green-200 transition-all h-full flex flex-col">
-                  <div className="relative h-44 shrink-0 overflow-hidden">
-                    <PostCover post={post} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  </div>
-                  <div className="p-4 flex flex-col flex-1">
-                    <CategoryBadge category={post.category} />
-                    <h3 className="font-bold text-gray-900 text-sm leading-snug mt-1.5 mb-2 line-clamp-2 group-hover:text-green-700 transition-colors flex-1">
-                      {post.title}
-                    </h3>
-                    <p className="text-gray-400 text-xs line-clamp-2 mb-3">{post.excerpt}</p>
-                    <p className="text-xs text-gray-400">
-                      {formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}
-                    </p>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── MAIS ARTIGOS + GUIAS/GLOSSÁRIO ───────────────────────────── */}
-      {rest.length > 0 && (
-        <section>
-          <div className="grid lg:grid-cols-[1fr_300px] gap-8 items-start">
-
-            {/* Mais artigos */}
-            <div>
-              <h2 className="text-base font-bold text-gray-900 mb-4">Mais artigos</h2>
-              <div className="divide-y divide-gray-100">
-                {rest.map(post => (
-                  <Link
-                    key={post.slug.current}
-                    href={`/blog/${post.slug.current}`}
-                    className="flex gap-4 py-4 group hover:bg-gray-50 -mx-3 px-3 rounded-xl transition-colors"
-                  >
-                    {post.coverImage?.url ? (
-                      <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-20 h-14 object-cover rounded-xl shrink-0" />
-                    ) : (
-                      <div className="w-20 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl shrink-0 flex items-center justify-center text-xl">💰</div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <CategoryBadge category={post.category} />
-                      <h3 className="font-bold text-gray-900 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-green-700 transition-colors">
-                        {post.title}
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-1">{formatDate(post.publishedAt)}{post.readingTime ? ` · ${post.readingTime} min` : ''}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Sidebar: Guias + Glossário */}
-            <div className="space-y-4 lg:sticky lg:top-[148px] lg:max-h-[calc(100vh-165px)] lg:overflow-y-auto lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
-
-              {/* Guias */}
-              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-                <div className="bg-gradient-to-br from-green-700 to-green-900 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-green-300 mb-0.5">Educação financeira</p>
-                  <h2 className="text-white font-extrabold text-sm leading-snug">Guias completos</h2>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {[
-                    { href: '/guias/como-sair-das-dividas', label: 'Como sair das dívidas', tag: 'Dívidas', tagColor: 'text-red-600' },
-                    { href: '/guias/como-economizar-dinheiro', label: 'Como economizar dinheiro', tag: 'Organização', tagColor: 'text-blue-600' },
-                    { href: '/guias/fundo-de-emergencia', label: 'Fundo de emergência', tag: 'Organização', tagColor: 'text-blue-600' },
-                    { href: '/guias/como-investir-do-zero', label: 'Como investir do zero', tag: 'Investimentos', tagColor: 'text-green-700' },
-                    { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-700' },
-                    { href: '/guias/imposto-de-renda', label: 'Imposto de Renda 2025', tag: 'Impostos', tagColor: 'text-yellow-700' },
-                  ].map(g => (
-                    <Link key={g.href} href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[10px] font-bold uppercase tracking-wide ${g.tagColor} mb-0.5`}>{g.tag}</p>
-                        <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700 transition-colors leading-snug">{g.label}</p>
-                      </div>
-                      <span className="text-gray-300 group-hover:text-green-500 shrink-0 text-sm">→</span>
-                    </Link>
-                  ))}
-                </div>
-                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
-                  <Link href="/guias" className="text-xs font-semibold text-green-700 hover:underline">Ver todos os guias →</Link>
-                </div>
-              </div>
-
-              {/* Glossário */}
-              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-                <div className="bg-gradient-to-br from-slate-700 to-slate-900 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Dicionário financeiro</p>
-                  <h2 className="text-white font-extrabold text-sm leading-snug">Glossário</h2>
-                </div>
-                <div className="px-4 pt-3 pb-2">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Termos populares</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { slug: 'selic', label: 'Selic' },
-                      { slug: 'cdi', label: 'CDI' },
-                      { slug: 'juros-compostos', label: 'Juros compostos' },
-                      { slug: 'score-de-credito', label: 'Score' },
-                      { slug: 'tesouro-direto', label: 'Tesouro Direto' },
-                      { slug: 'renda-fixa', label: 'Renda fixa' },
-                      { slug: 'acoes', label: 'Ações' },
-                      { slug: 'pix', label: 'Pix' },
-                    ].map(t => (
-                      <Link
-                        key={t.slug}
-                        href={`/glossario/${t.slug}`}
-                        className="text-xs font-medium px-2 py-0.5 border border-gray-200 rounded-full text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors"
-                      >
-                        {t.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 mt-2">
-                  <Link href="/glossario" className="text-xs font-semibold text-green-700 hover:underline">Explorar o glossário completo →</Link>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-      )}
 
       {allPosts.length === 0 && (
         <div className="text-center py-16 text-gray-400 border border-dashed border-gray-200 rounded-xl">

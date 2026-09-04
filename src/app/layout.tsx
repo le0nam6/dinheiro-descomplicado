@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Manrope } from 'next/font/google'
 import Script from 'next/script'
 import { headers } from 'next/headers'
 import { CustomCursor } from '@/components/CustomCursor'
@@ -17,6 +17,9 @@ import './globals.css'
 // Exposta como variável CSS para o design system consumir em --font-sans,
 // em vez de depender de uma className no <body>.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
+// Manrope so na manchete: a Inter foi desenhada para nao chamar atencao, que e
+// o que se quer em interface e o oposto do que um titulo de capa precisa.
+const manrope = Manrope({ subsets: ['latin'], weight: ['600','700','800'], variable: '--font-manrope', display: 'swap' })
 
 export const metadata: Metadata = {
   title: { default: 'Endinheirados', template: '%s | Endinheirados' },
@@ -40,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isWide = pathname === '/' || pathname.startsWith('/blog/')
 
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={`${inter.variable} ${manrope.variable}`}>
       <head>
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />

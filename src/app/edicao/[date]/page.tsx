@@ -184,7 +184,7 @@ export default async function EditionPage({ params }: { params: Promise<{ date: 
     <article className="max-w-2xl mx-auto">
       {/* Cabeçalho */}
       <header className="mb-8">
-        <Link href="/edicao" className="text-sm text-green-700 font-medium hover:underline">← Todas as edições</Link>
+        <Link href="/edicao" className="inline-flex items-center gap-1.5 text-sm text-green-700 font-medium hover:underline">← Todas as edições</Link>
         <div className="mt-4 flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-green-700 uppercase tracking-wide">🗞️ A Edição</span>
           {ed.number && <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">#{ed.number}</span>}
