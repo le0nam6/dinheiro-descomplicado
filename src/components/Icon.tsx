@@ -68,3 +68,26 @@ export function CheckItem({
     </li>
   )
 }
+
+/**
+ * Traduz um emoji vindo de dado salvo (ex.: settings.referralMilestones) para o
+ * ícone equivalente. Os níveis do sorteio são configurados no painel e ficam
+ * gravados como emoji, então não dá para trocá-los editando markup — a troca
+ * acontece aqui, na renderização. Emoji sem correspondência cai no próprio
+ * emoji, para nunca sumir da tela.
+ */
+import {
+  IconSeeding, IconChartBar, IconBriefcase, IconTrophy, IconCrown, IconCoins,
+  IconStar, IconRocket, IconMedal,
+} from '@tabler/icons-react'
+
+const DE_EMOJI: Record<string, typeof IconStar> = {
+  '🌱': IconSeeding, '📊': IconChartBar, '💼': IconBriefcase, '🏆': IconTrophy,
+  '👑': IconCrown, '💰': IconCoins, '⭐': IconStar, '🚀': IconRocket, '🥇': IconMedal,
+}
+
+export function EmojiIcon({ emoji, size = 16 }: { emoji?: string; size?: number }) {
+  const C = emoji ? DE_EMOJI[emoji.trim()] : undefined
+  if (!C) return <span className="text-base leading-none">{emoji}</span>
+  return <C size={size} stroke={1.9} aria-hidden />
+}

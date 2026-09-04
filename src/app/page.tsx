@@ -2,16 +2,20 @@ import { getPosts, getLatestEdition } from '@/lib/sanity'
 import { AdUnit } from '@/components/AdUnit'
 import { ReferralBanner } from '@/components/ReferralBanner'
 import Link from 'next/link'
+import { IconArrowRight, IconBook2, IconChartLine, IconCoins, IconNews, IconPencil, IconTool } from '@tabler/icons-react'
 
 export const revalidate = 60
 
+// Ícone em vez de emoji: emoji muda de desenho em cada sistema operacional e o
+// leitor de tela lê "jornal enrolado" no meio do nome da seção. Tabler é a
+// família que o projeto já usa nos outros 26 ícones.
 const categories = [
-  { label: 'Notícias', href: '/categoria/noticias', icon: '📰' },
-  { label: 'Blog', href: '/blog', icon: '✍️' },
-  { label: 'Educação Financeira', href: '/categoria/educacao-financeira', icon: '📚' },
-  { label: 'Ganhe Dinheiro', href: '/categoria/ganhar-dinheiro', icon: '🚀' },
-  { label: 'Investimentos', href: '/categoria/investimentos', icon: '📈' },
-  { label: 'Ferramentas', href: '/ferramentas', icon: '🛠️' },
+  { label: 'Notícias', href: '/categoria/noticias', Icon: IconNews },
+  { label: 'Blog', href: '/blog', Icon: IconPencil },
+  { label: 'Educação Financeira', href: '/categoria/educacao-financeira', Icon: IconBook2 },
+  { label: 'Ganhe Dinheiro', href: '/categoria/ganhar-dinheiro', Icon: IconCoins },
+  { label: 'Investimentos', href: '/categoria/investimentos', Icon: IconChartLine },
+  { label: 'Ferramentas', href: '/ferramentas', Icon: IconTool },
 ]
 
 type Post = {
@@ -35,7 +39,7 @@ function editionLabel(date: string) {
 
 function CategoryBadge({ category, onImage = false }: { category: string; onImage?: boolean }) {
   return onImage ? (
-    <span className="inline-block text-[11px] font-bold uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-md mb-1">
+    <span className="self-start text-[11px] font-bold uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-md mb-1">
       {category}
     </span>
   ) : (
@@ -87,7 +91,7 @@ export default async function Home() {
       {edition && (
         <Link href={`/edicao/${edition.slug.current}`} className="group block">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 to-green-900 text-white px-5 py-4 sm:px-6 sm:py-5 flex items-center gap-5">
-            <span className="hidden sm:block text-5xl shrink-0 select-none">🗞️</span>
+            <IconNews size={46} stroke={1.4} className="hidden sm:block shrink-0 opacity-90" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider bg-white/15 px-2.5 py-1 rounded-full mb-2">
                 A Edição · {editionLabel(edition.date)}
@@ -97,8 +101,8 @@ export default async function Home() {
                 <p className="text-green-100/80 text-sm mt-1 line-clamp-1">{edition.intro}</p>
               )}
             </div>
-            <span className="shrink-0 bg-white text-green-800 font-bold text-sm px-4 py-2 rounded-full group-hover:bg-green-50 transition-colors whitespace-nowrap">
-              Ler →
+            <span className="shrink-0 inline-flex items-center gap-1.5 bg-white text-green-800 font-bold text-sm px-4 py-2 rounded-full group-hover:bg-green-50 transition-colors whitespace-nowrap">
+              Ler <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden />
             </span>
           </div>
         </Link>
@@ -154,7 +158,7 @@ export default async function Home() {
               href={cat.href}
               className="flex-none flex items-center gap-1.5 border border-gray-200 rounded-xl px-3 py-2 hover:border-green-400 hover:bg-green-50 transition-all bg-white whitespace-nowrap"
             >
-              <span className="text-base">{cat.icon}</span>
+              <cat.Icon size={17} stroke={1.8} className="shrink-0 text-green-700" aria-hidden />
               <span className="font-semibold text-sm text-gray-800">{cat.label}</span>
             </Link>
           ))}
@@ -171,7 +175,7 @@ export default async function Home() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-gray-900">Últimas publicações</h2>
-            <Link href="/blog" className="text-sm text-green-700 font-medium hover:underline">Ver todos →</Link>
+            <Link href="/blog" className="text-sm text-green-700 font-medium hover:underline">Ver todos <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden /></Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {grid.map(post => (

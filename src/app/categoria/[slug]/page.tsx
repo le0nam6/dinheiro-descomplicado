@@ -3,6 +3,8 @@ import { AdUnit } from '@/components/AdUnit'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import type { Icon as TablerIcon } from '@tabler/icons-react'
+import { IconBook2, IconBuildingBank, IconChartLine, IconChartPie, IconCoins, IconCreditCard, IconHome, IconNews } from '@tabler/icons-react'
 
 export const revalidate = 60
 
@@ -21,7 +23,7 @@ interface PillarInfo {
   title: string
   h1: string
   desc: string
-  icon: string
+  Icon: TablerIcon
   intro: string
   tool?: { title: string; href: string; emoji: string }
   faq: { q: string; a: string }[]
@@ -32,7 +34,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Notícias',
     h1: 'Notícias de Finanças e Economia em 2026',
     desc: 'As principais notícias sobre economia, mercado financeiro, empresas e investimentos que você precisa saber.',
-    icon: '📰',
+    Icon: IconNews,
     intro: 'Tudo o que acontece no mundo financeiro e econômico que afeta o seu bolso. Notícias sobre Bolsa de Valores, câmbio, juros, empresas e muito mais — explicadas de forma simples e direta.',
     faq: [
       { q: 'Por que acompanhar notícias de economia?', a: 'O mercado financeiro é influenciado por eventos econômicos e políticos. Entender o que está acontecendo ajuda a tomar melhores decisões de investimento e proteger seu dinheiro.' },
@@ -43,7 +45,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Ganhar Dinheiro',
     h1: 'Ganhar Dinheiro em 2026: Renda Extra, MMO e Liberdade Financeira',
     desc: 'Renda extra, trabalhar pela internet (MMO), sair da CLT e construir liberdade financeira com mais de uma fonte de renda.',
-    icon: '🚀',
+    Icon: IconCoins,
     intro: 'Guardar e investir é metade do jogo — a outra metade é fazer entrar mais dinheiro. Aqui você encontra caminhos reais para criar renda extra, ganhar pela internet, empreender e, quem sabe, sair da CLT. Sem fórmula mágica e sem promessa de ficar rico da noite pro dia: só o que de fato funciona pra aumentar sua renda e comprar sua liberdade.',
     faq: [
       { q: 'Como começar a ter uma renda extra do zero?', a: 'Comece pelo que você já sabe fazer: freelas, serviços, venda de produtos ou conteúdo. O segredo é validar pequeno, com baixo custo, antes de escalar — e reinvestir os primeiros ganhos.' },
@@ -55,7 +57,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Empréstimo',
     h1: 'Empréstimo em 2026: Guia Completo de Crédito Inteligente',
     desc: 'Tudo sobre empréstimo consignado, pessoal, FGTS e as melhores taxas do mercado em 2026.',
-    icon: '💳',
+    Icon: IconCreditCard,
     intro: 'Pegar dinheiro emprestado não precisa ser uma armadilha. Reunimos tudo o que você precisa saber para escolher o crédito mais barato, comparar taxas e nunca cair em ciladas. Do consignado ao empréstimo pessoal, aqui está o seu guia definitivo.',
     tool: { title: 'Calculadora de Consignado', href: '/ferramentas/calculadora-consignado', emoji: '💳' },
     faq: [
@@ -68,7 +70,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Investimentos',
     h1: 'Investimentos em 2026: Do Primeiro Passo à Liberdade Financeira',
     desc: 'Renda fixa, Tesouro Direto, CDB, LCI/LCA e renda passiva — guias completos para todo perfil de investidor.',
-    icon: '📈',
+    Icon: IconChartLine,
     intro: 'Investir é como você garante que seu dinheiro nunca pare de crescer. Não importa se você tem R$30 ou R$30 mil — aqui você encontra o caminho completo, do Tesouro Selic à construção de renda passiva, explicado de forma que qualquer um entende.',
     tool: { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
     faq: [
@@ -81,7 +83,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Cartão de Crédito',
     h1: 'Cartão de Crédito em 2026: Sem Anuidade, Cashback e Mais',
     desc: 'Os melhores cartões sem anuidade, cashback, opções para negativados e como usar o cartão a seu favor.',
-    icon: '🏦',
+    Icon: IconBuildingBank,
     intro: 'Usado com inteligência, o cartão de crédito é uma ferramenta poderosa — cashback, prazo para pagar e construção de score. Usado errado, vira bola de neve. Aqui você aprende a escolher o cartão certo e a usar sem nunca pagar juros.',
     tool: { title: 'Simulador de Quitação de Dívidas', href: '/ferramentas/simulador-dividas', emoji: '🔴' },
     faq: [
@@ -94,7 +96,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Financiamento',
     h1: 'Financiamento em 2026: Imóvel e Veículo com as Melhores Taxas',
     desc: 'Guias e simulações de financiamento imobiliário, veículo, consórcio e uso do FGTS.',
-    icon: '🏠',
+    Icon: IconHome,
     intro: 'A casa própria ou o carro novo passam, quase sempre, por um financiamento. Uma boa escolha aqui economiza dezenas de milhares de reais. Reunimos os comparativos de taxas, SAC vs Price, consórcio vs financiamento e como usar o FGTS a seu favor.',
     tool: { title: 'Calculadora de Consignado', href: '/ferramentas/calculadora-consignado', emoji: '💳' },
     faq: [
@@ -107,7 +109,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Previdência',
     h1: 'Previdência Privada em 2026: PGBL, VGBL e Aposentadoria',
     desc: 'Como planejar sua aposentadoria com previdência privada, a diferença entre PGBL e VGBL e quanto investir.',
-    icon: '📊',
+    Icon: IconChartPie,
     intro: 'O INSS dificilmente será suficiente para manter seu padrão de vida na aposentadoria. A previdência privada e os investimentos de longo prazo são como você garante tranquilidade no futuro. Entenda as opções e monte seu plano.',
     tool: { title: 'Calculadora de Investimentos', href: '/ferramentas/calculadora-juros', emoji: '📈' },
     faq: [
@@ -120,7 +122,7 @@ const pillars: Record<string, PillarInfo> = {
     title: 'Educação Financeira',
     h1: 'Educação Financeira em 2026: Organize e Multiplique seu Dinheiro',
     desc: 'Score, orçamento, reserva de emergência, como sair das dívidas e os hábitos que constroem riqueza.',
-    icon: '📚',
+    Icon: IconBook2,
     intro: 'Tudo começa aqui. Antes de investir ou pegar crédito, você precisa dominar o básico: orçamento, reserva de emergência, score e como sair das dívidas. Esta é a base de quem constrói patrimônio que dura para sempre.',
     tool: { title: 'Simulador de Quitação de Dívidas', href: '/ferramentas/simulador-dividas', emoji: '🔴' },
     faq: [
@@ -170,7 +172,7 @@ export default async function PillarPage({ params }: { params: Promise<{ slug: s
 
       {/* Hero pillar */}
       <div className="mb-8">
-        <p className="text-4xl mb-2">{p.icon}</p>
+        <div className="mb-3"><p.Icon size={34} stroke={1.6} className="text-green-700" aria-hidden /></div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 leading-tight">{p.h1}</h1>
         <p className="text-lg text-gray-600 leading-relaxed">{p.intro}</p>
       </div>

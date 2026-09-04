@@ -1,7 +1,9 @@
 'use client'
 
+import { EmojiIcon } from '@/components/Icon'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { IconArrowRight, IconCrown } from '@tabler/icons-react'
 
 type Milestone = { count: number; emoji: string; label: string; reward: string }
 type Data = { milestones: Milestone[]; top: Milestone }
@@ -34,7 +36,7 @@ export function ReferralBanner() {
       <div className="relative p-5 sm:p-6">
         {/* selo */}
         <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-950 shadow-sm">
-          <span className="text-sm leading-none">👑</span> Maior prêmio da campanha
+          <IconCrown size={13} stroke={2} aria-hidden /> Maior prêmio da campanha
         </div>
 
         {/* prêmio */}
@@ -58,7 +60,7 @@ export function ReferralBanner() {
                     : 'bg-white/10 text-emerald-50'
                 }`}
               >
-                <span className="text-base leading-none">{m.emoji}</span>
+                <EmojiIcon emoji={m.emoji} size={17} />
                 <span className="text-[10px] font-bold leading-none">{m.count}</span>
               </div>
             )
@@ -70,7 +72,7 @@ export function ReferralBanner() {
           href="/painel"
           className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-ui bg-action px-4 py-3 text-sm font-black text-action-ink shadow-lg shadow-action/20 transition-colors hover:bg-action-hover"
         >
-          Quero meu link de indicação →
+          Quero meu link de indicação <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden />
         </Link>
         <p className="mt-2 text-center text-[11px] text-emerald-200/70">
           Cada amigo que assinar pelo seu link conta. Quanto mais, melhor o prêmio.

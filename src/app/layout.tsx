@@ -13,7 +13,10 @@ import { SubscriberGoalBadge } from '@/components/SubscriberGoalBadge'
 import { IconTool, IconNews } from '@tabler/icons-react'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+
+// Exposta como variável CSS para o design system consumir em --font-sans,
+// em vez de depender de uma className no <body>.
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 
 export const metadata: Metadata = {
   title: { default: 'Endinheirados', template: '%s | Endinheirados' },
@@ -37,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isWide = pathname === '/' || pathname.startsWith('/blog/')
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={inter.variable}>
       <head>
         {/* Tema: aplica dark antes do paint p/ evitar flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
@@ -65,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           gtag('config', 'G-C1TGQHVY23');
         `}</Script>
       </head>
-      <body className={inter.className}>
+      <body>
         {isLP ? children : (
           <>
             <CustomCursor />

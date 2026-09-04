@@ -61,8 +61,23 @@
   --radius-card: 12px;
 }
 
+/* Tipografia principal: Inter, carregada por next/font e exposta em
+   --font-inter. O fallback é a fonte de sistema, para o texto não pular de
+   forma enquanto a Inter carrega. */
+@theme {
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 html { color-scheme: only light; scroll-behavior: smooth; }
-body { background-color: var(--color-paper); color: #1A1D19; }
+body {
+  background-color: var(--color-paper);
+  color: #1A1D19;
+  font-family: var(--font-sans);
+  /* A SF Pro foi desenhada com o antialias da Apple em mente. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 /* Foco visível em tudo que recebe teclado. Havia 9 focus:outline-none sem
    anel substituto, o que é falha direta na 2.4.7 do WCAG. Esta regra
