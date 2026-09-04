@@ -90,7 +90,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const date = new Date(post.publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   return (
-    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[1fr_240px] lg:gap-10">
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-14">
     <article className="max-w-2xl w-full mx-auto min-w-0">
       {/* Breadcrumb */}
       <nav className="text-sm text-gray-400 mb-6">
@@ -271,8 +271,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {/* CTA: Ferramentas + Links internos */}
       <ArticleCTA category={post.category ?? ''} related={related} />
 
-      {/* Sorteio / indicação */}
-      <ReferralBanner />
+      {/* Sorteio / indicação.
+          Precisa da margem aqui porque, diferente dos outros usos (a home e o
+          rodapé ficam dentro de um pai com space-y), aqui o banner é filho
+          direto do <article> e vinha colado no bloco de CTA acima. */}
+      <div className="mt-10">
+        <ReferralBanner />
+      </div>
 
       {/* Ad após o conteúdo */}
       <AdUnit placeholderId={104} />
@@ -334,10 +339,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       )}
     </article>
 
-    {/* Índice navegável (sticky centralizado, só em telas grandes e guias longos) */}
+    {/* Índice navegável (sticky no topo, só em telas grandes e guias longos) */}
     <aside className="hidden lg:block">
-      <div className="sticky top-0 h-screen flex items-center">
-        <div className="max-h-[70vh] overflow-y-auto w-full pr-1">
+      {/* Era `top-0 h-screen flex items-center`, o que centralizava o índice na
+          altura da janela e o deixava solto no meio do vazio, longe do começo do
+          texto. Ancorado logo abaixo do header (137px) ele acompanha a leitura. */}
+      <div className="sticky top-[9.5rem]">
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto w-full pr-1">
           <TableOfContents headings={headings} />
         </div>
       </div>

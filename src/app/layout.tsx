@@ -29,6 +29,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const hdrs = await headers()
   const pathname = hdrs.get('x-current-path') ?? ''
   const isLP = pathname.startsWith('/blogai')
+  // A home e o post de blog montam layout proprio de duas colunas e declaram
+  // max-w-5xl. Com o main preso em max-w-4xl (896px) esse container nunca
+  // alcancava a largura pedida: a coluna de leitura ficava 88px menor que o
+  // proprio design pede e sobrava margem morta dos dois lados. Aqui o main
+  // acompanha o que a pagina pede, em vez de cortar antes.
+  const isWide = pathname === '/' || pathname.startsWith('/blog/')
 
   return (
     <html lang="pt-BR">
@@ -66,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ExitIntentPopup />
             <QuotesTicker />
             <Header />
-            <main className="max-w-4xl mx-auto px-4 py-12">{children}</main>
+            <main className={`${isWide ? 'max-w-5xl' : 'max-w-4xl'} mx-auto px-4 py-12`}>{children}</main>
             <Footer />
           </>
         )}
