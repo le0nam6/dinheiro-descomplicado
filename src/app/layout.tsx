@@ -41,9 +41,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // proprio design pede e sobrava margem morta dos dois lados. Aqui o main
   // acompanha o que a pagina pede, em vez de cortar antes.
   const isWide = pathname === '/' || pathname.startsWith('/blog/')
-  // Só a home alarga no 2xl, para abrir espaço ao trilho de anúncio. O post
-  // fica em max-w-5xl de propósito: alargar ali estragaria a medida de
-  // leitura de 67 caracteres por linha que a coluna do artigo tem hoje.
+  // A home cresce junto com a tela em vez de parar em 1024px: num monitor
+  // grande sobravam quase 500px mortos de cada lado. O post fica de fora
+  // porque lá a coluna estreita é proposital — 67 caracteres por linha.
   const isHome = pathname === '/'
 
   return (
@@ -82,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ExitIntentPopup />
             <QuotesTicker />
             <Header />
-            <main className={`${isWide ? 'max-w-5xl' : 'max-w-4xl'} ${isHome ? '2xl:max-w-[1440px]' : ''} mx-auto px-4 py-12`}>{children}</main>
+            <main className={`${isHome ? 'max-w-5xl lg:max-w-6xl xl:max-w-[1360px] 2xl:max-w-[1520px]' : isWide ? 'max-w-5xl' : 'max-w-4xl'} mx-auto px-4 sm:px-6 xl:px-10 py-12`}>{children}</main>
             <Footer />
           </>
         )}

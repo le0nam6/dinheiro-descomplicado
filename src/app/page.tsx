@@ -7,8 +7,6 @@ import { IconArrowRight, IconBook2, IconChartLine, IconCoins, IconNews, IconPenc
 
 export const revalidate = 60
 
-// Só reserva a coluna de anúncio se existir slot criado no painel do AdSense.
-const TEM_TRILHO = Boolean(process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR)
 
 
 type Post = {
@@ -77,13 +75,8 @@ export default async function Home() {
   const grid = allPosts.slice(3, 12)
   const rest = allPosts.slice(12)
 
-  // O max-w-5xl daqui travava em 1024px mesmo com o main já em 1440 no 2xl, e a
-  // coluna principal desabava para 344px quando o trilho de anúncio aparecia.
-  // Com o trilho, quem manda na largura no 2xl é o main.
-  const larguraHome = TEM_TRILHO ? 'max-w-5xl 2xl:max-w-none' : 'max-w-5xl'
-
   return (
-    <div className={`${larguraHome} mx-auto space-y-10`}>
+    <div className="space-y-10">
 
 
       {/* ── EDIÇÃO DO DIA ─────────────────────────────────────────────── */}
@@ -118,11 +111,7 @@ export default async function Home() {
            havia anúncio nenhum ali: os dois AdUnit da home sempre estiveram no
            fluxo do conteúdo. O trilho abaixo ocupa essa faixa, e só existe
            quando há um slot configurado — coluna vazia seria pior que margem. */}
-      <div className={`lg:grid lg:gap-10 lg:items-start space-y-10 lg:space-y-0 ${
-        TEM_TRILHO
-          ? 'lg:grid-cols-[minmax(0,2.1fr)_300px] 2xl:grid-cols-[minmax(0,2.1fr)_300px_300px]'
-          : 'lg:grid-cols-[minmax(0,2.1fr)_300px]'
-      }`}>
+      <div className="lg:grid lg:grid-cols-[minmax(0,2.4fr)_320px] lg:gap-10 lg:items-start space-y-10 lg:space-y-0">
 
         {/* Coluna principal */}
         <div className="min-w-0 space-y-10">
@@ -133,7 +122,9 @@ export default async function Home() {
 
               {/* Featured: ocupa 2/3 */}
               <Link href={`/blog/${featured.slug.current}`} className="group md:col-span-2">
-                <article className="relative rounded-2xl overflow-hidden h-[280px] sm:h-[340px]">
+                {/* A altura cresce com a coluna. Fixa em 340px, o hero ficava achatado
+                       numa coluna de 950px, e a lateral sobrava 312px abaixo dele. */}
+                  <article className="relative rounded-2xl overflow-hidden h-[280px] sm:h-[340px] lg:h-[450px] xl:h-[530px]">
                   <PostCover post={featured} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
                   <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end">
@@ -319,15 +310,6 @@ export default async function Home() {
               </div>
         </aside>
 
-        {/* Trilho de anúncio. Fora da área de navegação, que é justamente o que
-            a política de posição do AdSense proíbe. */}
-        {TEM_TRILHO && (
-          <aside className="hidden 2xl:block">
-            <div className="sticky top-[148px]">
-              <AdUnit placeholderId={106} />
-            </div>
-          </aside>
-        )}
       </div>
 
       {/* ── SORTEIO / INDICAÇÃO ───────────────────────────────────────── */}
