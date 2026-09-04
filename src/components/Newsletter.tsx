@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@/components/Button'
 import { useState } from 'react'
 
 export function Newsletter({ referredBy }: { referredBy?: string } = {}) {
@@ -48,7 +49,7 @@ export function Newsletter({ referredBy }: { referredBy?: string } = {}) {
               />
               <button
                 onClick={() => navigator.clipboard?.writeText(link)}
-                className="shrink-0 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                className="shrink-0 bg-action text-action-ink text-xs font-bold px-3 py-1.5 rounded-ui"
               >
                 Copiar
               </button>
@@ -68,15 +69,11 @@ export function Newsletter({ referredBy }: { referredBy?: string } = {}) {
         value={email}
         onChange={e => setEmail(e.target.value)}
         placeholder="seu@email.com"
-        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
       />
-      <button
-        type="submit"
-        disabled={status === 'loading'}
-        className="bg-green-600 hover:bg-green-500 disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
-      >
-        {status === 'loading' ? '...' : 'Quero receber'}
-      </button>
+      <Button type="submit" disabled={status === 'loading'}>
+        {status === 'loading' ? 'Enviando…' : 'Quero receber'}
+      </Button>
     </form>
   )
 }

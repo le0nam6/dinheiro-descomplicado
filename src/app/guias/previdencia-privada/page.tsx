@@ -1,3 +1,4 @@
+import { CheckItem } from '@/components/Icon'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -88,19 +89,19 @@ export default function GuiaPrevidenciaPrivada() {
           <div className="border border-blue-200 bg-blue-50 rounded-2xl p-5">
             <p className="font-bold text-blue-800 mb-2">PGBL</p>
             <ul className="space-y-1.5 text-sm text-blue-900">
-              <li>✓ Deduz até 12% da renda bruta no IR</li>
-              <li>✓ IR sobre o total no resgate (principal + rendimentos)</li>
-              <li>✓ Indicado para declaração completa</li>
-              <li className="text-blue-600">→ Bom se você tem IR a pagar todo ano</li>
+              <CheckItem>Deduz até 12% da renda bruta no IR</CheckItem>
+              <CheckItem>IR sobre o total no resgate (principal + rendimentos)</CheckItem>
+              <CheckItem>Indicado para declaração completa</CheckItem>
+              <CheckItem tone="next">Bom se você tem IR a pagar todo ano</CheckItem>
             </ul>
           </div>
           <div className="border border-green-200 bg-green-50 rounded-2xl p-5">
             <p className="font-bold text-green-800 mb-2">VGBL</p>
             <ul className="space-y-1.5 text-sm text-green-900">
-              <li>✓ Não deduz do IR</li>
-              <li>✓ IR apenas sobre os rendimentos no resgate</li>
-              <li>✓ Indicado para declaração simplificada</li>
-              <li className="text-green-600">→ Bom para a maioria dos casos</li>
+              <CheckItem>Não deduz do IR</CheckItem>
+              <CheckItem>IR apenas sobre os rendimentos no resgate</CheckItem>
+              <CheckItem>Indicado para declaração simplificada</CheckItem>
+              <CheckItem tone="next">Bom para a maioria dos casos</CheckItem>
             </ul>
           </div>
         </div>
@@ -165,21 +166,21 @@ export default function GuiaPrevidenciaPrivada() {
           <div className="border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-gray-900 text-sm">Taxa de carregamento</p>
-              <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Evite acima de 0%</span>
+              <span className="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">Evite acima de 0%</span>
             </div>
             <p className="text-sm text-gray-600">Cobrada sobre cada aporte — de 0% a 5%. Um plano com 3% de carregamento investe apenas R$97 de cada R$100 que você coloca. Plataformas independentes (XP, BTG, Icatu) oferecem 0% de carregamento. Exija isso.</p>
           </div>
           <div className="border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-gray-900 text-sm">Taxa de administração</p>
-              <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">Máximo 1% ao ano</span>
+              <span className="text-xs font-semibold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full">Máximo 1% ao ano</span>
             </div>
             <p className="text-sm text-gray-600">Cobrada anualmente sobre o patrimônio total. Bancos cobram de 1,5% a 3%. Planos de seguradoras independentes têm opções abaixo de 0,5%. A diferença de 1% ao ano por 30 anos é gigantesca — em R$500.000, representa mais de R$150.000 a menos.</p>
           </div>
           <div className="border border-gray-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-gray-900 text-sm">Taxa de saída</p>
-              <span className="text-xs font-semibold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">Atenção ao prazo</span>
+              <span className="text-xs font-semibold text-yellow-800 bg-yellow-50 px-2 py-0.5 rounded-full">Atenção ao prazo</span>
             </div>
             <p className="text-sm text-gray-600">Cobrada na portabilidade ou resgate antecipado. Alguns planos isentam após 24-60 meses. Verifique no regulamento antes de contratar — e negocie a isenção.</p>
           </div>

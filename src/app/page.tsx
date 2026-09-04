@@ -35,7 +35,7 @@ function editionLabel(date: string) {
 
 function CategoryBadge({ category, onImage = false }: { category: string; onImage?: boolean }) {
   return onImage ? (
-    <span className="inline-block text-[11px] font-bold uppercase tracking-wide text-white bg-green-600/80 px-2 py-0.5 rounded-md mb-1">
+    <span className="inline-block text-[11px] font-bold uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-md mb-1">
       {category}
     </span>
   ) : (
@@ -244,7 +244,7 @@ export default async function Home() {
                     { href: '/guias/como-economizar-dinheiro', label: 'Como economizar dinheiro', tag: 'Organização', tagColor: 'text-blue-600' },
                     { href: '/guias/fundo-de-emergencia', label: 'Fundo de emergência', tag: 'Organização', tagColor: 'text-blue-600' },
                     { href: '/guias/como-investir-do-zero', label: 'Como investir do zero', tag: 'Investimentos', tagColor: 'text-green-700' },
-                    { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-600' },
+                    { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-700' },
                     { href: '/guias/imposto-de-renda', label: 'Imposto de Renda 2025', tag: 'Impostos', tagColor: 'text-yellow-700' },
                   ].map(g => (
                     <Link key={g.href} href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">

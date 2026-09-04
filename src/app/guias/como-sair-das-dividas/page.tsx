@@ -112,7 +112,7 @@ export default function GuiaComoSairDasDividas() {
                 <tr>
                   <td className="py-2">Empréstimo pessoal</td>
                   <td>R$ 2.800</td>
-                  <td className="text-orange-600 font-semibold">4,5%</td>
+                  <td className="text-orange-700 font-semibold">4,5%</td>
                   <td>R$ 180</td>
                 </tr>
               </tbody>
@@ -144,7 +144,7 @@ export default function GuiaComoSairDasDividas() {
           </div>
           <div className="border border-orange-200 bg-orange-50 rounded-2xl p-5">
             <p className="font-bold text-orange-800 mb-1">Método Avalanche</p>
-            <p className="text-xs text-orange-600 mb-3">Matematicamente ótimo</p>
+            <p className="text-xs text-orange-700 mb-3">Matematicamente ótimo</p>
             <p className="text-sm text-orange-900 leading-relaxed">
               Ataque a <strong>maior taxa de juros</strong> primeiro. Você paga menos juros no total e quita as dívidas em menos tempo. Mais eficiente, mas pode demorar para ver a primeira vitória.
             </p>

@@ -1,7 +1,80 @@
 @import "tailwindcss";
 
+/* ════════════════════════════════════════════════════════════════════
+   Design system — direção B "Feira"
+   ════════════════════════════════════════════════════════════════════
+
+   A regra que organiza tudo: VERDE É A MARCA, ÂMBAR É A AÇÃO.
+
+   O verde da marca era também o verde de "subiu" nos indicadores de
+   mercado. Um botão verde ao lado de um ticker verde disputava o mesmo
+   significado e obrigava o leitor a decidir qual era qual. Agora verde e
+   vermelho pertencem só ao mercado; quem chama para a ação é o âmbar.
+   Botão nunca é verde.
+
+   A rampa de verde foi reescrita porque a antiga reprovava em WCAG AA:
+   green-500 como fundo de botão dava 2.28:1 e green-600 como link dava
+   3.30:1. Remapear aqui conserta as 300+ ocorrências espalhadas pelos
+   componentes sem precisar tocar em nenhum arquivo .tsx.
+   ════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Verde da marca. Do 500 para cima passa AA como texto e como fundo
+     com texto branco. Do 400 para baixo é tinta de fundo, nunca texto. */
+  --color-green-50:  #EEF6F1;
+  --color-green-100: #D6E9DE;
+  --color-green-200: #AFD4C0;
+  --color-green-300: #7FB79B;
+  --color-green-400: #4E9772;  /* 3.39:1 — só texto grande, borda e ícone */
+  --color-green-500: #2A8155;  /* 4.65:1 */
+  --color-green-600: #12653A;  /* 6.89:1 — o verde da marca */
+  --color-green-700: #0E5230;  /* 8.95:1 */
+  --color-green-800: #0A3E25;
+  --color-green-900: #07291A;
+
+  /* Era #9ca3af, com 2.45:1 sobre o papel: reprovava em AA e aparecia em
+     153 lugares como texto (breadcrumb, crédito de foto, metadado). */
+  --color-gray-400: #6E746C;   /* 4.64:1 */
+
+  /* Papel quente da direção B, no lugar do branco puro. */
+  --color-paper: #FDFBF6;
+  --color-rule:  #EDE6D8;
+
+  /* Âmbar de ação. Sempre com tinta escura por cima: com branco dá
+     2.17:1 e reprova, por isso o componente Button trava o par. */
+  --color-action:       #E8A317;
+  --color-action-hover: #D29310;
+  --color-action-ink:   #231A08;  /* 7.92:1 sobre o âmbar */
+
+  /* Texto secundário sobre superfície escura (barra de cotações, rodapé).
+     O gray-400 acima foi escurecido para passar no papel claro, o que o faz
+     reprovar sobre fundo escuro: 3.70:1. Este token cobre esse caso. */
+  --color-on-dark: #A6ADA2;   /* 7.71:1 sobre a barra #101828 */
+
+  /* Mercado. Estas duas cores não aparecem em botão, link ou marca. */
+  --color-up:   #0F7B3D;
+  --color-down: #B3261E;
+
+  /* Quatro degraus de raio, no lugar dos seis valores soltos de antes:
+     dado e tabela, controle, cartão, e o círculo de avatar e selo. */
+  --radius-data: 2px;
+  --radius-ui:   6px;
+  --radius-card: 12px;
+}
+
 html { color-scheme: only light; scroll-behavior: smooth; }
-body { background-color: #ffffff; color: #171717; }
+body { background-color: var(--color-paper); color: #1A1D19; }
+
+/* Foco visível em tudo que recebe teclado. Havia 9 focus:outline-none sem
+   anel substituto, o que é falha direta na 2.4.7 do WCAG. Esta regra
+   devolve o anel mesmo onde o outline foi zerado na classe utilitária. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-green-600);
+  outline-offset: 2px;
+  border-radius: var(--radius-ui);
+}
+html.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: var(--color-green-400);
+}
 
 .prose h1 { @apply text-3xl font-extrabold mt-2 mb-4 text-gray-900; }
 .prose h2 { @apply text-2xl font-bold mt-8 mb-4 text-gray-900; }
@@ -18,7 +91,8 @@ body { background-color: #ffffff; color: #171717; }
 
 /* ===== Modo escuro (classe .dark no <html>) ===== */
 html.dark { color-scheme: dark; }
-html.dark body { background-color: #0b0f0e; color: #e5e7eb; }
+html.dark body { background-color: #0F1210; color: #E9EBE7; }
+html.dark .bg-paper { background-color: #0F1210 !important; }
 html.dark .bg-white { background-color: #14191b !important; }
 html.dark .bg-gray-50 { background-color: #11171a !important; }
 html.dark .bg-gray-100 { background-color: #1b2225 !important; }

@@ -1,3 +1,4 @@
+import { Check } from '@/components/Icon'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -136,7 +137,7 @@ export default function GuiaImpostoDeRenda() {
               <ul className="space-y-1">
                 {grupo.docs.map((doc, j) => (
                   <li key={j} className="flex gap-2 items-start text-sm text-gray-600">
-                    <span className="text-green-500 shrink-0 mt-0.5">✓</span>
+                    <Check className="w-4 h-4 text-green-600 shrink-0 mt-1" />
                     {doc}
                   </li>
                 ))}

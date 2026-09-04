@@ -58,7 +58,7 @@ export function QuotesTicker() {
           const slug = SLUG[q.symbol]
           const inner = (
             <>
-              <span className="text-gray-400 font-medium tracking-wide">{q.label}</span>
+              <span className="text-on-dark font-medium tracking-wide">{q.label}</span>
               <span className="font-semibold tabular-nums">{fmt(q)}</span>
               <span className={`inline-flex items-center gap-0.5 tabular-nums ${up ? 'text-green-400' : 'text-red-400'}`}>
                 {up ? <IconTrendingUp size={14} stroke={2} /> : <IconTrendingDown size={14} stroke={2} />}

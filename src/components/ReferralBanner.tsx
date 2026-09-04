@@ -68,7 +68,7 @@ export function ReferralBanner() {
         {/* CTA */}
         <Link
           href="/painel"
-          className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-emerald-950 shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-300 active:bg-amber-500"
+          className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-ui bg-action px-4 py-3 text-sm font-black text-action-ink shadow-lg shadow-action/20 transition-colors hover:bg-action-hover"
         >
           Quero meu link de indicação →
         </Link>
