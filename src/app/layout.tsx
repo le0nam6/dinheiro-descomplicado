@@ -37,6 +37,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />
 
 
+        {/* Google AdSense: o script precisa estar no <head> de toda pagina, tanto
+            pra verificacao de propriedade quanto pra veicular anuncio depois. */}
+        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+            crossOrigin="anonymous"
+          />
+        )}
+
         {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-C1TGQHVY23"
