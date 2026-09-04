@@ -7,6 +7,9 @@ import { IconArrowRight, IconBook2, IconChartLine, IconCoins, IconNews, IconPenc
 
 export const revalidate = 60
 
+// Só reserva a coluna de anúncio se existir slot criado no painel do AdSense.
+const TEM_TRILHO = Boolean(process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR)
+
 
 type Post = {
   title: string
@@ -74,8 +77,13 @@ export default async function Home() {
   const grid = allPosts.slice(3, 12)
   const rest = allPosts.slice(12)
 
+  // O max-w-5xl daqui travava em 1024px mesmo com o main já em 1440 no 2xl, e a
+  // coluna principal desabava para 344px quando o trilho de anúncio aparecia.
+  // Com o trilho, quem manda na largura no 2xl é o main.
+  const larguraHome = TEM_TRILHO ? 'max-w-5xl 2xl:max-w-none' : 'max-w-5xl'
+
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
+    <div className={`${larguraHome} mx-auto space-y-10`}>
 
 
       {/* ── EDIÇÃO DO DIA ─────────────────────────────────────────────── */}
@@ -106,7 +114,15 @@ export default async function Home() {
            glossário, newsletter) fica na lateral fixa. A faixa de
            categorias saiu daqui: os seis itens dela repetiam o menu do
            topo, e é a lateral que agora faz o papel de índice. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,2.1fr)_300px] lg:gap-10 lg:items-start space-y-10 lg:space-y-0">
+      {/* Em telas de 1536px pra cima sobravam ~480px mortos de cada lado, e não
+           havia anúncio nenhum ali: os dois AdUnit da home sempre estiveram no
+           fluxo do conteúdo. O trilho abaixo ocupa essa faixa, e só existe
+           quando há um slot configurado — coluna vazia seria pior que margem. */}
+      <div className={`lg:grid lg:gap-10 lg:items-start space-y-10 lg:space-y-0 ${
+        TEM_TRILHO
+          ? 'lg:grid-cols-[minmax(0,2.1fr)_300px] 2xl:grid-cols-[minmax(0,2.1fr)_300px_300px]'
+          : 'lg:grid-cols-[minmax(0,2.1fr)_300px]'
+      }`}>
 
         {/* Coluna principal */}
         <div className="min-w-0 space-y-10">
@@ -134,12 +150,14 @@ export default async function Home() {
               <div className="flex flex-col gap-4">
                 {secondary.map(post => (
                   <Link key={post.slug.current} href={`/blog/${post.slug.current}`} className="group flex-1">
-                    <article className="relative rounded-2xl overflow-hidden h-[130px] sm:h-[160px]">
+                    {/* Altura fixa cortava manchete longa: o texto não tinha para onde ir.
+                         Agora o card acompanha a altura da coluna, que o hero define. */}
+                    <article className="relative rounded-2xl overflow-hidden h-[130px] sm:h-full sm:min-h-[168px]">
                       <PostCover post={post} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                       <div className="absolute inset-0 p-4 flex flex-col justify-end">
                         <CategoryBadge category={post.category} onImage />
-                        <h3 className="text-white font-bold text-sm leading-snug mt-0.5 line-clamp-2">
+                        <h3 className="text-white font-bold text-sm leading-snug mt-0.5 line-clamp-4">
                           {post.title}
                         </h3>
                       </div>
@@ -300,6 +318,16 @@ export default async function Home() {
                 </div>
               </div>
         </aside>
+
+        {/* Trilho de anúncio. Fora da área de navegação, que é justamente o que
+            a política de posição do AdSense proíbe. */}
+        {TEM_TRILHO && (
+          <aside className="hidden 2xl:block">
+            <div className="sticky top-[148px]">
+              <AdUnit placeholderId={106} />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* ── SORTEIO / INDICAÇÃO ───────────────────────────────────────── */}
