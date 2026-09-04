@@ -29,9 +29,18 @@ const FEEDS = [
   { source: 'Finsiders', url: 'https://finsiders.com.br/feed/' },
 ]
 
-// Janelas de publicação (hora de Brasília). O agendador bate de hora em hora
-// (6h-23h) e agora geramos notícia em toda janela — cadência real de 1h em 1h.
-const PUBLISH_SLOTS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+// Janelas de publicação (hora de Brasília). O agendador externo bate de hora em
+// hora; estes slots é que decidem em quais delas realmente se publica.
+//
+// Segue em 6h-23h (até 18/dia), que é cadência normal pra site de notícia. O
+// volume em si não é violação de política: o que pega é conteúdo duplicado e sem
+// valor agregado, e isso é tratado na janela de deduplicação lá embaixo.
+//
+// NEWS_PUBLISH_SLOTS ajusta sem deploy, ex.: "8,12,16,20" para quatro por dia.
+const PUBLISH_SLOTS = (process.env.NEWS_PUBLISH_SLOTS || '6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23')
+  .split(',')
+  .map(h => Number(h.trim()))
+  .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
 
 type NewsItem = { source: string; title: string; description: string; url: string; imageUrl?: string }
 
@@ -286,7 +295,6 @@ async function fetchArticleText(url: string): Promise<string> {
 async function processNews(skipRecencyLock = false, articleUrl?: string) {
   // Gate de janela + trava de recência. Em dev/force, ambos são ignorados.
   if (!skipRecencyLock && !articleUrl) {
-    // Publica em toda janela horária (6h-23h BRT) — cadência de 1h em 1h.
     const spNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
     if (!PUBLISH_SLOTS.includes(spNow.getHours())) return
     // Trava de recência: evita duplicar dentro da mesma janela horária (< 50min desde a última).
@@ -297,10 +305,19 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
   const news = await fetchNews()
   if (!news.length) return
 
-  // Títulos das últimas 6h para checar duplicata de assunto
+  // Títulos recentes para checar duplicata de assunto.
+  //
+  // Isso já foi 6h, o que era curto demais: no ritmo de até 18 posts/dia o mesmo
+  // tema voltava dois ou três dias depois e passava batido, gerando os slugs -2
+  // e -3 que hoje precisam de canonical (ver src/lib/duplicates.ts). Sete dias
+  // cobrem os casos reais (as duplicatas saíram com 2 a 6 dias de intervalo) sem
+  // barrar desdobramento legítimo de pauta, ainda mais porque isTooSimilar exige
+  // 3+ palavras longas em comum: "Copom mantém Selic" e "Copom corta Selic"
+  // compartilham só duas.
+  const DUP_WINDOW_DAYS = Number(process.env.NEWS_DUP_WINDOW_DAYS || 7)
   const recentNewsTitles: string[] = await sanity.fetch(
     `*[_type=="post" && articleType=="news" && publishedAt >= $since]|order(publishedAt desc).title`,
-    { since: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() }
+    { since: new Date(Date.now() - DUP_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString() }
   )
 
   // Títulos das últimas 12h para detectar temas saturados e forçar diversidade
@@ -330,9 +347,9 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
   const recent = await getRecentTitles(20)
   const post = await generate(news, recent, saturatedThemes, editorBrief ?? queued?.brief)
 
-  // Descarta se o assunto já foi publicado nas últimas 6h (exceto pauta do editor, que sempre vale)
+  // Descarta se o assunto já foi coberto na janela (exceto pauta do editor, que sempre vale)
   if (!queued && isTooSimilar(post.title, recentNewsTitles)) {
-    console.log(`[news] Assunto já coberto nas últimas 6h, pulando: "${post.title}"`)
+    console.log(`[news] Assunto já coberto nos últimos ${DUP_WINDOW_DAYS} dias, pulando: "${post.title}"`)
     return
   }
 

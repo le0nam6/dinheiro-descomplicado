@@ -1,4 +1,5 @@
 import { createClient } from '@sanity/client'
+import { isDuplicate } from '@/lib/duplicates'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +67,9 @@ export async function GET() {
 
   const entries = [
     ...STATIC.map(([loc, cf, p]) => url(loc, cf, p)),
-    ...posts.map(p => url(`${BASE}/blog/${p.slug}`, 'weekly', '0.8', p.publishedAt?.slice(0, 10))),
+    // duplicatas ficam de fora: quem entra no sitemap e a versao canonica
+    ...posts.filter(p => !isDuplicate(p.slug))
+      .map(p => url(`${BASE}/blog/${p.slug}`, 'weekly', '0.8', p.publishedAt?.slice(0, 10))),
     ...editions.map(e => url(`${BASE}/edicao/${e.slug}`, 'never', '0.6', e.date?.slice(0, 10))),
   ]
 

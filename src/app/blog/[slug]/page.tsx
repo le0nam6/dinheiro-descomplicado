@@ -1,3 +1,4 @@
+import { canonicalSlug } from '@/lib/duplicates'
 import { getPostBySlug, getPosts, getRelatedPosts } from '@/lib/sanity'
 import { PortableText } from '@portabletext/react'
 import { AdUnit } from '@/components/AdUnit'
@@ -57,7 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: post.title,
     description: post.excerpt,
     keywords: post.seoKeywords?.join(', '),
-    alternates: { canonical: `${SITE}/blog/${slug}` },
+    alternates: { canonical: `${SITE}/blog/${canonicalSlug(slug)}` },
     openGraph: {
       type: 'article',
       url: `${SITE}/blog/${slug}`,
