@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* O tema escuro deste projeto é por classe (.dark no <html>), não por
+   prefers-color-scheme. Sem isto, as utilidades dark: do Tailwind v4 nunca
+   disparam e o escuro fica dependendo só dos overrides !important abaixo. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ════════════════════════════════════════════════════════════════════
    Design system — direção B "Feira"
    ════════════════════════════════════════════════════════════════════
@@ -109,6 +114,10 @@ html.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-
 .prose ol { @apply list-decimal list-inside mb-4 space-y-1 text-gray-700; }
 .prose strong { @apply font-semibold text-gray-900; }
 .prose a { @apply text-green-700 underline hover:text-green-800; }
+/* O .prose é escrito à mão aqui, então o marcador not-prose que os componentes
+   já usam não fazia efeito: um botão dentro do texto herdava cor e sublinhado
+   de link, com especificidade maior que a própria classe dele. */
+.prose .not-prose a { color: inherit; text-decoration: none; }
 .prose blockquote { @apply border-l-4 border-green-500 pl-4 italic text-gray-600 my-4; }
 .prose table { @apply w-full border-collapse text-sm mb-6; }
 .prose th { @apply bg-green-50 font-semibold text-left px-3 py-2 border border-gray-200; }
@@ -137,6 +146,36 @@ html.dark .prose { color: #d1d5db; }
 html.dark .prose h1, html.dark .prose h2, html.dark .prose h3, html.dark .prose strong { color: #f3f4f6; }
 html.dark .prose p, html.dark .prose li, html.dark .prose td { color: #d1d5db; }
 html.dark .bg-green-50 { background-color: #14241b !important; }
+
+/* ── Verde no modo escuro ──────────────────────────────────────────────
+   Faltava qualquer regra para texto verde aqui: o bloco escuro só tratava
+   cinzas. Como o verde da marca é escuro por definição (foi escolhido para
+   passar em AA sobre papel claro), ele ficava em 2.04:1 sobre o fundo escuro,
+   praticamente invisível — e eram 19 links e 4 rótulos por tela.
+
+   #63A886 é o mesmo verde clareado até passar em AA nos três fundos escuros
+   que o site usa: corpo 6.71, card 6.31, painel 6.44. */
+html.dark .text-green-600,
+html.dark .text-green-700,
+html.dark .text-green-800,
+html.dark .text-green-900 { color: #63A886 !important; }
+html.dark .hover\:text-green-700:hover,
+html.dark .hover\:text-green-800:hover,
+html.dark .group:hover .group-hover\:text-green-700 { color: #93C6AB !important; }
+html.dark .border-green-200,
+html.dark .border-green-300 { border-color: #2A4A38 !important; }
+html.dark .bg-green-100 { background-color: #16301F !important; }
+html.dark .text-green-300 { color: #93C6AB !important; }
+
+/* Fundo de botão verde continua escuro no tema escuro, então o texto branco
+   por cima segue legível; só o hover precisa não clarear demais. */
+html.dark .bg-green-600 { background-color: #12653A !important; }
+html.dark .hover\:bg-green-500:hover { background-color: #167945 !important; }
+
+/* Superfícies que ficaram brancas por não terem override próprio. */
+html.dark .bg-paper { background-color: #0F1210 !important; }
+html.dark .bg-gray-50 { background-color: #11171a !important; }
+
 html.dark .bg-amber-50 { background-color: #2a2113 !important; }
 
 /* Colapsa bloco de anúncio quando o AdSense não preenche (evita espaço vazio) */

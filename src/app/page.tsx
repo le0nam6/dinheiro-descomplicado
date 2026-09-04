@@ -81,18 +81,20 @@ export default async function Home() {
       {/* ── EDIÇÃO DO DIA ─────────────────────────────────────────────── */}
       {edition && (
         <Link href={`/edicao/${edition.slug.current}`} className="group block">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 to-green-900 text-white px-5 py-4 sm:px-6 sm:py-5 flex items-center gap-5">
+          {/* No celular o botão vai para baixo: ao lado do texto ele espremia a
+                 coluna e o título era cortado no meio da primeira linha. */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 to-green-900 text-white px-5 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
             <IconNews size={46} stroke={1.4} className="hidden sm:block shrink-0 opacity-90" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider bg-white/15 px-2.5 py-1 rounded-full mb-2">
                 A Edição · {editionLabel(edition.date)}
               </p>
-              <h2 className="text-lg sm:text-xl font-extrabold leading-tight line-clamp-1">{edition.title}</h2>
+              <h2 className="text-lg sm:text-xl font-extrabold leading-tight line-clamp-3 sm:line-clamp-1">{edition.title}</h2>
               {edition.intro && (
-                <p className="text-green-100/80 text-sm mt-1 line-clamp-1">{edition.intro}</p>
+                <p className="text-green-100/80 text-sm mt-1 line-clamp-2 sm:line-clamp-1">{edition.intro}</p>
               )}
             </div>
-            <span className="shrink-0 inline-flex items-center gap-1.5 bg-white text-green-800 font-bold text-sm px-4 py-2 rounded-full group-hover:bg-green-50 transition-colors whitespace-nowrap">
+            <span className="shrink-0 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto min-h-11 bg-white text-green-800 dark:bg-green-100 dark:text-green-900 font-bold text-sm px-4 py-2 rounded-full group-hover:bg-green-50 transition-colors whitespace-nowrap">
               Ler <IconArrowRight size={15} stroke={2} className="shrink-0" aria-hidden />
             </span>
           </div>
@@ -216,66 +218,74 @@ export default async function Home() {
 
         {/* Lateral fixa */}
         <aside className="space-y-4 lg:sticky lg:top-[148px] lg:max-h-[calc(100vh-165px)] lg:overflow-y-auto lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden">
-            {/* Guias */}
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-              <div className="bg-gradient-to-br from-green-700 to-green-900 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-green-300 mb-0.5">Educação financeira</p>
-                <h2 className="text-white font-extrabold text-sm leading-snug">Guias completos</h2>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {[
-                  { href: '/guias/como-sair-das-dividas', label: 'Como sair das dívidas', tag: 'Dívidas', tagColor: 'text-red-600' },
-                  { href: '/guias/como-economizar-dinheiro', label: 'Como economizar dinheiro', tag: 'Organização', tagColor: 'text-blue-600' },
-                  { href: '/guias/fundo-de-emergencia', label: 'Fundo de emergência', tag: 'Organização', tagColor: 'text-blue-600' },
-                  { href: '/guias/como-investir-do-zero', label: 'Como investir do zero', tag: 'Investimentos', tagColor: 'text-green-700' },
-                  { href: '/guias/previdencia-privada', label: 'Previdência privada', tag: 'Previdência', tagColor: 'text-orange-700' },
-                  { href: '/guias/imposto-de-renda', label: 'Imposto de Renda 2025', tag: 'Impostos', tagColor: 'text-yellow-700' },
-                ].map(g => (
-                  <Link key={g.href} href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide ${g.tagColor} mb-0.5`}>{g.tag}</p>
-                      <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700 transition-colors leading-snug">{g.label}</p>
-                    </div>
-                    <span className="text-gray-300 group-hover:text-green-500 shrink-0 text-sm">→</span>
-                  </Link>
-                ))}
-              </div>
-              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
-                <Link href="/guias" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">Ver todos os guias →</Link>
-              </div>
-            </div>
+            {/* ── Trilha de guias ────────────────────────────────────────
+                 Era uma lista de seis linhas de peso igual, cada uma com uma
+                 cor de tag diferente — seis cores para seis itens, o que é
+                 variação sem significado. E cada linha tinha uma seta que
+                 repetia o que a linha inteira já diz, já que ela toda é o link.
 
-            {/* Glossário */}
+                 Os guias têm ordem real: não dá para investir antes de sair do
+                 vermelho, nem montar reserva sem sobrar dinheiro no mês. O
+                 número passa a carregar essa sequência, que é informação
+                 verdadeira, e substitui as cores como elemento de estrutura. */}
             <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-              <div className="bg-gradient-to-br from-slate-700 to-slate-900 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Dicionário financeiro</p>
-                <h2 className="text-white font-extrabold text-sm leading-snug">Glossário</h2>
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-green-700 mb-0.5">Educação financeira</p>
+                <h2 className="font-extrabold text-sm leading-snug text-gray-900">Por onde começar</h2>
+                <p className="text-xs text-gray-500 leading-relaxed mt-1">Seis guias na ordem em que fazem sentido.</p>
               </div>
-              <div className="px-4 pt-3 pb-2">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Termos populares</p>
+              <ol className="divide-y divide-gray-100">
+                {[
+                  { href: '/guias/como-sair-das-dividas',    label: 'Sair das dívidas' },
+                  { href: '/guias/como-economizar-dinheiro', label: 'Economizar todo mês' },
+                  { href: '/guias/fundo-de-emergencia',      label: 'Montar a reserva' },
+                  { href: '/guias/como-investir-do-zero',    label: 'Começar a investir' },
+                  { href: '/guias/previdencia-privada',      label: 'Planejar a aposentadoria' },
+                  { href: '/guias/imposto-de-renda',         label: 'Declarar o Imposto de Renda' },
+                ].map((g, i) => (
+                  <li key={g.href}>
+                    <Link href={g.href} className="flex items-center gap-3 px-4 py-2.5 group hover:bg-green-50 transition-colors">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-green-50 text-green-700 text-[11px] font-bold flex items-center justify-center tabular-nums group-hover:bg-green-600 group-hover:text-white transition-colors">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-800 group-hover:text-green-700 transition-colors leading-snug min-w-0">
+                        {g.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+              {/* O glossário deixa de ser um cartão próprio com cabeçalho escuro
+                  e passa a fechar este: os termos são justamente os que aparecem
+                  nos guias acima, então pertencem ao mesmo bloco. */}
+              <div className="px-4 pt-3 pb-3 border-t border-gray-100 bg-gray-50">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Termos que aparecem neles</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { slug: 'selic', label: 'Selic' },
                     { slug: 'cdi', label: 'CDI' },
                     { slug: 'juros-compostos', label: 'Juros compostos' },
-                    { slug: 'score-de-credito', label: 'Score' },
                     { slug: 'tesouro-direto', label: 'Tesouro Direto' },
                     { slug: 'renda-fixa', label: 'Renda fixa' },
-                    { slug: 'acoes', label: 'Ações' },
-                    { slug: 'pix', label: 'Pix' },
+                    { slug: 'score-de-credito', label: 'Score' },
                   ].map(t => (
                     <Link
                       key={t.slug}
                       href={`/glossario/${t.slug}`}
-                      className="text-xs font-medium px-2 py-0.5 border border-gray-200 rounded-full text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors"
+                      className="text-xs font-medium px-2 py-0.5 border border-gray-200 bg-white rounded-full text-gray-600 hover:border-green-600 hover:text-green-700 transition-colors"
                     >
                       {t.label}
                     </Link>
                   ))}
                 </div>
-              </div>
-              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 mt-2">
-                <Link href="/glossario" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">Explorar o glossário completo →</Link>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+                  <Link href="/guias" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">
+                    Todos os guias <IconArrowRight size={13} stroke={2} aria-hidden />
+                  </Link>
+                  <Link href="/glossario" className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:underline">
+                    Glossário completo <IconArrowRight size={13} stroke={2} aria-hidden />
+                  </Link>
+                </div>
               </div>
             </div>
               {/* Newsletter */}

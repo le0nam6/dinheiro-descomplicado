@@ -19,7 +19,7 @@ const VARIANTS: Variant[] = [
     headline: () => '1h com um planejador financeiro. De graça.',
     body: ({ goal, prizeName }) =>
       `Cada pessoa que você indica nos aproxima da meta de ${goal.toLocaleString('pt-BR')} inscritos. Quando bater, sorteamos ${prizeName} — e uma consultoria financeira certificada. O tipo de coisa que custa R$ 300/hora lá fora.`,
-    cta: 'Quero ganhar minha hora →',
+    cta: 'Quero ganhar minha hora',
   },
   {
     // Ogilvy — especificidade brutal
@@ -27,7 +27,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Você pode ganhar 1h de consultoria financeira só por indicar um amigo.',
     body: ({ goal }) =>
       `Não é ponto fidelidade. Não é desconto em produto que você nunca vai usar. É uma hora com um profissional certificado — de graça — quando a gente bater ${goal.toLocaleString('pt-BR')} inscritos.`,
-    cta: 'Participar agora →',
+    cta: 'Participar agora',
   },
   {
     // Sugarman — envolvimento + padrão quebrado
@@ -35,7 +35,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Você claramente se importa com seu dinheiro.',
     body: ({ goal, prizeName }) =>
       `Seus amigos também deveriam. Manda o Endinheirados pra eles — e quando a gente bater ${goal.toLocaleString('pt-BR')} leitores, você concorre a ${prizeName} e a 1h com um planejador certificado.`,
-    cta: 'Indicar agora →',
+    cta: 'Indicar agora',
   },
   {
     // Hopkins — meta pública + prova concreta
@@ -44,7 +44,7 @@ const VARIANTS: Variant[] = [
       `Faltam ${(goal - count).toLocaleString('pt-BR')} inscritos. Prêmio: ${prizeName}.`,
     body: ({ goal }) =>
       `Quando a gente bater ${goal.toLocaleString('pt-BR')} leitores, o sorteio acontece. Você acelera indicando amigos — e concorre automaticamente. Simples assim.`,
-    cta: 'Ver minha posição →',
+    cta: 'Ver minha posição',
   },
   {
     // Gary Halbert — inversão + medo de perder
@@ -52,7 +52,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Seus amigos vão descobrir o Endinheirados de qualquer jeito.',
     body: () =>
       `A questão é: vai ser por você — e você concorre a 1h de consultoria financeira — ou vai ser por outra pessoa? Quem indica tem vantagem no sorteio. É simples assim.`,
-    cta: 'Indicar antes que alguém me passe →',
+    cta: 'Indicar antes que alguém me passe',
   },
   {
     // Robert Collier — entrar na conversa já existente
@@ -60,7 +60,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Tem gente pagando R$ 300/hora por exatamente isso.',
     body: ({ prizeName }) =>
       `Uma hora com um planejador financeiro certificado. Você pode ganhar de graça — e seus amigos entram na newsletter mais direta sobre dinheiro do Brasil. Sorteamos ${prizeName} também.`,
-    cta: 'Ganhar minha consultoria →',
+    cta: 'Ganhar minha consultoria',
   },
   {
     // Dan Kennedy — direto, sem enrolação
@@ -68,7 +68,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Você não precisa comprar nada. Não precisa pagar nada.',
     body: ({ goal, prizeName }) =>
       `Só indicar um amigo. Quando bater ${goal.toLocaleString('pt-BR')} inscritos, sorteamos ${prizeName} entre todos — e quem mais indicou tem mais chances. Cada amigo que se inscrever pelo seu link conta.`,
-    cta: 'Entrar no sorteio →',
+    cta: 'Entrar no sorteio',
   },
   {
     // Sugarman 2 — escorregador emocional
@@ -76,7 +76,7 @@ const VARIANTS: Variant[] = [
     headline: () => 'Você leu. Aprendeu. Agora passa adiante.',
     body: ({ prizeName }) =>
       `Alguém em algum momento achou que finanças pessoais valiam atenção. Você concordou e chegou até aqui. Seus amigos merecem o mesmo. E você concorre a ${prizeName} e a 1h de consultoria por isso.`,
-    cta: 'Compartilhar →',
+    cta: 'Compartilhar',
   },
 ]
 
@@ -120,7 +120,7 @@ export function ReferralInline({ seed }: { seed?: string }) {
       </p>
       <Link
         href="/indicar"
-        className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors"
+        className="inline-flex items-center gap-1.5 bg-action hover:bg-action-hover text-action-ink font-bold text-sm px-4 py-2 rounded-ui transition-colors"
       >
         {variant.cta}
       </Link>

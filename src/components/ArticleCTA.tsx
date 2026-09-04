@@ -1,3 +1,4 @@
+import { IconBook2, IconBooks, IconMap } from '@tabler/icons-react'
 import Link from 'next/link'
 
 // Calculadora relacionada por categoria
@@ -127,7 +128,7 @@ export function ArticleCTA({ category, related }: Props) {
       {/* Guias relacionados */}
       {guias.length > 0 && (
         <div>
-          <p className="font-bold text-gray-900 text-sm mb-3">🗺️ Guias relacionados</p>
+          <p className="font-bold text-gray-900 text-sm mb-3"><IconMap size={15} stroke={1.9} className="inline-block align-[-2px] mr-1.5 text-green-700" aria-hidden />Guias relacionados</p>
           <div className="grid gap-2">
             {guias.map(g => (
               <Link key={g.href} href={g.href} className="flex items-center justify-between text-sm border border-gray-200 rounded-xl px-4 py-3 hover:border-green-300 hover:text-green-700 transition-colors group">
@@ -142,7 +143,7 @@ export function ArticleCTA({ category, related }: Props) {
       {/* Glossário relevante */}
       {glossarioTerms.length > 0 && (
         <div>
-          <p className="font-bold text-gray-900 text-sm mb-3">📖 Termos do glossário</p>
+          <p className="font-bold text-gray-900 text-sm mb-3"><IconBook2 size={15} stroke={1.9} className="inline-block align-[-2px] mr-1.5 text-green-700" aria-hidden />Termos do glossário</p>
           <div className="flex flex-wrap gap-2">
             {glossarioTerms.map(t => (
               <Link key={t.slug} href={`/glossario/${t.slug}`} className="text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-full hover:border-green-400 hover:text-green-700 transition-colors">
@@ -156,7 +157,7 @@ export function ArticleCTA({ category, related }: Props) {
       {/* Links internos dinâmicos */}
       {related.length > 0 && (
         <div>
-          <p className="font-bold text-gray-900 text-sm mb-3">📚 Continue lendo</p>
+          <p className="font-bold text-gray-900 text-sm mb-3"><IconBooks size={15} stroke={1.9} className="inline-block align-[-2px] mr-1.5 text-green-700" aria-hidden />Continue lendo</p>
           <div className="grid gap-2">
             {related.map(r => (
               <Link key={r.slug.current} href={`/blog/${r.slug.current}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-700 p-2 rounded-lg hover:bg-green-50 transition-colors group">
