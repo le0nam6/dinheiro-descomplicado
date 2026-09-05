@@ -94,3 +94,89 @@ export async function consultasDoSite(
 export async function gscDisponivel(): Promise<boolean> {
   return (await consultasDoSite({ dias: 7, limite: 1 })).length >= 0 && (await token()) !== null
 }
+
+
+// ─── Relatório ───────────────────────────────────────────────────────────────
+
+/** Territórios centrais do portal: se estes seguem enterrados, é o alerta real. */
+const CENTRAIS = [
+  'juros compostos', 'fundo de emergência', 'como investir', 'score de crédito',
+  'renda fixa', 'tesouro direto', 'sair das dívidas', 'imposto de renda',
+  'previdência privada', 'cartão de crédito', 'pix',
+]
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function agregar(linhas: LinhaConsulta[]) {
+  const impressoes = linhas.reduce((s, l) => s + l.impressoes, 0)
+  const cliques = linhas.reduce((s, l) => s + l.cliques, 0)
+  // Posição ponderada por impressão: consulta com 300 impressões pesa mais que
+  // uma com 1, o que a média simples do painel do Google ignora.
+  const posicao = impressoes
+    ? linhas.reduce((s, l) => s + l.posicao * l.impressoes, 0) / impressoes
+    : 0
+  return { impressoes, cliques, posicao, consultas: linhas.length }
+}
+
+/**
+ * Monta o relatório de busca em HTML do Telegram. Usado tanto pelo cron
+ * semanal quanto pelo comando /busca, para os dois nunca divergirem.
+ */
+export async function relatorioDeBusca(dias = 7): Promise<string> {
+  const [atual, dobro] = await Promise.all([
+    consultasDoSite({ dias, limite: 1000 }),
+    consultasDoSite({ dias: dias * 2, limite: 1000 }),
+  ])
+
+  if (!atual.length && !dobro.length) {
+    return '<b>Busca</b>\n\nSem dados do Search Console. Verifique se a API segue ativa e se a service account mantém acesso.'
+  }
+
+  const agora = agregar(atual)
+  const tudo = agregar(dobro)
+  const antes = {
+    impressoes: Math.max(0, tudo.impressoes - agora.impressoes),
+    cliques: Math.max(0, tudo.cliques - agora.cliques),
+  }
+  const varia = (a: number, b: number) => {
+    if (!b) return a ? 'novo' : '—'
+    const p = Math.round(((a - b) / b) * 100)
+    return p === 0 ? 'estável' : `${p > 0 ? '+' : ''}${p}%`
+  }
+
+  const out: string[] = [`<b>Busca — últimos ${dias} dias</b>`, '']
+  out.push(`Impressões: <b>${agora.impressoes}</b> (${varia(agora.impressoes, antes.impressoes)})`)
+  out.push(`Cliques: <b>${agora.cliques}</b> (${varia(agora.cliques, antes.cliques)})`)
+  out.push(`Posição média: <b>${agora.posicao.toFixed(1)}</b>`)
+  out.push(`Consultas distintas: ${agora.consultas}`)
+
+  const topo = atual.slice().sort((a, b) => b.impressoes - a.impressoes).slice(0, 5)
+  if (topo.length) {
+    out.push('', '<b>Mais vistas</b>')
+    for (const l of topo) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${esc(l.consulta.slice(0, 40))}`)
+  }
+
+  const perto = atual
+    .filter(l => l.posicao >= 5 && l.posicao <= 20 && l.impressoes >= 2)
+    .sort((a, b) => b.impressoes - a.impressoes).slice(0, 5)
+  if (perto.length) {
+    out.push('', '<b>Perto da página 1</b>')
+    for (const l of perto) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${esc(l.consulta.slice(0, 40))}`)
+  }
+
+  const enterrados = atual
+    .filter(l => l.posicao > 30 && CENTRAIS.some(c => l.consulta.toLowerCase().includes(c)))
+    .sort((a, b) => b.impressoes - a.impressoes).slice(0, 4)
+  if (enterrados.length) {
+    out.push('', '<b>Tema central enterrado</b>')
+    for (const l of enterrados) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${esc(l.consulta.slice(0, 40))}`)
+    out.push('<i>A página já existe. Reescrever costuma render mais que publicar tema novo.</i>')
+  }
+
+  if (!agora.impressoes) {
+    out.push('', '⚠️ <b>Zero impressões no período.</b> Verifique ações manuais no Search Console.')
+  }
+  return out.join('\n')
+}

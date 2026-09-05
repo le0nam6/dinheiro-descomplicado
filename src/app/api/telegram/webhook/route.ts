@@ -2,6 +2,7 @@
  * Webhook do Telegram: recebe cliques dos botões (aprovar/rejeitar/editar)
  * e mensagens de edição. Controla o fluxo de aprovação dos posts.
  */
+import { relatorioDeBusca } from '@/lib/search-console'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import {
@@ -563,6 +564,51 @@ export async function POST(request: Request) {
         ).then(r => r.json()).catch(() => null)
         if (!r?.ok) {
           await tg('sendMessage', { chat_id: chatId, text: `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
+        }
+        return NextResponse.json({ ok: true })
+      }
+
+      // /pautas — roda a pesquisa agora, sem esperar o cron das 7h
+      if (cmd === '/pautas') {
+        await tg('sendMessage', { chat_id: chatId, text: 'Pesquisando pautas… as sugestões chegam em ~1 min.' })
+        const origin = new URL(request.url).origin
+        // Chama o próprio cron: a lógica mora lá e não deve ser duplicada aqui.
+        fetch(`${origin}/api/cron/pautas`, {
+          headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        }).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+
+      // /fila — o que já foi aprovado e aguarda virar post
+      if (cmd === '/fila') {
+        const fila = await listQueue().catch(() => [])
+        if (!fila.length) {
+          await tg('sendMessage', { chat_id: chatId, text: 'Fila vazia. Use /pautas para receber sugestões.' })
+          return NextResponse.json({ ok: true })
+        }
+        const linhas = fila.slice(0, 15).map((q, i) =>
+          `${i + 1}. ${q.brief.slice(0, 60)}${q.brief.length > 60 ? '…' : ''}`)
+        await tg('sendMessage', {
+          chat_id: chatId,
+          text: `Fila editorial — ${fila.length} pauta(s)\n\n${linhas.join('\n')}`,
+        })
+        return NextResponse.json({ ok: true })
+      }
+
+      // /busca [dias] — relatório do Search Console sob demanda
+      // Mesma função do digest semanal, para os dois nunca divergirem.
+      if (cmd === '/busca' || cmd === '/search') {
+        const arg = Number(text.split(/\s+/)[1])
+        const dias = [7, 28, 90].includes(arg) ? arg : 7
+        await tg('sendMessage', { chat_id: chatId, text: `Consultando o Search Console (${dias} dias)…` })
+        try {
+          const relatorio = await relatorioDeBusca(dias)
+          await tg('sendMessage', { chat_id: chatId, text: relatorio, parse_mode: 'HTML' })
+        } catch (err) {
+          await tg('sendMessage', {
+            chat_id: chatId,
+            text: `Não consegui ler o Search Console: ${err instanceof Error ? err.message.slice(0, 120) : 'erro'}`,
+          })
         }
         return NextResponse.json({ ok: true })
       }
