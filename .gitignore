@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 docs/
+
+# relatorio da varredura de capas
+capas-quebradas.json

@@ -64,6 +64,42 @@ export async function POST(request: Request) {
       const [action, id] = parts
       const msgId = cq.message?.message_id
 
+      // --- Pauta sugerida: aprovar (pa) ou recusar (pr) ---
+      // O cron /api/cron/pautas manda as sugestões; aqui a decisão vira ação.
+      // Aprovar joga na fila editorial, de onde o cron /original escreve.
+      if (action === 'pa' || action === 'pr') {
+        const aprovou = action === 'pa'
+        const pauta = await sanity.fetch(
+          `*[_type=="pautaSugerida" && _id==$id][0]{_id, termo, status}`, { id },
+        ).catch(() => null)
+
+        if (!pauta) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Pauta não encontrada.' })
+          return NextResponse.json({ ok: true })
+        }
+        if (pauta.status !== 'sugerida') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: `Já ${pauta.status}.` })
+          return NextResponse.json({ ok: true })
+        }
+
+        await sanity.patch(id).set({
+          status: aprovou ? 'aprovada' : 'recusada',
+          decididaEm: new Date().toISOString(),
+        }).commit()
+
+        if (aprovou) {
+          // O brief é o próprio termo de busca: é assim que o leitor pergunta,
+          // e escrever para a pergunta dele é o ponto de toda a mudança.
+          await addQueueItem('materia', pauta.termo, 'telegram', 5)
+        }
+
+        await tg('answerCallbackQuery', {
+          callback_query_id: cq.id,
+          text: aprovou ? `✓ Na fila: ${pauta.termo.slice(0, 40)}` : '✕ Descartada',
+        })
+        return NextResponse.json({ ok: true })
+      }
+
       // --- IG: OK (já postou manualmente) ---
       if (action === 'iga') {
         await sanity.patch(id).set({ igQueued: true }).unset(['_igPhotoUrl']).commit()

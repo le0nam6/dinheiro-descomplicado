@@ -84,9 +84,11 @@ export async function GET(req: NextRequest) {
     })
     if (!res.ok) return desiste(`http-${res.status}`)
 
-    const ct = res.headers.get('content-type') || ''
+    const ct = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
     // A checagem que faltava: 200 com text/html é o caso do YouTube e do Facebook.
-    if (!ct.startsWith('image/')) return desiste(`tipo-${ct.split(';')[0] || 'vazio'}`)
+    // Mas há servidor que manda 'webp' sem o prefixo — é imagem válida.
+    const SOLTOS = ['webp', 'jpeg', 'jpg', 'png', 'gif', 'avif', 'image']
+    if (!ct.startsWith('image/') && !SOLTOS.includes(ct)) return desiste(`tipo-${ct || 'vazio'}`)
 
     const buf = await res.arrayBuffer()
     if (buf.byteLength < 128) return desiste('vazia')
