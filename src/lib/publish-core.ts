@@ -97,7 +97,16 @@ type Block = {
 }
 
 function toBlocks(lines: string[]): Block[] {
-  return lines.map(line => {
+  // Um item do array pode carregar várias linhas dentro de si, e antes cada
+  // item virava exatamente um bloco. O humanizador divide o texto só em linha
+  // em branco (\n\n), então uma lista escrita em linhas consecutivas chegava
+  // aqui inteira num item — e as três viravam um bullet só, com os outros dois
+  // engolidos dentro do texto do primeiro. Era o bug de bullet quebrado.
+  return lines
+    .flatMap(l => l.split('\n'))
+    .map(l => l.trimEnd())
+    .filter(l => l.trim().length > 0)
+    .map(line => {
     const trimmed = line.trim()
     // Lista com marcador (- item ou * item)
     if (/^[-*]\s+/.test(trimmed)) {
@@ -203,7 +212,7 @@ REGRAS ABSOLUTAS:
 9. Varie o ritmo organicamente: frases curtas para pontos diretos, mais longas para desenvolvimento. Nunca todas iguais.
 10. Preserve 100% do conteúdo, dados e profundidade. Humanizar nunca é cortar.
 11. Preserve subtítulos (## e ###) exatamente como estão.
-12. Preserve listas com "- " no início.
+12. Preserve listas com "- " no início, uma por linha, e mantenha a MESMA QUANTIDADE de itens do original. Se o texto anuncia "três pontas" ou "quatro motivos", entregue exatamente essa quantidade.
 13. Preserve os dados, fontes e fatos do original.
 
 Retorne APENAS o texto humanizado, sem comentários, sem explicações, sem prefácio. Só o texto.`

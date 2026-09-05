@@ -1,123 +1,111 @@
 /**
- * Vercel Cron (semanal): resume a performance dos posts no Instagram
- * dos últimos 7 dias e manda um digest no Telegram.
- * GA4 do blog fica como evolução futura (precisa de service account + property id).
+ * Digest semanal de busca, no Telegram.
+ *
+ * Antes este cron resumia a performance dos posts no Instagram. O canal parou
+ * de ser alimentado, então o relatório virou ruído — e o dado que move o
+ * projeto está no Search Console, não no Instagram.
+ *
+ * O relatório responde três perguntas, nesta ordem:
+ *   1. A busca cresceu ou encolheu nesta semana?
+ *   2. O que já está perto da primeira página e vale empurrar?
+ *   3. Que tema central do portal segue enterrado?
+ *
+ * O GA4 fica de fora de propósito: as visitas registradas lá são do próprio
+ * editor, então não há audiência para medir ainda.
  */
 import { NextResponse } from 'next/server'
-import { sanity, tgConfigured, tgAlert } from '@/lib/publish-core'
-import { ga4Configured, getGA4Summary } from '@/lib/ga4'
+import { tgConfigured, tgSendMessage, tgAlert } from '@/lib/publish-core'
+import { consultasDoSite, type LinhaConsulta } from '@/lib/search-console'
 
-const IG_USER_ID = process.env.IG_USER_ID!
-const IG_TOKEN   = process.env.IG_ACCESS_TOKEN!
-const GRAPH      = 'https://graph.instagram.com/v21.0'
+export const maxDuration = 300
 
-type Media = {
-  id: string
-  caption?: string
-  permalink: string
-  timestamp: string
-  like_count?: number
-  comments_count?: number
-  media_type?: string
+type Resumo = { impressoes: number; cliques: number; posicao: number; consultas: number }
+
+function resumir(linhas: LinhaConsulta[]): Resumo {
+  const impressoes = linhas.reduce((s, l) => s + l.impressoes, 0)
+  const cliques = linhas.reduce((s, l) => s + l.cliques, 0)
+  // Posição média ponderada por impressão: consulta com 300 impressões pesa
+  // mais que uma com 1, o que a média simples do painel ignora.
+  const posicao = impressoes
+    ? linhas.reduce((s, l) => s + l.posicao * l.impressoes, 0) / impressoes
+    : 0
+  return { impressoes, cliques, posicao, consultas: linhas.length }
 }
 
-async function getInsights(mediaId: string): Promise<{ reach: number; saved: number }> {
-  const res = await fetch(
-    `${GRAPH}/${mediaId}/insights?metric=reach,saved&access_token=${IG_TOKEN}`
-  ).then(r => r.json()).catch(() => null)
-  const out = { reach: 0, saved: 0 }
-  for (const m of res?.data ?? []) {
-    const v = m.values?.[0]?.value ?? 0
-    if (m.name === 'reach') out.reach = v
-    if (m.name === 'saved') out.saved = v
+function variacao(agora: number, antes: number): string {
+  if (!antes) return agora ? 'novo' : '—'
+  const p = Math.round(((agora - antes) / antes) * 100)
+  return p === 0 ? 'estável' : `${p > 0 ? '+' : ''}${p}%`
+}
+
+/** Territórios centrais do portal: se estes seguem enterrados, é o alerta real. */
+const CENTRAIS = [
+  'juros compostos', 'fundo de emergência', 'como investir', 'score de crédito',
+  'renda fixa', 'tesouro direto', 'sair das dívidas', 'imposto de renda',
+  'previdência privada', 'cartão de crédito', 'pix',
+]
+
+async function montarRelatorio(): Promise<string> {
+  const [semana, duasSemanas] = await Promise.all([
+    consultasDoSite({ dias: 7, limite: 1000 }),
+    consultasDoSite({ dias: 14, limite: 1000 }),
+  ])
+
+  if (!semana.length && !duasSemanas.length) {
+    return '<b>Busca — semana</b>\n\nSem dados do Search Console. Verifique se a API segue ativa e se a service account mantém acesso.'
   }
-  return out
+
+  const agora = resumir(semana)
+  // A janela de 14 dias contém a de 7; a diferença aproxima a semana anterior.
+  const tudo = resumir(duasSemanas)
+  const antes = {
+    impressoes: Math.max(0, tudo.impressoes - agora.impressoes),
+    cliques: Math.max(0, tudo.cliques - agora.cliques),
+  }
+
+  const out: string[] = ['<b>Busca — últimos 7 dias</b>', '']
+  out.push(`Impressões: <b>${agora.impressoes}</b> (${variacao(agora.impressoes, antes.impressoes)})`)
+  out.push(`Cliques: <b>${agora.cliques}</b> (${variacao(agora.cliques, antes.cliques)})`)
+  out.push(`Posição média: <b>${agora.posicao.toFixed(1)}</b>`)
+  out.push(`Consultas distintas: ${agora.consultas}`)
+
+  const perto = semana
+    .filter(l => l.posicao >= 5 && l.posicao <= 20 && l.impressoes >= 2)
+    .sort((a, b) => b.impressoes - a.impressoes)
+    .slice(0, 5)
+  if (perto.length) {
+    out.push('', '<b>Perto da página 1</b>')
+    for (const l of perto) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${l.consulta.slice(0, 42)}`)
+  }
+
+  const enterrados = semana
+    .filter(l => l.posicao > 30 && CENTRAIS.some(c => l.consulta.toLowerCase().includes(c)))
+    .sort((a, b) => b.impressoes - a.impressoes)
+    .slice(0, 4)
+  if (enterrados.length) {
+    out.push('', '<b>Tema central enterrado</b>')
+    for (const l of enterrados) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${l.consulta.slice(0, 42)}`)
+    out.push('<i>A página já existe. Reescrever costuma render mais que publicar tema novo.</i>')
+  }
+
+  if (!agora.impressoes) {
+    out.push('', '⚠️ <b>Zero impressões na semana.</b> Verifique ações manuais no Search Console.')
+  }
+
+  return out.join('\n')
 }
 
 export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!tgConfigured()) return NextResponse.json({ ok: false, error: 'Telegram não configurado' })
-
   try {
-    // 1. Posts no IG dos últimos 7 dias
-    const since = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const mediaRes = await fetch(
-      `${GRAPH}/${IG_USER_ID}/media?fields=id,caption,permalink,timestamp,like_count,comments_count,media_type&limit=25&access_token=${IG_TOKEN}`
-    ).then(r => r.json())
-    const recent: Media[] = (mediaRes.data ?? []).filter((m: Media) => new Date(m.timestamp).getTime() >= since)
-
-    // 2. Métricas por post
-    const rows = await Promise.all(recent.map(async m => {
-      const ins = await getInsights(m.id)
-      return {
-        title: (m.caption ?? '').split('\n')[0].slice(0, 50) || '(sem legenda)',
-        likes: m.like_count ?? 0,
-        comments: m.comments_count ?? 0,
-        ...ins,
-      }
-    }))
-
-    // 3. Blog: quantos posts saíram na semana
-    const blogCount = await sanity.fetch(
-      `count(*[_type=="post" && publishedAt > $since])`,
-      { since: new Date(since).toISOString() }
-    )
-
-    if (rows.length === 0) {
-      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `📊 Resumo semanal\n\n📝 ${blogCount} posts no blog\n📸 Nenhum post no Instagram nos últimos 7 dias ainda.` }),
-      })
-      return NextResponse.json({ ok: true, igPosts: 0, blogCount })
-    }
-
-    // 4. Rankings
-    const totalReach = rows.reduce((s, r) => s + r.reach, 0)
-    const totalSaved = rows.reduce((s, r) => s + r.saved, 0)
-    const totalLikes = rows.reduce((s, r) => s + r.likes, 0)
-    const bySaved = [...rows].sort((a, b) => b.saved - a.saved)
-    const top = bySaved.slice(0, 3)
-    const worst = bySaved[bySaved.length - 1]
-
-    const fmt = (r: typeof rows[0]) => `• ${r.title}\n   👁 ${r.reach}  💾 ${r.saved}  ❤️ ${r.likes}`
-
-    // Bloco do GA4 (tráfego do blog), se configurado
-    let ga4Block = ''
-    if (ga4Configured()) {
-      try {
-        const g = await getGA4Summary()
-        const topPages = g.topPages.map(p => `   ${p.path} — ${p.views}`).join('\n')
-        const topSources = g.sources.slice(0, 4).map(s => `   ${s.source}: ${s.sessions}`).join('\n')
-        ga4Block =
-          `\n\n🌐 BLOG (Google Analytics)\n` +
-          `👥 ${g.users} visitantes · 🔁 ${g.sessions} sessões · 📄 ${g.pageViews} páginas\n` +
-          `📲 Vindos do Instagram: ${g.instagramSessions} sessões\n\n` +
-          `📄 Páginas mais vistas:\n${topPages}\n\n` +
-          `🚪 De onde vem o tráfego:\n${topSources}`
-      } catch (e) {
-        ga4Block = `\n\n🌐 Blog: erro ao puxar GA4 (${e instanceof Error ? e.message.slice(0, 80) : 'desconhecido'})`
-      }
-    }
-
-    const text =
-      `📊 RESUMO DA SEMANA (Instagram)\n\n` +
-      `📝 ${blogCount} posts no blog · 📸 ${rows.length} no Instagram\n` +
-      `👁 Alcance total: ${totalReach}\n💾 Salvamentos: ${totalSaved}\n❤️ Curtidas: ${totalLikes}\n\n` +
-      `🏆 TOP 3 (por salvamentos — melhor sinal pra finanças):\n${top.map(fmt).join('\n')}\n\n` +
-      `📉 Menos engajou:\n${fmt(worst)}` +
-      ga4Block +
-      `\n\n💡 Salvamento alto = conteúdo útil. Vale fazer mais sobre os temas do top 3.`
-
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text }),
-    })
-
-    return NextResponse.json({ ok: true, igPosts: rows.length, blogCount, totalSaved })
+    const texto = await montarRelatorio()
+    if (tgConfigured()) await tgSendMessage(texto)
+    else console.log('[insights]', texto)
+    return NextResponse.json({ ok: true })
   } catch (err) {
-    await tgAlert('Resumo semanal de insights', err)
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 })
+    await tgAlert('Digest semanal de busca', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

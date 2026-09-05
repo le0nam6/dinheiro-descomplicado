@@ -109,7 +109,7 @@ ${top.map(p => `- "${p.title}" (r/${p.sub}, ${p.score} pontos)`).join('\n')}
 Use isso para calibrar o que sua audiência NÃO sabe. Prefira manchetes que respondam ou se conectem a essas dúvidas reais.`
 }
 
-async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[], editorBrief?: string): Promise<GeneratedPost & { newsSources: NewsItem[] }> {
+async function generate(news: NewsItem[], recent: string[], saturatedThemes: string[], editorBrief?: string): Promise<(GeneratedPost & { newsSources: NewsItem[] }) | null> {
   // Embaralha as notícias para não pegar sempre as primeiras do mesmo feed
   const shuffled = [...news].sort(() => Math.random() - 0.5)
   const top = shuffled.slice(0, 20)
@@ -161,7 +161,10 @@ IMPARCIALIDADE É MANDATÓRIA:
 - Se há lados/visões divergentes, apresente ambos de forma equilibrada.
 - Atribua afirmações às fontes ("segundo o Banco Central", "de acordo com a InfoMoney").
 - Sem alarmismo, sem clickbait. Título descritivo e honesto.
-- Não invente números, datas ou falas. Se faltar dado, fale de forma genérica.
+- Não invente números, datas ou falas.
+- NOMEIE O SUJEITO. Empresa, órgão ou pessoa de quem a notícia trata precisa aparecer pelo nome no lead e no título. "Uma empresa americana", "a companhia", "uma gigante do setor" não informam nada — o leitor termina sem saber de quem se trata.
+- Se a manchete de origem NÃO revela quem é o sujeito, DESCARTE a pauta: devolva {"descartar": true, "motivo": "sujeito não identificado"} em vez do JSON do post. É melhor não publicar do que publicar um texto que não diz de quem fala. Falar "de forma genérica" só vale para número e data secundários, nunca para o sujeito da notícia.
+- LISTAS: se o texto anuncia uma quantidade ("três pontas", "quatro motivos"), entregue exatamente essa quantidade, cada item numa linha própria começando com "- ".
 - DATAS E ANOS — REGRA CRÍTICA: O ANO ATUAL É ${currentYear}. NUNCA escreva qualquer outro ano como "ano atual", "este ano", "em 2025" ou similar — ${currentYear} é o presente. NUNCA afirme um ano futuro ou passado que NÃO esteja explicitamente na manchete/fonte. Na dúvida, seja atemporal ("recentemente", "nos próximos meses").
 - Explique o impacto para o brasileiro comum de forma didática e neutra.
 
@@ -252,7 +255,17 @@ sourceIndexes = índices das manchetes da lista usadas como fonte.`
     prompt: prompt,
   })
   const text = msgText.trim()
-  const parsed = await parseJsonSafe<GeneratedPost & { sourceIndexes?: number[]; category?: string }>(text)
+  const parsed = await parseJsonSafe<GeneratedPost & {
+    sourceIndexes?: number[]; category?: string; descartar?: boolean; motivo?: string
+  }>(text)
+
+  // O modelo pode devolver descarte quando a manchete de origem não revela o
+  // sujeito. Publicar assim gera texto sobre "uma empresa americana" que o
+  // leitor termina sem saber de quem fala — melhor pular a janela.
+  if (parsed.descartar) {
+    console.log(`[news] pauta descartada: ${parsed.motivo ?? 'sujeito não identificado'}`)
+    return null
+  }
   const idxs: number[] = Array.isArray(parsed.sourceIndexes) ? parsed.sourceIndexes : [1]
   const newsSources = idxs.map((i: number) => top[i - 1]).filter(Boolean)
   const VALID_CATEGORIES = ['investimentos', 'educação financeira', 'notícias', 'economia']
@@ -346,6 +359,10 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
 
   const recent = await getRecentTitles(20)
   const post = await generate(news, recent, saturatedThemes, editorBrief ?? queued?.brief)
+  // Descarte não é erro: é a janela sendo pulada de propósito, porque a
+  // manchete de origem não revelava o sujeito. Sair em silêncio evita alerta
+  // no Telegram para comportamento normal.
+  if (!post) return
 
   // Descarta se o assunto já foi coberto na janela (exceto pauta do editor, que sempre vale)
   if (!queued && isTooSimilar(post.title, recentNewsTitles)) {
