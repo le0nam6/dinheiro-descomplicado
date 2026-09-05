@@ -24,6 +24,10 @@ export type Candidata = {
   posicao?: number
   /** Similaridade com o que já foi publicado (0 a 1), vinda do RAG. */
   jaCoberto?: number
+  /** Posição na lista do autocomplete: 0 é a mais buscada. */
+  posicaoNaLista?: number
+  /** Base que gerou o termo, quando veio do autocomplete. */
+  base?: string
   /** De onde a candidata veio. */
   origem: 'search-console' | 'busca-relacionada' | 'editor'
 }
@@ -75,9 +79,12 @@ function proximidade(posicao?: number): number {
 }
 
 /** 2. DEMANDA — impressões acumuladas, em escala log para não deixar um pico dominar. */
-function demanda(impressoes?: number): number {
-  if (!impressoes) return 0.2
-  return Math.min(1, Math.log10(impressoes + 1) / 2.5)   // ~316 impressões satura
+function demanda(impressoes?: number, posicaoNaLista?: number): number {
+  if (impressoes) return Math.min(1, Math.log10(impressoes + 1) / 2.5)  // ~316 satura
+  // Sem impressão (termo que o site ainda não alcança), a posição na lista do
+  // autocomplete é o sinal disponível: o Google ordena por volume de busca.
+  if (posicaoNaLista != null) return Math.max(0.25, 1 - posicaoNaLista * 0.08)
+  return 0.2
 }
 
 /**
@@ -172,7 +179,7 @@ const PESOS = {
 export function pontuar(c: Candidata): PautaPontuada {
   const fatores = {
     proximidade: proximidade(c.posicao),
-    demanda: demanda(c.impressoes),
+    demanda: demanda(c.impressoes, c.posicaoNaLista),
     durabilidade: durabilidade(c.termo),
     lacuna: lacuna(c.jaCoberto, c.posicao),
   }
@@ -204,6 +211,32 @@ function explicar(c: Candidata, f: Record<string, number>): string {
   return partes.join(' · ') || 'termo novo no território do portal'
 }
 
+/**
+ * Tema de um termo: as duas primeiras palavras longas, em ordem.
+ * "como sair das dívidas com agiota" e "como sair das dívidas rápido" caem no
+ * mesmo tema, e é isso que permite limitar quantas variações da mesma ideia
+ * ocupam a lista.
+ */
+/**
+ * Tema de uma candidata, para limitar variações da mesma ideia por rodada.
+ *
+ * Quando o termo veio do autocomplete, a base que o gerou é a resposta exata —
+ * não há por que adivinhar. Tentei duas heurísticas de texto antes e as duas
+ * falharam: as palavras mais longas ordenadas separavam "dívidas altas" de
+ * "dívidas e investir", e as três primeiras palavras não agrupavam quando a
+ * base tinha só duas ("como investir" rendia cinco temas distintos).
+ */
+function tema(c: Candidata): string {
+  if (c.base) return c.base.toLowerCase()
+  return c.termo.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/).filter(Boolean).slice(0, 3).join(' ')
+}
+
+/** Quantas variações do mesmo tema cabem numa rodada. */
+const POR_TEMA = 2
+
 export function ranquear(cs: Candidata[], top = 8): PautaPontuada[] {
   const vistos = new Set<string>()
   return cs
@@ -225,5 +258,14 @@ export function ranquear(cs: Candidata[], top = 8): PautaPontuada[] {
       return true
     })
     .sort((a, b) => b.nota - a.nota)
-    .slice(0, top)
+    // Diversidade por tema. Sem isto, uma base como "como sair das dívidas"
+    // rendia dez variações com nota idêntica e tomava a lista inteira — que é
+    // a mesma sensação de repetição, só que dentro de uma rodada só.
+    .reduce<PautaPontuada[]>((acc, p) => {
+      if (acc.length >= top) return acc
+      const t = tema(p)
+      if (acc.filter(x => tema(x) === t).length >= POR_TEMA) return acc
+      acc.push(p)
+      return acc
+    }, [])
 }

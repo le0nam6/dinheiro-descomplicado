@@ -20,6 +20,7 @@
 import { NextResponse, after } from 'next/server'
 import { consultasDoSite } from '@/lib/search-console'
 import { ranquear, type Candidata, type PautaPontuada } from '@/lib/relevancia'
+import { expandir, tendenciasBrasil, SUFIXOS } from '@/lib/demanda-externa'
 import { sanity, tgSendMessage, tgConfigured, tgAlert, tgEscape } from '@/lib/publish-core'
 
 export const maxDuration = 300
@@ -47,58 +48,49 @@ async function doSearchConsole(): Promise<Candidata[]> {
 }
 
 /**
- * Buscas relacionadas do Google, via Serper. Cobre a lacuna do Search Console:
- * termo em que o site ainda não aparece de jeito nenhum não tem linha lá.
+ * Demanda externa: o que as pessoas digitam no Google.
+ *
+ * Esta é a fonte que tira o sistema de dentro do próprio universo. O Search
+ * Console só sabe onde o site já aparece, e o Serper com sementes fixas só
+ * devolvia o que eu tinha escrito à mão. O autocomplete devolve a consulta
+ * literal do leitor, ordenada por volume real.
  */
-async function dasBuscasRelacionadas(): Promise<Candidata[]> {
-  const chave = process.env.SERPER_API_KEY
-  if (!chave) return []
-
-  // Sementes rotativas. Antes eram seis fixas, e com o cron rodando todo dia o
-  // Serper devolvia as mesmas perguntas sempre — daí a sensação de que o
-  // sistema repetia tema. Agora o pool é maior e a janela do dia gira sobre ele.
-  const POOL = [
-    'como sair das dívidas', 'como investir do zero', 'fundo de emergência',
-    'imposto de renda', 'score de crédito', 'previdência privada',
-    'tesouro direto', 'renda fixa', 'cartão de crédito anuidade',
-    'financiamento imobiliário', 'juros compostos', 'aposentadoria INSS',
-    'FGTS saque', 'nome sujo limpar', 'reserva de emergência quanto',
-    'CDB ou poupança', 'declarar imposto de renda', 'consórcio vale a pena',
-    'empréstimo consignado', 'organizar orçamento mensal', 'Pix parcelado',
-    'salário líquido cálculo', 'dividendos ações', 'inflação IPCA efeito',
+async function daDemandaExterna(): Promise<Candidata[]> {
+  // Bases rotativas: o pool inteiro por dia geraria centenas de chamadas e
+  // devolveria sempre o mesmo topo. Três bases por dia, girando, dão amplitude
+  // ao longo da semana sem repetir.
+  const BASES = [
+    'como sair das dívidas', 'como investir', 'quanto rende', 'vale a pena investir',
+    'como economizar', 'qual o melhor investimento', 'como declarar', 'quanto custa',
+    'como aumentar o score', 'melhor cartão de crédito', 'como funciona o tesouro',
+    'quanto preciso para', 'como pedir empréstimo', 'como juntar dinheiro',
+    'onde investir', 'como sair do nome sujo', 'quanto tempo demora',
+    'como calcular juros',
   ]
-  const diaDoAno = Math.floor(
+  const dia = Math.floor(
     (Date.now() - new Date(new Date().getUTCFullYear(), 0, 0).getTime()) / 86_400_000,
   )
-  const inicio = (diaDoAno * 6) % POOL.length
-  const sementes = Array.from({ length: 6 }, (_, i) => POOL[(inicio + i) % POOL.length])
-  const saida: Candidata[] = []
+  const inicio = (dia * 3) % BASES.length
+  const bases = Array.from({ length: 3 }, (_, i) => BASES[(inicio + i) % BASES.length])
 
-  for (const semente of sementes) {
-    try {
-      const r = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: { 'X-API-KEY': chave, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: semente, gl: 'br', hl: 'pt-br', num: 10 }),
-        signal: AbortSignal.timeout(15_000),
-      })
-      const d = await r.json() as {
-        relatedSearches?: { query: string }[]
-        peopleAlsoAsk?: { question: string }[]
-      }
-      // "As pessoas também perguntam" é ouro para cauda longa: é a pergunta
-      // literal do leitor, na forma em que ele digita.
-      for (const p of d.peopleAlsoAsk ?? []) {
-        saida.push({ termo: p.question, origem: 'busca-relacionada' })
-      }
-      for (const rs of d.relatedSearches ?? []) {
-        saida.push({ termo: rs.query, origem: 'busca-relacionada' })
-      }
-    } catch {
-      // uma semente falhar não derruba a rodada
-    }
-  }
-  return saida
+  const lotes = await Promise.all(bases.map(b => expandir(b, SUFIXOS)))
+  const doAutocomplete: Candidata[] = lotes.flat().map(({ termo, posicaoNaLista, base }) => ({
+    termo,
+    posicaoNaLista,
+    base,
+    origem: 'busca-relacionada' as const,
+  }))
+
+  // Trends entra como coadjuvante. A tendência diária brasileira é quase toda
+  // futebol e TV, e o filtro de território derruba a maior parte — mas quando
+  // um assunto de finanças estoura de verdade, vale capturar.
+  const tend = await tendenciasBrasil()
+  const doTrends: Candidata[] = tend.map(t => ({
+    termo: t.termo,
+    origem: 'busca-relacionada' as const,
+  }))
+
+  return [...doAutocomplete, ...doTrends]
 }
 
 // ─── Cruzamento com o que já existe ──────────────────────────────────────────
@@ -187,7 +179,7 @@ function teclado(ids: string[]): { inline_keyboard: { text: string; callback_dat
 async function processar() {
   const [gsc, relacionadas] = await Promise.all([
     doSearchConsole(),
-    dasBuscasRelacionadas(),
+    daDemandaExterna(),
   ])
 
   if (!gsc.length && !relacionadas.length) {
@@ -240,7 +232,7 @@ async function processar() {
   const semGsc = gsc.length === 0
   const cabecalho = [
     '<b>Pautas sugeridas</b>',
-    `${gsc.length} do Search Console · ${relacionadas.length} da busca`,
+    `${gsc.length} do Search Console · ${relacionadas.length} da demanda do Google`,
     semGsc ? '\n⚠️ Search Console sem dados: API desativada ou sem permissão.' : '',
     '\nToque ✓ para mandar para a fila, ✕ para descartar.\n',
   ].filter(Boolean).join('\n')
