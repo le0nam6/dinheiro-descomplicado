@@ -66,7 +66,12 @@ function proximidade(posicao?: number): number {
   if (posicao <= 7) return 0.55               // perto do topo, vale empurrar
   if (posicao <= 20) return 1.00              // zona de maior retorno
   if (posicao <= 40) return 0.70
-  return 0.25                                 // longe demais para uma página só
+  // Antes isto caía para 0.25 e descartava o caso mais importante que os dados
+  // mostraram: 'juros compostos' na 89ª, 'o que são ações' na 85ª, 'fundo de
+  // emergência' na 77ª. São os temas centrais do portal, com página publicada,
+  // enterrados na página 8. Não é pauta nova — é página existente que precisa
+  // ser refeita, e ignorá-las era jogar fora o sinal mais útil do relatório.
+  return 0.60
 }
 
 /** 2. DEMANDA — impressões acumuladas, em escala log para não deixar um pico dominar. */
@@ -113,17 +118,56 @@ const TERRITORIO = [
   'salário', 'salario', 'fgts', 'pix', 'banco', 'score', 'nome sujo',
   'orçamento', 'orcamento', 'reserva', 'ações', 'acoes', 'fundo', 'cdb',
 ]
-function encaixe(termo: string): number {
-  return contem(termo, TERRITORIO) ? 1.0 : 0.3
+/**
+ * Assuntos que vetam a pauta mesmo quando ela cita uma palavra do território.
+ *
+ * Veio da simulação com os dados reais: 'quanto dinheiro a copa do mundo
+ * movimenta' tirou nota 92 e liderou a lista, porque contém "dinheiro". O site
+ * está na 10ª posição para isso, então proximidade e demanda o empurraram ao
+ * topo — e a primeira sugestão do sistema teria sido escrever sobre a Copa.
+ * 'dieta marketing ganhar dinheiro online' passou pelo mesmo buraco.
+ */
+const VETADOS = [
+  'copa do mundo', 'futebol', 'seleção', 'selecao', 'olimpíada', 'olimpiada',
+  'bbb', 'novela', 'celebridade', 'famoso', 'signo', 'horóscopo', 'horoscopo',
+  'afiliado', 'afiliados', 'associado amazon', 'marketplace', 'dropshipping',
+  'marketing digital', 'dieta', 'emagrec', 'apostas', 'bet', 'jogo do tigrin',
+]
+
+/**
+ * Palavras genéricas demais para qualificar sozinhas. 'dinheiro' aparece em
+ * qualquer assunto; só conta como território quando acompanhada de um termo
+ * de fato financeiro.
+ */
+const FRACAS = ['dinheiro', 'renda', 'banco', 'fundo', 'reserva']
+
+function noTerritorio(termo: string): boolean {
+  if (contem(termo, VETADOS)) return false
+  if (!contem(termo, TERRITORIO)) return false
+  // Se o único sinal for uma palavra fraca, exige um segundo sinal.
+  const t = termo.toLowerCase()
+  const fortes = TERRITORIO.filter(x => !FRACAS.includes(x))
+  return fortes.some(x => t.includes(x)) || FRACAS.filter(x => t.includes(x)).length >= 2
 }
 
 const PESOS = {
-  proximidade: 0.32,
+  proximidade: 0.30,
   demanda: 0.22,
-  durabilidade: 0.24,
-  lacuna: 0.14,
-  encaixe: 0.08,
+  durabilidade: 0.28,
+  lacuna: 0.20,
 }
+
+/**
+ * Encaixe deixou de ser um fator de 8% e virou eliminatório.
+ *
+ * Motivo, nos dados reais do Search Console: das 688 consultas em que o site
+ * aparece, só 218 são de finanças. E as poucas que rankeiam bem são acidentais
+ * — 'sam altman' na 1ª, 'bauducco mondelez' na 6ª, 'randon opa' na 9ª, 'copa do
+ * mundo' na 10ª. Como proximidade é o fator de maior peso, essas subiriam ao
+ * topo da lista de pautas e o cron sugeriria escrever sobre a Copa.
+ *
+ * Fora do território, a pauta nem entra na disputa.
+ */
 
 export function pontuar(c: Candidata): PautaPontuada {
   const fatores = {
@@ -131,7 +175,9 @@ export function pontuar(c: Candidata): PautaPontuada {
     demanda: demanda(c.impressoes),
     durabilidade: durabilidade(c.termo),
     lacuna: lacuna(c.jaCoberto, c.posicao),
-    encaixe: encaixe(c.termo),
+  }
+  if (!noTerritorio(c.termo)) {
+    return { ...c, nota: 0, fatores, porque: 'fora do território de finanças' }
   }
   const nota = Object.entries(PESOS)
     .reduce((s, [k, p]) => s + fatores[k as keyof typeof fatores] * p, 0)
@@ -143,9 +189,11 @@ export function pontuar(c: Candidata): PautaPontuada {
 function explicar(c: Candidata, f: Record<string, number>): string {
   const partes: string[] = []
   if (c.posicao != null && c.posicao > 7 && c.posicao <= 20) {
-    partes.push(`já aparece na ${Math.round(c.posicao)}ª posição, perto de virar página 1`)
+    partes.push(`já aparece na ${Math.round(c.posicao)}ª, perto de virar página 1`)
   } else if (c.posicao != null && c.posicao <= 7) {
     partes.push(`já está na ${Math.round(c.posicao)}ª posição`)
+  } else if (c.posicao != null && c.posicao > 40) {
+    partes.push(`REFORÇAR: tema central enterrado na ${Math.round(c.posicao)}ª posição`)
   } else if (c.posicao != null) {
     partes.push(`hoje na ${Math.round(c.posicao)}ª posição`)
   }
@@ -161,7 +209,17 @@ export function ranquear(cs: Candidata[], top = 8): PautaPontuada[] {
   return cs
     .map(pontuar)
     .filter(p => {
-      const k = p.termo.toLowerCase().trim()
+      // Assinatura sem acento, sem palavra curta e com ordem normalizada: assim
+      // 'juros compostos o que é' e 'o que são juros compostos' contam como uma
+      // pauta só, em vez de ocuparem duas vagas das oito com o mesmo assunto.
+      const k = p.termo
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .sort()
+        .join(' ')
       if (vistos.has(k)) return false
       vistos.add(k)
       return true
