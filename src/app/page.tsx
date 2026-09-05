@@ -44,7 +44,7 @@ function CategoryBadge({ category, onImage = false }: { category: string; onImag
 // Capa do post. Toda a resiliência (proxy, tipo inválido, erro de rede) vive no
 // componente Cover — aqui só passamos a URL guardada no Sanity.
 function PostCover({ post, className = '' }: { post: Post; className?: string }) {
-  return <Cover url={post.coverImage?.url} alt={post.coverImage?.alt ?? ''} className={className} />
+  return <Cover url={post.coverImage?.url} alt={post.coverImage?.alt ?? ''} categoria={post.category} className={className} />
 }
 
 const websiteSchema = JSON.stringify({
@@ -210,6 +210,7 @@ export default async function Home() {
                       <Cover
                         url={post.coverImage?.url}
                         alt={post.coverImage?.alt ?? ''}
+                        categoria={post.category}
                         className="w-20 h-14 object-cover rounded-xl shrink-0 bg-green-50"
                       />
                       <div className="flex-1 min-w-0">

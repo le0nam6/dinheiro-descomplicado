@@ -38,8 +38,39 @@ export function ehCapaValida(url: string | null | undefined): boolean {
  * URL para exibir. Externa passa pelo proxy: evita bloqueio de hotlink, deixa
  * o cache sob nosso controle e dá um único ponto para tratar falha.
  */
-export function urlDeExibicao(url: string | null | undefined): string | null {
-  if (!url) return null
+
+
+
+/**
+ * Termo de busca por categoria, usado quando a capa original falha e
+ * precisamos trazer uma foto de verdade do banco (Pexels, depois Unsplash).
+ * Em inglês porque é onde os dois bancos têm acervo decente.
+ */
+const BUSCA_POR_CATEGORIA: Record<string, string> = {
+  'notícias': 'brazil business newspaper finance',
+  'economia': 'economy finance chart brazil',
+  'investimentos': 'investment stock market chart',
+  'educação financeira': 'personal finance planning money',
+  'ganhar dinheiro': 'entrepreneur working laptop money',
+  'empréstimo': 'bank loan contract signing',
+  'cartão de crédito': 'credit card payment hands',
+  'financiamento': 'house keys mortgage contract',
+  'previdência': 'retirement senior couple planning',
+}
+
+/** Query de fallback para uma capa, a partir da categoria do post. */
+export function buscaDeFallback(categoria?: string | null): string {
+  const c = (categoria || '').toLowerCase().trim()
+  return BUSCA_POR_CATEGORIA[c] ?? 'finance money brazil business'
+}
+
+export function urlDeExibicao(
+  url: string | null | undefined,
+  categoria?: string | null,
+): string {
+  const q = encodeURIComponent(buscaDeFallback(categoria))
+  // Sem URL guardada, o proxy já entra direto no banco de imagens.
+  if (!url) return `/api/img?q=${q}`
   if (url.startsWith('/') || url.startsWith(SITE)) return url
-  return `/api/img?url=${encodeURIComponent(url)}`
+  return `/api/img?url=${encodeURIComponent(url)}&q=${q}`
 }

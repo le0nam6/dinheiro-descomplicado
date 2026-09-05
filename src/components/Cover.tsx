@@ -16,17 +16,22 @@ export function Cover({
   url,
   alt = '',
   className = '',
+  categoria,
   priority = false,
 }: {
   url?: string | null
   alt?: string
   className?: string
+  /** Define o termo usado se precisar buscar foto no banco. */
+  categoria?: string | null
   priority?: boolean
 }) {
-  const src = urlDeExibicao(url)
+  const src = urlDeExibicao(url, categoria)
   const [falhou, setFalhou] = useState(false)
 
-  if (!src || falhou) return <CoverVazia className={className} />
+  // O proxy já resolve foto de verdade quando a original falha, então chegar
+  // aqui é raro: significa que nem o banco de imagens respondeu.
+  if (falhou) return <CoverVazia className={className} />
 
   return (
     <img

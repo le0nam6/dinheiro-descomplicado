@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { fetchPhoto } from '@/lib/publish-core'
 
 /**
  * Proxy de imagem de capa.
@@ -20,6 +21,33 @@ const PLACEHOLDER = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 45
   <circle cx="352" cy="205" r="18" fill="#12653A" fill-opacity="0.3"/>
 </svg>`
 
+/**
+ * Última linha antes do placeholder: busca uma foto de verdade no banco
+ * (Pexels, depois Unsplash) usando o termo que veio em ?q=. É o que evita
+ * mostrar um quadrado desenhado no lugar de uma imagem — o leitor vê uma foto
+ * pertinente, não um defeito.
+ */
+async function fotoDoBanco(q: string, motivo: string): Promise<Response | null> {
+  try {
+    const foto = await fetchPhoto(q)
+    if (!foto?.url) return null
+    const res = await fetch(foto.url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return null
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.startsWith('image/')) return null
+    return new Response(await res.arrayBuffer(), {
+      headers: {
+        'Content-Type': ct,
+        'X-Img-Fallback': `banco:${motivo}`,
+        // 1 dia: a origem pode voltar, e o backfill pode corrigir o post.
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+      },
+    })
+  } catch {
+    return null
+  }
+}
+
 function placeholder(motivo: string) {
   return new Response(PLACEHOLDER, {
     status: 200,
@@ -34,7 +62,12 @@ function placeholder(motivo: string) {
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url')
-  if (!url) return placeholder('sem-url')
+  const q = req.nextUrl.searchParams.get('q') || 'finance money brazil business'
+
+  // Falhar aqui significa: tenta o banco de imagens; só depois o placeholder.
+  const desiste = async (motivo: string) => (await fotoDoBanco(q, motivo)) ?? placeholder(motivo)
+
+  if (!url) return desiste('sem-url')
 
   // Internas passam direto, sem custo de proxy.
   if (url.startsWith('https://portalendinheirados.com.br') || url.startsWith('/')) {
@@ -49,14 +82,14 @@ export async function GET(req: NextRequest) {
         Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
       },
     })
-    if (!res.ok) return placeholder(`http-${res.status}`)
+    if (!res.ok) return desiste(`http-${res.status}`)
 
     const ct = res.headers.get('content-type') || ''
     // A checagem que faltava: 200 com text/html é o caso do YouTube e do Facebook.
-    if (!ct.startsWith('image/')) return placeholder(`tipo-${ct.split(';')[0] || 'vazio'}`)
+    if (!ct.startsWith('image/')) return desiste(`tipo-${ct.split(';')[0] || 'vazio'}`)
 
     const buf = await res.arrayBuffer()
-    if (buf.byteLength < 128) return placeholder('vazia')
+    if (buf.byteLength < 128) return desiste('vazia')
 
     return new Response(buf, {
       headers: {
@@ -65,6 +98,6 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (err) {
-    return placeholder(err instanceof Error && err.name === 'TimeoutError' ? 'timeout' : 'erro')
+    return desiste(err instanceof Error && err.name === 'TimeoutError' ? 'timeout' : 'erro')
   }
 }
