@@ -34,7 +34,7 @@ const TOPIC_TAXONOMY: Record<string, string[]> = {
     'entregador de app (iFood, Rappi, Loggi): a conta real do custo-benefício',
     'bico de fim de semana: as opções mais bem pagas por hora',
     'como precificar o seu trabalho freelancer sem vender barato',
-    'abrir MEI: quando vale a pena e o que muda no bolso',
+    'abrir MEI: quando vale a pena e quanto custa por mês',
     'CLT com CNPJ: como fazer isso de forma legal',
     'consultoria: como transformar o que você já sabe em fonte de renda',
     'vender fotos no Shutterstock e Adobe Stock: funciona para brasileiros',
@@ -144,7 +144,7 @@ const TOPIC_TAXONOMY: Record<string, string[]> = {
     'quando é melhor pedir empréstimo do que parcelar no cartão',
   ],
   'financiamento': [
-    'financiamento imobiliário: SFH vs SFI — qual muda o seu bolso',
+    'financiamento imobiliário: SFH vs SFI — qual sai mais barato',
     'FGTS no financiamento: como usar e quanto economiza',
     'financiamento pelo MCMV: quem pode e como funciona',
     'tabela SAC vs Price: a diferença real em reais',

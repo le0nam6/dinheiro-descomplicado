@@ -14,7 +14,7 @@
  * editor, então não há audiência para medir ainda.
  */
 import { NextResponse } from 'next/server'
-import { tgConfigured, tgSendMessage, tgAlert } from '@/lib/publish-core'
+import { tgConfigured, tgSendMessage, tgAlert, tgEscape } from '@/lib/publish-core'
 import { consultasDoSite, type LinhaConsulta } from '@/lib/search-console'
 
 export const maxDuration = 300
@@ -75,7 +75,7 @@ async function montarRelatorio(): Promise<string> {
     .slice(0, 5)
   if (perto.length) {
     out.push('', '<b>Perto da página 1</b>')
-    for (const l of perto) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${l.consulta.slice(0, 42)}`)
+    for (const l of perto) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${tgEscape(l.consulta.slice(0, 42))}`)
   }
 
   const enterrados = semana
@@ -84,7 +84,7 @@ async function montarRelatorio(): Promise<string> {
     .slice(0, 4)
   if (enterrados.length) {
     out.push('', '<b>Tema central enterrado</b>')
-    for (const l of enterrados) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${l.consulta.slice(0, 42)}`)
+    for (const l of enterrados) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${tgEscape(l.consulta.slice(0, 42))}`)
     out.push('<i>A página já existe. Reescrever costuma render mais que publicar tema novo.</i>')
   }
 
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
   }
   try {
     const texto = await montarRelatorio()
-    if (tgConfigured()) await tgSendMessage(texto)
+    if (tgConfigured()) await tgSendMessage(texto, undefined, 'HTML')
     else console.log('[insights]', texto)
     return NextResponse.json({ ok: true })
   } catch (err) {

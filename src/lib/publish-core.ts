@@ -204,7 +204,8 @@ REGRAS ABSOLUTAS:
 1. ZERO travessão (—) em qualquer contexto. Se a frase depende dele, reescreva inteira.
 2. Frases telegráficas empilhadas são proibidas: 3+ frases seguidas com menos de 6 palavras cada. Junte num raciocínio completo.
 3. Paralelismo negativo ("Não é X. É Y.") máximo 1x por texto. Nunca repetido.
-4. Vocabulário proibido: "crucial", "fundamental" (no sentido vago), "delve", "highlight" (verbo), "adicionalmente", "no mundo atual", "em um cenário onde", "é fundamental que", "isso se traduz em", "evidencia"/"ressalta" como gerúndio, "inovador"/"revolucionário"/"transformador", "adicionalmente". Substitua sempre por alternativas diretas.
+4. Vocabulário proibido: "crucial", "fundamental" (no sentido vago), "delve", "highlight" (verbo), "adicionalmente", "no mundo atual", "em um cenário onde", "é fundamental que", "isso se traduz em", "evidencia"/"ressalta" como gerúndio, "inovador"/"revolucionário"/"transformador". Substitua sempre por alternativas diretas.
+4b. MULETA DA CASA — proibida: "o que muda no seu bolso", "o que mexe no seu bolso", "impacto no bolso", "sentir no bolso" e variações. Virou tique do portal, aparece em título após título e já não diz nada. Diga a consequência concreta: quanto custa, quanto rende, quanto tempo leva, quem paga a conta, o que fazer agora. "Financiamento fica R$ 180 mais caro por mês" informa; "o que muda no seu bolso" não.
 5. Sem atribuições vagas: "especialistas afirmam", "pesquisas mostram" sem fonte real são proibidos.
 6. Sem gerúndio superficial no fim de frase: "evidenciando a importância de X", "demonstrando como Y" são proibidos.
 7. Sem conclusões genéricas motivacionais: "o futuro é promissor para quem abraça a mudança" e variações.
@@ -408,7 +409,23 @@ export function tgConfigured() {
   return Boolean(TG_TOKEN() && TG_CHAT())
 }
 
-export async function tgSendMessage(text: string, replyMarkup?: unknown) {
+/**
+ * Escapa texto para o parse_mode HTML do Telegram.
+ *
+ * Sem isto, um termo de busca com & ou < faz o Telegram recusar a mensagem
+ * inteira — e como a API responde 400 em vez de renderizar torto, o digest
+ * simplesmente não chegaria.
+ */
+export function tgEscape(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/**
+ * parseMode é opcional de propósito: os chamadores antigos mandam texto puro,
+ * que pode conter < e & soltos, e ligar HTML para todos quebraria essas
+ * mensagens. Quem usa marcação pede explicitamente.
+ */
+export async function tgSendMessage(text: string, replyMarkup?: unknown, parseMode?: 'HTML' | 'Markdown') {
   return fetch(`https://api.telegram.org/bot${TG_TOKEN()}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -416,6 +433,7 @@ export async function tgSendMessage(text: string, replyMarkup?: unknown) {
       chat_id: TG_CHAT(),
       text,
       disable_web_page_preview: false,
+      ...(parseMode ? { parse_mode: parseMode } : {}),
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   }).then(r => r.json())

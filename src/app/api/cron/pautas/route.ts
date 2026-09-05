@@ -20,7 +20,7 @@
 import { NextResponse, after } from 'next/server'
 import { consultasDoSite } from '@/lib/search-console'
 import { ranquear, type Candidata, type PautaPontuada } from '@/lib/relevancia'
-import { sanity, tgSendMessage, tgConfigured, tgAlert } from '@/lib/publish-core'
+import { sanity, tgSendMessage, tgConfigured, tgAlert, tgEscape } from '@/lib/publish-core'
 
 export const maxDuration = 300
 
@@ -133,9 +133,9 @@ async function marcarCobertura(cs: Candidata[]): Promise<Candidata[]> {
 function cartao(p: PautaPontuada, i: number): string {
   const origem = p.origem === 'search-console' ? 'Search Console' : 'Busca do Google'
   return [
-    `<b>${i + 1}. ${p.termo}</b>`,
+    `<b>${i + 1}. ${tgEscape(p.termo)}</b>`,
     `nota ${p.nota}/100 · ${origem}`,
-    `<i>${p.porque}</i>`,
+    `<i>${tgEscape(p.porque)}</i>`,
   ].join('\n')
 }
 
@@ -191,7 +191,7 @@ async function processar() {
   const corpo = melhores.map((p, i) => cartao(p, i)).join('\n\n')
 
   if (tgConfigured()) {
-    await tgSendMessage(`${cabecalho}\n${corpo}`, teclado(docs.map(d => d._id)))
+    await tgSendMessage(`${cabecalho}\n${corpo}`, teclado(docs.map(d => d._id)), 'HTML')
   } else {
     console.log('[pautas] Telegram não configurado; sugestões:', melhores.map(p => p.termo))
   }

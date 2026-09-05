@@ -143,7 +143,7 @@ EXEMPLOS DE TOM (não copie, inspire-se no espírito):
 - Frio/errado: "O cenário macroeconômico apresenta incertezas relevantes."
 - Quente/certo: "O mercado tá nervoso, e com razão: tem muita coisa acontecendo ao mesmo tempo."
 - Frio/errado: "A medida pode impactar negativamente os consumidores de baixa renda."
-- Quente/certo: "Quem vai sentir mais no bolso é quem já tá no limite do orçamento."
+- Quente/certo: "Quem aperta primeiro é quem já tá no limite do orçamento."
 
 MANCHETES REAIS DAS ÚLTIMAS HORAS (índice | fonte | título | resumo):
 ${pool.map((n, i) => `${i + 1}. ${n.source} | ${n.title} | ${n.description}`).join('\n')}
@@ -198,7 +198,7 @@ Escreva 2 a 3 frases que abram a manhã com personalidade — como um bom-dia in
 - Pode ser uma observação sobre o humor do mercado, uma provocação, uma reflexão ligeira sobre o momento econômico, ou um ângulo humano sobre o que o brasileiro vai sentir ao longo do dia.
 - Tom: alguém que chegou cedo, já leu tudo, e agora te conta o clima antes de você começar o dia.
 - Exemplos de estilo (adapte ao momento real, não copie):
-  → "Tem coisa mexendo no câmbio, nos juros e no bolso de quem paga aluguel. Não é um dia qualquer. Bora."
+  → "Tem coisa mexendo no câmbio, nos juros e na conta de quem paga aluguel. Não é um dia qualquer. Bora."
   → "Enquanto a maioria ainda dorme, o mercado já decidiu o humor da semana. A boa notícia é que você já acordou sabendo o que ele decidiu."
   → "O mundo financeiro não tirou férias. O brasileiro também não pode. Por isso você tá aqui às 5h lendo isso."
 
@@ -226,7 +226,7 @@ Campos comuns a todos os formatos:
    - Tendência: compare com o período anterior
    - Algumas matérias devem ser curtas (1-2 frases secas). Outras mais desenvolvidas (até 5 frases). NÃO padronize em "2-4 frases" sempre.
 
-3. "why" — o impacto prático no bolso do leitor. REGRA CRÍTICA: NÃO É OBRIGATÓRIO.
+3. "why" — a consequência concreta para o leitor: quanto custa, quanto rende, o que fazer. Evite a fórmula "muda no seu bolso", que já se repete demais no portal. REGRA CRÍTICA: NÃO É OBRIGATÓRIO.
    - Para a maioria, escreva 1-2 frases de impacto neutro e didático (use analogia do cotidiano quando ajudar).
    - Para matérias onde o impacto JÁ ESTÁ ÓBVIO no "what", ou que são meramente informativas, deixe "why" VAZIO ("") — isso evita a sensação de fórmula repetida.
    - Mire em deixar 1 ou 2 das matérias sem "why". O contraste é o que faz a edição não parecer um molde.
@@ -262,7 +262,7 @@ TÍTULO DA EDIÇÃO ("title") — REGRAS OBRIGATÓRIAS:
 - Deve conter a keyword principal do dia (ex: "Dólar", "Selic", "Copom", "Bitcoin", "Ibovespa", "Petróleo", "Lula", nome de empresa relevante)
 - Tom direto, jornalístico, sem clickbait, sem ponto de exclamação
 - Formatos válidos: "[Fato A] e [Fato B]: o que importa hoje" ou "[Fato principal] — o que muda no seu bolso" ou "[Keyword sobe/cai/decide] e [consequência direta]"
-- Exemplos válidos: "Dólar sobe e Copom mantém juros: o que muda no seu bolso" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde" / "Ibovespa cai 1,2% e inflação surpreende: entenda o que aconteceu"
+- Exemplos válidos: "Dólar sobe e Copom trava os juros: quem paga a conta" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde" / "Ibovespa cai 1,2% e inflação surpreende: entenda o que aconteceu"
 - PROIBIDO: "Edição de DD de mês", títulos genéricos sem keyword, títulos com mais de 70 chars
 
 Retorne SOMENTE JSON válido:
@@ -280,7 +280,7 @@ Retorne SOMENTE JSON válido:
       "headline": "manchete curta e descritiva",
       "hook": "frase de abertura que fisga (ou \"\" se a matéria for seca)",
       "what": "o relato factual (comprimento variável)",
-      "why": "impacto no bolso (ou \"\" quando já está óbvio no what)",
+      "why": "consequência concreta e específica (ou \"\" quando já está óbvio no what)",
       "imageQuery": "termo em inglês p/ foto, específico ao tema (sempre preencher)",
       "sourceIndexes": [1, 4]
     },

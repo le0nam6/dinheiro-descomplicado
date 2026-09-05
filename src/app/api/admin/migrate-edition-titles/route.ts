@@ -36,7 +36,7 @@ Regras:
 - Máximo 70 caracteres
 - Inclua a keyword principal do dia (Dólar, Selic, Ibovespa, Bitcoin, nome de empresa, etc.)
 - Tom direto, sem clickbait, sem ponto de exclamação
-- Exemplos: "Dólar sobe e Copom mantém juros: o que muda no seu bolso" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde"
+- Exemplos: "Dólar sobe e Copom trava os juros: quem paga a conta" / "Bitcoin passa dos R$ 600 mil e FIIs pagam dividendo recorde"
 - Retorne APENAS o título, sem aspas, sem explicação`,
   })
   return (msgText || '').trim().replace(/^["']|["']$/g, '')
