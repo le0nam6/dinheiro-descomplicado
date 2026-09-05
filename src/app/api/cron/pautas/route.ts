@@ -54,11 +54,24 @@ async function dasBuscasRelacionadas(): Promise<Candidata[]> {
   const chave = process.env.SERPER_API_KEY
   if (!chave) return []
 
-  // Sementes: os territórios em que o portal tem alguma chance real.
-  const sementes = [
+  // Sementes rotativas. Antes eram seis fixas, e com o cron rodando todo dia o
+  // Serper devolvia as mesmas perguntas sempre — daí a sensação de que o
+  // sistema repetia tema. Agora o pool é maior e a janela do dia gira sobre ele.
+  const POOL = [
     'como sair das dívidas', 'como investir do zero', 'fundo de emergência',
     'imposto de renda', 'score de crédito', 'previdência privada',
+    'tesouro direto', 'renda fixa', 'cartão de crédito anuidade',
+    'financiamento imobiliário', 'juros compostos', 'aposentadoria INSS',
+    'FGTS saque', 'nome sujo limpar', 'reserva de emergência quanto',
+    'CDB ou poupança', 'declarar imposto de renda', 'consórcio vale a pena',
+    'empréstimo consignado', 'organizar orçamento mensal', 'Pix parcelado',
+    'salário líquido cálculo', 'dividendos ações', 'inflação IPCA efeito',
   ]
+  const diaDoAno = Math.floor(
+    (Date.now() - new Date(new Date().getUTCFullYear(), 0, 0).getTime()) / 86_400_000,
+  )
+  const inicio = (diaDoAno * 6) % POOL.length
+  const sementes = Array.from({ length: 6 }, (_, i) => POOL[(inicio + i) % POOL.length])
   const saida: Candidata[] = []
 
   for (const semente of sementes) {
@@ -128,6 +141,26 @@ async function marcarCobertura(cs: Candidata[]): Promise<Candidata[]> {
   })
 }
 
+/**
+ * Assinatura estável de um termo: sem acento, sem palavra curta, ordem
+ * normalizada. Faz 'juros compostos o que é' e 'o que são juros compostos'
+ * contarem como o mesmo tema, tanto na deduplicação quanto no histórico.
+ */
+function assinatura(t: string): string {
+  return t.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/).filter(w => w.length > 3).sort().join(' ')
+}
+
+/** Tudo que já foi sugerido antes, aprovado ou recusado. */
+async function termosJaSugeridos(): Promise<Set<string>> {
+  const termos: string[] = await sanity.fetch(
+    `*[_type=="pautaSugerida"].termo`,
+  ).catch(() => [])
+  return new Set(termos.map(assinatura))
+}
+
 // ─── Telegram ────────────────────────────────────────────────────────────────
 
 function cartao(p: PautaPontuada, i: number): string {
@@ -164,7 +197,31 @@ async function processar() {
     return
   }
 
-  const comCobertura = await marcarCobertura([...gsc, ...relacionadas])
+  // Nunca repetir o que já passou por aqui. Sem isto, com o cron diário e
+  // fontes que mudam pouco, as mesmas seis pautas voltavam todo dia — e as
+  // recusadas voltavam também, o que torna a decisão anterior inútil.
+  const jaVistos = await termosJaSugeridos()
+  const ineditos = [...gsc, ...relacionadas].filter(c => !jaVistos.has(assinatura(c.termo)))
+
+  if (!ineditos.length) {
+    // Falhar em silêncio aqui seria pior que não ter o cron: você pararia de
+    // receber mensagem e não saberia se o sistema quebrou ou se acabou o
+    // assunto. Avisa, e diz o que fazer.
+    if (tgConfigured()) {
+      await tgSendMessage(
+        '<b>Pautas</b>\n\nTodas as candidatas de hoje já foram sugeridas antes.\n\n' +
+        `Já passaram por aqui ${jaVistos.size} termos. As fontes (Search Console e busca do Google) ` +
+        'mudam devagar, então isso acontece quando o acervo de temas do território se esgota.\n\n' +
+        '<i>Caminhos: alimentar a fila com pauta própria, ou esperar o Search Console acumular ' +
+        'consultas novas conforme o site ganha impressões.</i>',
+        undefined, 'HTML',
+      )
+    }
+    console.log(`[pautas] nenhuma candidata inédita; ${jaVistos.size} termos no histórico`)
+    return
+  }
+
+  const comCobertura = await marcarCobertura(ineditos)
   const melhores = ranquear(comCobertura, QUANTAS)
   if (!melhores.length) return
 
