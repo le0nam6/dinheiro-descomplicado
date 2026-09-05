@@ -1,3 +1,4 @@
+import { ehCapaValida } from '@/lib/images'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createHmac, timingSafeEqual } from 'crypto'
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     // Resolve relative URLs
     const resolved = ogImage.startsWith('http') ? ogImage : new URL(ogImage, url).href
 
-    return NextResponse.json({ imageUrl: resolved })
+    return NextResponse.json({ imageUrl: ehCapaValida(resolved) ? resolved : null })
   } catch {
     return NextResponse.json({ imageUrl: null })
   }

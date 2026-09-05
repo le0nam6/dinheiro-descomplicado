@@ -3,6 +3,7 @@ import { AdUnit } from '@/components/AdUnit'
 import { ReferralBanner } from '@/components/ReferralBanner'
 import { ButtonLink } from '@/components/Button'
 import Link from 'next/link'
+import { Cover, CoverVazia } from '@/components/Cover'
 import { IconArrowRight, IconBook2, IconChartLine, IconCoins, IconNews, IconPencil, IconTool } from '@tabler/icons-react'
 
 export const revalidate = 60
@@ -40,11 +41,10 @@ function CategoryBadge({ category, onImage = false }: { category: string; onImag
   )
 }
 
+// Capa do post. Toda a resiliência (proxy, tipo inválido, erro de rede) vive no
+// componente Cover — aqui só passamos a URL guardada no Sanity.
 function PostCover({ post, className = '' }: { post: Post; className?: string }) {
-  if (post.coverImage?.url) {
-    return <img src={post.coverImage.url} alt={post.coverImage.alt} className={className} />
-  }
-  return <div className={`${className} bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center text-3xl`}>💰</div>
+  return <Cover url={post.coverImage?.url} alt={post.coverImage?.alt ?? ''} className={className} />
 }
 
 const websiteSchema = JSON.stringify({
@@ -205,11 +205,13 @@ export default async function Home() {
                       href={`/blog/${post.slug.current}`}
                       className="flex gap-4 py-4 group hover:bg-gray-50 -mx-3 px-3 rounded-xl transition-colors"
                     >
-                      {post.coverImage?.url ? (
-                        <img src={post.coverImage.url} alt={post.coverImage.alt} className="w-20 h-14 object-cover rounded-xl shrink-0" />
-                      ) : (
-                        <div className="w-20 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl shrink-0 flex items-center justify-center text-xl">💰</div>
-                      )}
+                      {/* Sem ternário: o Cover já cai no placeholder quando não há
+                          URL, quando o host devolve HTML ou quando a imagem falha. */}
+                      <Cover
+                        url={post.coverImage?.url}
+                        alt={post.coverImage?.alt ?? ''}
+                        className="w-20 h-14 object-cover rounded-xl shrink-0 bg-green-50"
+                      />
                       <div className="flex-1 min-w-0">
                         <CategoryBadge category={post.category} />
                         <h3 className="font-bold text-gray-900 text-sm leading-snug mt-0.5 line-clamp-2 group-hover:text-green-700 transition-colors">

@@ -6,6 +6,7 @@
  * escolhidas (não cria mais rascunho de edition aqui: isso fazia o cron das
  * 5h achar que a edição do dia já existia e pular a geração real).
  */
+import { ehCapaValida } from '@/lib/images'
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { sanity, SITE, tgConfigured, tgAlert } from '@/lib/publish-core'
@@ -155,7 +156,9 @@ export async function GET(request: Request) {
           ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1]
           ?? html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
         if (!img) return undefined
-        return img.startsWith('http') ? img : new URL(img, url).href
+        // Resolve para absoluta antes de validar: og:image relativo é comum.
+        const abs = img.startsWith('http') ? img : new URL(img, url).href
+        return ehCapaValida(abs) ? abs : undefined
       } catch { return undefined }
     }
 

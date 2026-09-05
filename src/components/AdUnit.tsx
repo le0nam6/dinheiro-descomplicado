@@ -9,13 +9,18 @@ import { useEffect } from 'react'
 // Cada ponto so renderiza quando existe um slot correspondente criado no painel
 // do AdSense e exposto por env. Sem slot, o componente nao renderiza nada — uma
 // <div> vazia no meio do artigo atrapalha o layout e nao vira anuncio.
+// Slot usado por qualquer ponto que ainda não tenha unidade própria no painel.
+// Permite acender o site inteiro com uma unidade só enquanto as demais são
+// criadas; cada específica assume o seu lugar assim que existir, sem deploy.
+const PADRAO = process.env.NEXT_PUBLIC_ADSENSE_SLOT_PADRAO
+
 const SLOTS: Record<number, string | undefined> = {
-  101: process.env.NEXT_PUBLIC_ADSENSE_SLOT_LISTAGEM,
-  102: process.env.NEXT_PUBLIC_ADSENSE_SLOT_POS_TITULO,
-  103: process.env.NEXT_PUBLIC_ADSENSE_SLOT_MEIO_ARTIGO,
-  104: process.env.NEXT_PUBLIC_ADSENSE_SLOT_FIM_ARTIGO,
-  105: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME,
-  106: process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR,
+  101: process.env.NEXT_PUBLIC_ADSENSE_SLOT_LISTAGEM   ?? PADRAO,
+  102: process.env.NEXT_PUBLIC_ADSENSE_SLOT_POS_TITULO ?? PADRAO,
+  103: process.env.NEXT_PUBLIC_ADSENSE_SLOT_MEIO_ARTIGO ?? PADRAO,
+  104: process.env.NEXT_PUBLIC_ADSENSE_SLOT_FIM_ARTIGO ?? PADRAO,
+  105: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME       ?? PADRAO,
+  106: process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR    ?? PADRAO,
 }
 
 interface AdUnitProps {
