@@ -9,7 +9,7 @@ import {
   sanity, SITE, type GeneratedPost,
   createSanityPost, buildSlideUrls, deliverCarousel, fetchPhoto, fetchSerperImages,
   tgConfigured, tgSendPhoto, tgAlert, getRecentTitles, getRecentPhotoUrls, getTitlesByCategory,
-  adminToken, parseJsonSafe,
+  adminToken, parseJsonSafe, nextQueueItem, markQueueUsed,
 } from '@/lib/publish-core'
 import { getEditorialContext, getPublishedPostsByCategory, getSimilarPublishedTopics, indexPublishedPost } from '@/lib/rag'
 
@@ -297,7 +297,14 @@ async function fetchNews(): Promise<string> {
 
 // --- Gerar post com Claude ---
 
-async function generatePost(schedule: ReturnType<typeof getSchedule>, news: string, recentTitles: string[], rejectedTitle?: string | null) {
+async function generatePost(
+  schedule: ReturnType<typeof getSchedule>,
+  news: string,
+  recentTitles: string[],
+  rejectedTitle?: string | null,
+  /** Pauta aprovada pelo editor. Quando existe, manda na lista fixa. */
+  pautaDaFila?: string,
+) {
   const { type, funnel } = schedule
 
   const funnelGuide = {
@@ -322,7 +329,16 @@ async function generatePost(schedule: ReturnType<typeof getSchedule>, news: stri
 
   // Monta guia de foco com taxonomia + títulos já cobertos
   let focusGuide = ''
-  if (focusCategory) {
+
+  // A pauta aprovada no Telegram tem prioridade sobre a lista fixa do código.
+  //
+  // Era aqui que a fila estava sendo ignorada: este cron escolhia o tema
+  // sozinho, de TOPIC_TAXONOMY, sem nunca olhar o editorialQueue. Foi assim que
+  // saiu "CDC vs leasing" no horário das 18h enquanto 18 pautas aprovadas
+  // esperavam. A lista fixa vira reserva, para quando a fila esvaziar.
+  if (pautaDaFila) {
+    focusGuide = `\nPAUTA DEFINIDA PELO EDITOR-CHEFE — escreva exatamente sobre isto, não escolha outro tema:\n"${pautaDaFila}"\n\nNÃO repita títulos recentes: ${recentTitles.slice(0, 10).join(' | ')}`
+  } else if (focusCategory) {
     const taxonomy = TOPIC_TAXONOMY[focusCategory] ?? []
     const coveredTitles = [...new Set([...recentTitles, ...categoryTitles])]
 
@@ -596,7 +612,11 @@ export async function GET(request: Request) {
     ])
     const recentTitles = rejectedTitle ? [rejectedTitle, ...recentTitlesRaw] : recentTitlesRaw
     const effectiveSchedule = (forceTopic || injectTitle) ? { ...schedule, type: 'news' as const } : schedule
-    const post = await generatePost(effectiveSchedule, news, recentTitles, rejectedTitle)
+    // Fila primeiro: só cai na lista fixa quando não há pauta aprovada.
+    const daFila = effectiveSchedule.type === 'evergreen'
+      ? await nextQueueItem('materia')
+      : null
+    const post = await generatePost(effectiveSchedule, news, recentTitles, rejectedTitle, daFila?.brief)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
     // 3. Foto: tenta imagem do artigo original → Serper → Pexels/Unsplash
@@ -629,6 +649,9 @@ export async function GET(request: Request) {
       const doc = await createSanityPost(post as unknown as GeneratedPost, photo)
       await indexPublishedPost({ title: post.title as string, excerpt: post.excerpt as string, category: post.category as string, slug: post.slug as string, publishedAt: new Date().toISOString() })
       await deliverCarousel(slideUrls, caption, `${SITE}/blog/${post.slug}`)
+      // Sem isto a mesma pauta voltaria em toda rodada, porque nextQueueItem
+      // devolve sempre o primeiro item com status 'fila'.
+      if (daFila) await markQueueUsed(daFila._id, post.slug as string)
       return NextResponse.json({ ok: true, mode: 'auto', sanityId: doc._id, slug: post.slug })
     }
 
@@ -684,6 +707,7 @@ export async function GET(request: Request) {
       }
     }
 
+    if (daFila) await markQueueUsed(daFila._id, post.slug as string)
     return NextResponse.json({ ok: true, mode: 'approval', pendingId: id, slug: post.slug })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
