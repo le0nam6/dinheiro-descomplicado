@@ -35,11 +35,19 @@ Variaveis opcionais:
 | `GEMINI_MODEL` | Troca o modelo do Gemini sem deploy (padrao: `gemini-3.8-flash`) |
 | `GROQ_API_KEY` + `GROQ_MODEL` | Adiciona a Groq como ultimo degrau da cadeia |
 
-**Por que o Gemini:** em 07/09/2026 o `minimax-m3:free` saiu do free tier do
-OpenRouter. Dos seis gratuitos que restaram, dois dao 429, um devolve JSON
-invalido, um vem vazio, e os dois que funcionam entregam 748 e 1130 caracteres
-— contra os 3922 da mediana do portal. O free tier do Google AI Studio nao pede
-cartao, tem limite muito maior e o modelo e de outra categoria.
+**A cadeia gratuita funciona.** Reteste de 07/09/2026, com max_tokens de 6000
+(o teste anterior usava 3000 e media respostas truncadas, o que fez os modelos
+parecerem piores do que sao):
+
+| modelo | corpo produzido |
+|---|---|
+| `ling-3.0-flash-fin:free` | 8154 chars |
+| `gemini-3.8-flash` | 5385 chars |
+| `nemotron-3-ultra:free` | 3510 chars |
+| `nemotron-3-super:free` | 2699 chars |
+
+A mediana do portal e 3922 chars, entao o gratuito da conta. O Gemini entra
+acima deles por ser mais consistente, mas nao e obrigatorio.
 
 Pegue a chave em https://aistudio.google.com/apikey e rode:
 `vercel env add GEMINI_API_KEY production`
