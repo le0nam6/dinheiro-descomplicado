@@ -1,7 +1,12 @@
 /**
- * Cron jornalístico. O agendador (cron-job.org) bate de hora em hora (6h-23h
- * BRT) e a rota gera notícia em toda janela, com trava de recência de 50min
- * pra não duplicar dentro da mesma hora.
+ * Cron de publicação do dia. O agendador (cron-job.org) bate de hora em hora,
+ * mas só os horários em PUBLISH_SLOTS publicam — hoje 9, 12, 18 e 20h BRT. Nos
+ * outros toques a rota sai cedo, no gate.
+ *
+ * A FILA VEM ANTES DO RSS. Havendo pauta aprovada no Telegram, ela vira o post
+ * daquele horário, escrita por gerarDaPauta() com prompt de conteúdo perene. O
+ * RSS só assume quando a fila esvazia — é o que faz o portal publicar o que o
+ * editor escolheu em vez do que caiu no feed.
  * Publica uma notícia do mercado financeiro BR + mundo, com IMPARCIALIDADE
  * mandatória, fontes discriminadas e termômetro de imparcialidade (no front).
  * Cada notícia entra como rascunho e vai pro Telegram para aprovação manual.
