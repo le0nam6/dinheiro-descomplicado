@@ -69,15 +69,23 @@
     },
     {
       "path": "/api/cron/original",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/original",
       "schedule": "0 18 * * *"
     },
     {
-      "path": "/api/cron/original",
+      "path": "/api/cron/news",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/news",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/news",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/news",
+      "schedule": "0 23 * * *"
     }
   ]
 }

@@ -37,7 +37,7 @@ const FEEDS = [
 // valor agregado, e isso é tratado na janela de deduplicação lá embaixo.
 //
 // NEWS_PUBLISH_SLOTS ajusta sem deploy, ex.: "8,12,16,20" para quatro por dia.
-const PUBLISH_SLOTS = (process.env.NEWS_PUBLISH_SLOTS || '6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23')
+const PUBLISH_SLOTS = (process.env.NEWS_PUBLISH_SLOTS || '9,12,18,20')
   .split(',')
   .map(h => Number(h.trim()))
   .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
@@ -304,6 +304,41 @@ async function fetchArticleText(url: string): Promise<string> {
   return `Título original: ${title}\n\nConteúdo:\n${paragraphs.slice(0, 12).join('\n\n')}`
 }
 
+/**
+ * Escreve a partir de uma pauta aprovada na fila editorial.
+ *
+ * Separado da geração de notícia de propósito: aquele prompt é jornalístico,
+ * montado em torno das manchetes de RSS e exigindo sourceIndexes apontando
+ * para elas. Uma pauta perene escrita por ali sairia com fonte inventada.
+ *
+ * Este é o mesmo formato do generateFromBrief do /original, para que os quatro
+ * horários de publicação do dia possam sair da fila em vez do RSS — que é o
+ * ponto de ter fila.
+ */
+async function gerarDaPauta(brief: string, recent: string[]): Promise<GeneratedPost> {
+  const prompt = `Você é redator de finanças pessoais do Endinheirados. O editor-chefe aprovou esta pauta:
+
+PAUTA: "${brief}"
+
+Escreva um artigo próprio, didático e aprofundado (10 a 12 parágrafos) que entregue exatamente o que a pauta pede. Tom de quem entende do assunto e explica como gente, sem juridiquês. Explique todo termo técnico na hora em que ele aparece. Quando usar número para ilustrar, deixe explícito que é exemplo hipotético ("imagine que você guarda R$ 100 por mês"), nunca apresente exemplo como dado real de mercado.
+
+REGRAS DE FORMATO (o modelo costuma ignorar quando elas ficam soltas no meio do texto, então estão numeradas):
+1. ZERO travessão (—) em qualquer posição. Se a frase depende dele, reescreva.
+2. Toda lista tem cada item em SUA PRÓPRIA linha, começando com "- ".
+3. Se o texto anunciar uma quantidade ("três pontas", "quatro motivos"), entregue exatamente essa quantidade.
+4. Proibido: "crucial", "fundamental" (vago), "cenário", "revolucionário", "o que muda no seu bolso" e variações.
+5. Proibido atribuição vaga: "especialistas afirmam", "pesquisas mostram" sem fonte nomeada.
+
+Retorne SOMENTE JSON válido, sem markdown:
+{"title":"título max 60 chars","slug":"kebab-case","excerpt":"resumo 1 frase max 155 chars","body":["lead direto sem subtítulo","## Subtítulo específico","parágrafo","- item","- item","## Outro subtítulo","parágrafo de fechamento"],"igCaption":"legenda instagram 3 parágrafos","igTitle":"TÍTULO CAIXA ALTA","category":"educação financeira"}
+
+NÃO repita temas recentes: ${recent.slice(0, 10).join(' | ')}`
+
+  const texto = await askLLM({ label: 'pauta-da-fila', tier: 'smart', maxTokens: 8000, prompt })
+  const p = await parseJsonSafe<GeneratedPost>(texto.trim())
+  return { ...p, funnel: 'mofu', articleType: 'evergreen', newsSources: [] } as GeneratedPost
+}
+
 // Geração + publicação da notícia (pesado: RSS + IA + foto + Sanity)
 async function processNews(skipRecencyLock = false, articleUrl?: string) {
   // Gate de janela + trava de recência. Em dev/force, ambos são ignorados.
@@ -313,6 +348,30 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
     // Trava de recência: evita duplicar dentro da mesma janela horária (< 50min desde a última).
     const last: string | null = await sanity.fetch('*[_type=="post" && articleType=="news"]|order(publishedAt desc)[0].publishedAt')
     if (last && Date.now() - new Date(last).getTime() < 50 * 60 * 1000) return
+  }
+
+  // A fila do editor vem antes do RSS. É o que faz os horários de publicação do
+  // dia saírem do que você aprovou, e não do que caiu no feed.
+  const daFila = await nextQueueItem('materia')
+  if (daFila) {
+    const recentes = await getRecentTitles(30)
+    const post = await gerarDaPauta(daFila.brief, recentes)
+    post.body = Array.isArray(post.body) ? await humanizePostBody(post.body) : post.body
+
+    const fotosRecentes = await getRecentPhotoUrls(30)
+    const foto = await fetchPhoto(post.coverQuery || 'Brazil personal finance money', fotosRecentes)
+    const doc = await createSanityPost(post, foto)
+    const slug = (doc.slug as { current: string }).current
+
+    await markQueueUsed(daFila._id, slug)
+
+    if (tgConfigured()) {
+      await tgSendMessage(
+        `📝 *Da sua fila* — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 180) ?? ''}\n\n🔗 ${SITE}/blog/${slug}`,
+        blogApprovalKeyboard((doc as { _id: string })._id),
+      )
+    }
+    return
   }
 
   const news = await fetchNews()
