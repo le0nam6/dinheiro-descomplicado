@@ -41,9 +41,22 @@ const OPENAI_COMPAT: Record<OpenAICompatVendor, { url: string; envKey: string }>
 //
 // Modelo gratuito sai do ar sem aviso, por isso a cadeia tem três degraus.
 const OPENROUTER_FREE = [
-  'minimax/minimax-m3:free',
+  // minimax/minimax-m3:free saiu do free tier em 07/09/2026 — o OpenRouter
+  // passou a responder 404 dizendo que só a versão paga existe. Era o único
+  // que entregava corpo cheio (2715 chars), e a cadeia caiu para o nemotron.
+  //
+  // Reteste em 07/09/2026 com o prompt real, dos 6 gratuitos disponíveis:
+  //   nemotron-3-ultra   1130 chars, 93s   ← melhor sobrevivente
+  //   nemotron-3-super    748 chars, 44s
+  //   gemma-4-31b / 4-26b  429 (rate limit)
+  //   nemotron-3.5-lightning  JSON inválido
+  //   dots-3-note         resposta vazia
+  //
+  // Nenhum chega perto da mediana do portal, que é 3922 chars. O gratuito hoje
+  // serve para o site não parar, não para publicar com qualidade.
   'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'dots-studio/dots-3-note-preview:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemma-4-31b-it:free',
 ]
 
 function chainFor(tier: Tier): Step[] {

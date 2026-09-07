@@ -176,7 +176,23 @@ function teclado(ids: string[]): { inline_keyboard: { text: string; callback_dat
 
 // ─── Execução ────────────────────────────────────────────────────────────────
 
+/** Quantas pautas na fila já bastam. Acima disso, sugerir só acumula. */
+const FILA_CHEIA = 10
+
 async function processar() {
+  // Oferta tem que acompanhar consumo. O cron diário sugeria 6 por dia e o
+  // pipeline escreve ~4, então a fila só crescia — 19 itens esperando quando
+  // isso foi notado. Com a fila cheia, a rodada é pulada e você não recebe
+  // mensagem para decidir sobre coisa que não vai ser escrita tão cedo.
+  const naFila: number = await sanity.fetch(
+    `count(*[_type=="editorialQueue" && status=="fila"])`,
+  ).catch(() => 0)
+
+  if (naFila >= FILA_CHEIA) {
+    console.log(`[pautas] fila com ${naFila} itens, pulando a rodada`)
+    return
+  }
+
   const [gsc, relacionadas] = await Promise.all([
     doSearchConsole(),
     daDemandaExterna(),
@@ -214,7 +230,8 @@ async function processar() {
   }
 
   const comCobertura = await marcarCobertura(ineditos)
-  const melhores = ranquear(comCobertura, QUANTAS)
+  // Sugere só o que falta para completar a fila, em vez de sempre 6.
+  const melhores = ranquear(comCobertura, Math.min(QUANTAS, FILA_CHEIA - naFila))
   if (!melhores.length) return
 
   // Guarda para o webhook poder resolver o callback por id curto.

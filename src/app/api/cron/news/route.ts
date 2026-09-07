@@ -355,6 +355,11 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
     if (queued) editorBrief = queued.brief
   }
 
+  // A fila de 'materia' fica de fora aqui de propósito: o prompt deste cron é
+  // jornalístico, montado em torno das manchetes de RSS e exigindo
+  // sourceIndexes apontando para elas. Uma pauta perene escrita por ele sairia
+  // com atribuição de fonte inventada. Quem consome 'materia' é o /original,
+  // que tem generateFromBrief com o prompt certo.
   const queued = articleUrl ? null : await nextQueueItem('noticia')
 
   const recent = await getRecentTitles(20)
