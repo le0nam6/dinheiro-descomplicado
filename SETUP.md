@@ -31,7 +31,18 @@ Variaveis opcionais:
 |---|---|
 | `OPENROUTER_MODELS` | Sobrescreve a cadeia gratuita padrao (separado por virgula) |
 | `LLM_SKIP_ANTHROPIC=1` | Tira a Anthropic da cadeia enquanto o saldo estiver zerado, evitando uma ida-e-volta perdida por chamada |
+| `GEMINI_API_KEY` | Coloca o Gemini logo abaixo da Anthropic na cadeia. **Recomendado** |
+| `GEMINI_MODEL` | Troca o modelo do Gemini sem deploy (padrao: `gemini-3.8-flash`) |
 | `GROQ_API_KEY` + `GROQ_MODEL` | Adiciona a Groq como ultimo degrau da cadeia |
+
+**Por que o Gemini:** em 07/09/2026 o `minimax-m3:free` saiu do free tier do
+OpenRouter. Dos seis gratuitos que restaram, dois dao 429, um devolve JSON
+invalido, um vem vazio, e os dois que funcionam entregam 748 e 1130 caracteres
+— contra os 3922 da mediana do portal. O free tier do Google AI Studio nao pede
+cartao, tem limite muito maior e o modelo e de outra categoria.
+
+Pegue a chave em https://aistudio.google.com/apikey e rode:
+`vercel env add GEMINI_API_KEY production`
 
 A cadeia gratuita padrao saiu de um teste real com o prompt do pipeline, medindo
 JSON valido no schema, portugues e tamanho de corpo. Se um modelo gratuito sair

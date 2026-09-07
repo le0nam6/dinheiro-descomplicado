@@ -21,9 +21,16 @@ type Step =
   | { provider: 'anthropic'; model: string }
   | { provider: 'openai-compat'; vendor: OpenAICompatVendor; model: string }
 
-type OpenAICompatVendor = 'openrouter' | 'groq'
+type OpenAICompatVendor = 'gemini' | 'openrouter' | 'groq'
 
 const OPENAI_COMPAT: Record<OpenAICompatVendor, { url: string; envKey: string }> = {
+  // O Gemini expõe um endpoint compatível com OpenAI, confirmado na
+  // documentação oficial do Google. Por isso entra sem código novo: o mesmo
+  // adaptador que fala com o OpenRouter serve aqui.
+  gemini: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    envKey: 'GEMINI_API_KEY',
+  },
   openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', envKey: 'OPENROUTER_API_KEY' },
   groq: { url: 'https://api.groq.com/openai/v1/chat/completions', envKey: 'GROQ_API_KEY' },
 }
@@ -67,6 +74,22 @@ function chainFor(tier: Tier): Step[] {
   // pra tomar 400. LLM_SKIP_ANTHROPIC=1 tira ela da cadeia até você recarregar.
   if (process.env.LLM_SKIP_ANTHROPIC !== '1') {
     steps.push({ provider: 'anthropic', model: primary })
+  }
+
+  // Gemini entra logo abaixo da Anthropic, antes dos gratuitos do OpenRouter.
+  //
+  // Motivo: em 07/09/2026 o minimax saiu do free tier do OpenRouter e o melhor
+  // que sobrou entrega 1130 caracteres, contra os 3922 da mediana do portal. O
+  // free tier do Google AI Studio não pede cartão e tem limite muito maior, e
+  // o modelo é de outra categoria — dá para publicar com ele.
+  //
+  // GEMINI_MODEL permite trocar de modelo sem deploy.
+  if (process.env.GEMINI_API_KEY) {
+    steps.push({
+      provider: 'openai-compat',
+      vendor: 'gemini',
+      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+    })
   }
 
   const freeList = process.env.OPENROUTER_MODELS?.split(',').map(m => m.trim()).filter(Boolean)
