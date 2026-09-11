@@ -39,6 +39,7 @@ async function fotoDoBanco(q: string, motivo: string): Promise<Response | null> 
       headers: {
         'Content-Type': ct,
         'X-Img-Fallback': `banco:${motivo}`,
+        'X-Robots-Tag': 'noindex',
         // 1 dia: a origem pode voltar, e o backfill pode corrigir o post.
         'Cache-Control': 'public, max-age=86400, s-maxage=86400',
       },
@@ -55,6 +56,7 @@ function placeholder(motivo: string) {
       'Content-Type': 'image/svg+xml; charset=utf-8',
       'X-Img-Fallback': motivo,
       // cache curto: a origem pode voltar a funcionar
+      'X-Robots-Tag': 'noindex',
       'Cache-Control': 'public, max-age=3600, s-maxage=3600',
     },
   })
@@ -96,6 +98,7 @@ export async function GET(req: NextRequest) {
     return new Response(buf, {
       headers: {
         'Content-Type': ct,
+        'X-Robots-Tag': 'noindex',
         'Cache-Control': 'public, max-age=604800, s-maxage=604800, immutable',
       },
     })
