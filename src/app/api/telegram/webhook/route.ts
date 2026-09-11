@@ -541,7 +541,10 @@ export async function POST(request: Request) {
       if (cmd === '/gerar') {
         await tg('sendMessage', { chat_id: chatId, text: '📰 Gerando notícia… (alguns segundos)' })
         const origin = new URL(request.url).origin
-        const r = await fetch(`${origin}/api/cron/news`, { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }).then(r => r.json()).catch(() => null)
+        // force=true: pedido seu não passa pelo slot do meio-dia nem pela trava de
+        // recência, que governam só a rodada automática. Sem isso o comando ficava
+        // mudo fora das 12h. A escolha entre manchetes segue o filtro de território.
+        const r = await fetch(`${origin}/api/cron/news?force=true`, { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }).then(r => r.json()).catch(() => null)
         if (!r?.ok) {
           await tg('sendMessage', { chat_id: chatId, text: `❌ Não rolou: ${r?.error || r?.message || 'erro'}` })
         }
@@ -573,7 +576,7 @@ export async function POST(request: Request) {
         await tg('sendMessage', { chat_id: chatId, text: 'Pesquisando pautas… as sugestões chegam em ~1 min.' })
         const origin = new URL(request.url).origin
         // Chama o próprio cron: a lógica mora lá e não deve ser duplicada aqui.
-        fetch(`${origin}/api/cron/pautas`, {
+        fetch(`${origin}/api/cron/pautas?manual=1`, {
           headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
         }).catch(() => {})
         return NextResponse.json({ ok: true })

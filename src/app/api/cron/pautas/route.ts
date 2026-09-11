@@ -179,7 +179,12 @@ function teclado(ids: string[]): { inline_keyboard: { text: string; callback_dat
 /** Quantas pautas na fila já bastam. Acima disso, sugerir só acumula. */
 const FILA_CHEIA = 10
 
-async function processar() {
+/**
+ * `manual` vem do comando /pautas. A trava de fila cheia existe para o cron
+ * diário não sugerir mais do que o pipeline consegue escrever — mas quando você
+ * pede, pede sugestão agora, e responder com silêncio parece defeito.
+ */
+async function processar(manual = false) {
   // Oferta tem que acompanhar consumo. O cron diário sugeria 6 por dia e o
   // pipeline escreve ~4, então a fila só crescia — 19 itens esperando quando
   // isso foi notado. Com a fila cheia, a rodada é pulada e você não recebe
@@ -188,7 +193,7 @@ async function processar() {
     `count(*[_type=="editorialQueue" && status=="fila"])`,
   ).catch(() => 0)
 
-  if (naFila >= FILA_CHEIA) {
+  if (naFila >= FILA_CHEIA && !manual) {
     console.log(`[pautas] fila com ${naFila} itens, pulando a rodada`)
     return
   }
@@ -231,8 +236,16 @@ async function processar() {
 
   const comCobertura = await marcarCobertura(ineditos)
   // Sugere só o que falta para completar a fila, em vez de sempre 6.
-  const melhores = ranquear(comCobertura, Math.min(QUANTAS, FILA_CHEIA - naFila))
-  if (!melhores.length) return
+  const melhores = ranquear(comCobertura, manual ? QUANTAS : Math.min(QUANTAS, FILA_CHEIA - naFila))
+  if (!melhores.length) {
+    if (manual && tgConfigured()) {
+      await tgSendMessage(
+        '<b>Pautas</b>\n\nNenhuma candidata inédita passou nos critérios de relevância agora.',
+        undefined, 'HTML',
+      )
+    }
+    return
+  }
 
   // Guarda para o webhook poder resolver o callback por id curto.
   const docs = await Promise.all(melhores.map(p => sanity.create({
@@ -267,10 +280,11 @@ export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const manual = new URL(request.url).searchParams.get('manual') === '1'
   // Responde na hora; o trabalho pesado (GSC + Serper + RAG) roda em background.
   after(async () => {
     try {
-      await processar()
+      await processar(manual)
     } catch (err) {
       await tgAlert('Cron de pautas', err)
     }
