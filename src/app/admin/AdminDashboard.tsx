@@ -655,7 +655,7 @@ export function AdminDashboard() {
 
           {/* Pipeline: Notícias */}
           <FluxoCard
-            emoji="📰" title="Notícias" badge="4× por dia" schedule="8h · 12h · 16h · 20h BRT" color="blue"
+            emoji="📰" title="Notícias" badge="1× por dia" schedule="12h BRT" color="blue"
             steps={[
               { kind: 'auto', label: 'RSS — 11 fontes', desc: 'InfoMoney, G1, Exame, Valor, CNN Brasil e mais. Manchetes das últimas 48h.' },
               { kind: 'cond', label: 'Fila editorial? (opcional)', desc: 'Se você colocou um item do tipo "notícia" na fila, ele substitui o RSS. Comanda: /pauta [tema] no Telegram.' },
@@ -672,7 +672,6 @@ export function AdminDashboard() {
           <FluxoCard
             emoji="📚" title="Conteúdo Próprio" badge="2× por dia" schedule="8h · 15h BRT" color="indigo"
             steps={[
-              { kind: 'cond', label: 'Fila editorial? (opcional)', desc: 'Se você colocou um item do tipo "matéria" na fila, ele define o tema. Comanda: /materia [pauta] no Telegram.' },
               { kind: 'auto', label: 'Série do dia (rotação de 8)', desc: 'Número do Dia · Setor na Lupa · Dólar e Você · Emprego e Salário · Preço de Tudo · Fundo Imobiliário · Fintech · Renda Extra. Roda em sequência automaticamente.' },
               { kind: 'auto', label: 'Busca dados reais', desc: 'BACEN (taxa Selic, câmbio, inflação), IBGE ou RSS financeiros específicos por série. Os números chegam no contexto do Claude.' },
               { kind: 'ai',   label: '🧠 Sonnet gera o artigo', desc: 'Análise aprofundada com dados reais. 10-12 parágrafos. Sem humanizador (Sonnet escreve bem direto).' },
@@ -680,14 +679,14 @@ export function AdminDashboard() {
               { kind: 'user', label: '📱 Telegram — você aprova', desc: 'Chega: título + excerpt + botões. Opções: ✅ Aprovar · ❌ Rejeitar. Botão 👁 Preview abre o artigo completo antes de decidir.' },
               { kind: 'done', label: 'Blog atualizado', desc: 'Status vira "aprovado". Post entra no site.' },
             ]}
-            commands={['/materia [pauta] — adiciona pauta de matéria própria para 8h ou 15h']}
+            commands={[]}
           />
 
           {/* Pipeline: Evergreen */}
           <FluxoCard
-            emoji="🔥" title="Evergreen — Blog + Instagram" badge="4× por dia" schedule="9h · 12h · 15h · 18h BRT" color="orange"
+            emoji="🔥" title="Evergreen — Blog + Instagram" badge="2× por dia" schedule="9h · 18h BRT" color="orange"
             steps={[
-              { kind: 'auto', label: 'Calendário editorial', desc: 'Define categoria (ganhar dinheiro / investimentos / educação financeira / cartão) e funil (TOFU / MOFU / BOFU) pelo dia da semana + hora. Ex: segunda 12h = educação financeira MOFU.' },
+              { kind: 'cond', label: 'Fila editorial (obrigatória)', desc: 'Pega a próxima pauta de matéria que você aprovou. Sem pauta na fila, a rodada é pulada. Categoria e funil saem do texto da pauta. Comanda: /materia [pauta] no Telegram.' },
               { kind: 'auto', label: 'Google Suggestions via Serper', desc: 'Busca o que brasileiros estão pesquisando agora sobre o tema. Alimenta o Claude com perguntas reais.' },
               { kind: 'ai',   label: '🤖 Haiku gera artigo + carrossel', desc: 'Produz: título, slug, body (10-12 parágrafos), excerpt, legenda do Instagram (igCaption), título do card (igTitle, CAIXA ALTA ≤3 linhas), 3-4 slides de conteúdo (title + body cada) e a coverQuery para buscar foto.' },
               { kind: 'auto', label: 'Busca foto (cascata)', desc: '1º Pexels com coverQuery. 2º Serper Google Images (3 opções alternativas). 3º Unsplash como fallback. Evita fotos já usadas recentemente.' },
@@ -699,7 +698,7 @@ export function AdminDashboard() {
               { kind: 'auto', label: 'Envia legenda no Telegram', desc: 'Mensagem separada com "📋 LEGENDA (copie e cole):" + o texto completo do Instagram.' },
               { kind: 'user', label: '📸 Você posta no Instagram', desc: 'Salva os slides do Telegram. Abre o Instagram. Cola a legenda. Adiciona música. Posta o carrossel.', highlight: true },
             ]}
-            commands={[]}
+            commands={['/materia [pauta] — adiciona pauta de matéria para 9h ou 18h']}
           />
 
           {/* Pipeline: Edição Diária */}
@@ -726,8 +725,8 @@ export function AdminDashboard() {
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               {([
-                { kind: 'noticia',     emoji: '📰', label: 'Notícia',         when: 'próximo slot — 8h, 12h, 16h ou 20h', color: 'blue',   cmds: ['/pauta [tema]',       'Aba "Fila editorial" aqui no admin'] },
-                { kind: 'materia',     emoji: '📝', label: 'Matéria própria', when: 'próximo slot — 8h ou 15h',           color: 'indigo', cmds: ['/materia [pauta]',    'Aba "Fila editorial" aqui no admin'] },
+                { kind: 'noticia',     emoji: '📰', label: 'Notícia',         when: 'próximo slot — 12h',                 color: 'blue',   cmds: ['/pauta [tema]',       'Aba "Fila editorial" aqui no admin'] },
+                { kind: 'materia',     emoji: '📝', label: 'Matéria própria', when: 'próximo slot — 9h ou 18h',           color: 'indigo', cmds: ['/materia [pauta]',    'Aba "Fila editorial" aqui no admin'] },
                 { kind: 'curiosidade', emoji: '💡', label: 'Curiosidade',     when: 'próxima edição — às 4h do dia seguinte', color: 'green', cmds: ['/curiosidade [tema]', 'Aba "Fila editorial" aqui no admin'] },
               ] as const).map(item => (
                 <div key={item.kind} className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
@@ -751,8 +750,8 @@ export function AdminDashboard() {
             <h3 className="font-bold text-gray-900 mb-4">📱 Todos os comandos do Telegram</h3>
             <div className="space-y-2">
               {([
-                { cmd: '/pauta [tema]',       desc: 'Adiciona pauta de notícia à fila. O cron usa no próximo slot (8h/12h/16h/20h).' },
-                { cmd: '/materia [pauta]',    desc: 'Adiciona pauta de matéria própria à fila. O cron usa no próximo 8h ou 15h.' },
+                { cmd: '/pauta [tema]',       desc: 'Adiciona pauta de notícia à fila. O cron usa no próximo slot (12h).' },
+                { cmd: '/materia [pauta]',    desc: 'Adiciona pauta de matéria própria à fila. O cron usa no próximo 9h ou 18h.' },
                 { cmd: '/curiosidade [tema]', desc: 'Adiciona curiosidade à fila. A edição usa na próxima geração (às 4h).' },
                 { cmd: '/fila',               desc: 'Lista todos os itens pendentes na fila editorial com status e prioridade.' },
                 { cmd: '/ajuda',              desc: 'Mostra todos os comandos disponíveis.' },

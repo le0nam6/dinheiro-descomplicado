@@ -15,7 +15,7 @@
  * melhores para o Telegram — a decisão final é sua, não da máquina.
  *
  * Nada é publicado aqui. O que você aprovar entra na fila editorial e o cron
- * /api/cron/original escreve a partir dela.
+ * /api/cron/publish escreve a partir dela, às 9h e às 18h.
  */
 import { NextResponse, after } from 'next/server'
 import { consultasDoSite } from '@/lib/search-console'

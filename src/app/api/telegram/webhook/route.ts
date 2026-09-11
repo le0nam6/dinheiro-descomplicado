@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
       // --- Pauta sugerida: aprovar (pa) ou recusar (pr) ---
       // O cron /api/cron/pautas manda as sugestões; aqui a decisão vira ação.
-      // Aprovar joga na fila editorial, de onde o cron /original escreve.
+      // Aprovar joga na fila editorial, de onde o cron /publish escreve.
       if (action === 'pa' || action === 'pr') {
         const aprovou = action === 'pa'
         const pauta = await sanity.fetch(

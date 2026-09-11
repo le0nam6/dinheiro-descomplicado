@@ -18,6 +18,11 @@
  *   08h → cicla as séries por dia do ano
  *   15h → copa (enquanto ativa) ou série diferente da manhã
  *
+ * A fila editorial de matéria NÃO é lida aqui: o único consumidor é o
+ * /api/cron/publish. Com os dois lendo a mesma fila saíam quatro matérias por
+ * dia sem ninguém ter escolhido esse ritmo, e a pauta perene escrita daqui era
+ * gravada como notícia (articleType 'news'), indo parar no sitemap do Google News.
+ *
  * ?dry=true → busca dados, retorna JSON sem chamar Claude nem publicar
  */
 import { askLLM } from '@/lib/llm'
@@ -26,7 +31,7 @@ import {
   sanity, SITE, type GeneratedPost, type Photo,
   createSanityPost, getRecentTitles, getRecentPhotoUrls,
   fetchPhoto, fetchSerperImages, tgAlert, tgConfigured, tgSendMessage,
-  originalDraftKeyboard, blogApprovalKeyboard, nextQueueItem, markQueueUsed, parseJsonSafe,
+  originalDraftKeyboard, parseJsonSafe,
 } from '@/lib/publish-core'
 import { getEditorialContext } from '@/lib/rag'
 
@@ -421,20 +426,6 @@ function recentBlock(recent: string[]) {
   return `NÃO repita temas: ${recent.slice(0, 10).join(' | ')}`
 }
 
-// Matéria própria a partir de uma pauta livre do editor (fila editorial)
-async function generateFromBrief(brief: string, recent: string[]): Promise<GeneratedPost> {
-  const prompt = `Você é redator de finanças pessoais do Endinheirados. O editor-chefe pediu uma matéria sobre esta pauta:
-
-PAUTA DO EDITOR: "${brief}"
-
-Escreva um artigo próprio, didático e aprofundado (10-12 parágrafos) que entregue exatamente o que a pauta pede. Tom de quem entende do assunto e explica como gente, sem juridiquês. Explique todo termo técnico na hora. Quando usar números para ilustrar, deixe explícito que é exemplo hipotético ("imagine que você guarda R$ 100 por mês"), nunca apresente exemplo como dado real de mercado.
-
-${recentBlock(recent)}
-${jsonSchema('educação financeira')}`
-  const p = await callClaude(prompt)
-  return { ...p, funnel: 'mofu', articleType: 'news' }
-}
-
 async function generateNumero(recent: string[]): Promise<GeneratedPost> {
   const d = await fetchDadosNumero()
   if (!d) throw new Error('BACEN sem dados')
@@ -762,36 +753,8 @@ async function processOriginal(
     }
   }
 
-  const recent = await getRecentTitles(30)
-
-  // Pauta do editor (fila editorial) tem prioridade sobre a série automática
-  const queued = await nextQueueItem('materia')
-
-  if (queued) {
-    // Gera direto a partir da pauta do editor
-    const post = await generateFromBrief(queued.brief, recent)
-    const recentPhotos = await getRecentPhotoUrls(30)
-    const serperPics = await fetchSerperImages(post.title || 'Brazil personal finance money planning', 2)
-    const photo: Photo = serperPics[0] ?? await fetchPhoto(post.coverQuery || 'Brazil personal finance money planning', recentPhotos)
-
-    const doc = await createSanityPost(post, photo)
-    const slug = (doc.slug as { current: string }).current
-    const docId = (doc as { _id: string })._id
-    const url = `${SITE}/blog/${slug}`
-
-    await markQueueUsed(queued._id, slug)
-
-    if (tgConfigured()) {
-      const tgRes = await tgSendMessage(
-        `📝 *Matéria da sua pauta* — rascunho criado\n\n*${post.title}*\n\n${post.excerpt?.slice(0, 200) ?? ''}\n\n_📊 Revisão rápida_\n🔗 ${url}`,
-        originalDraftKeyboard(docId, true),
-      )
-      if (!tgRes?.ok) console.error('[original] Telegram falhou:', JSON.stringify(tgRes))
-    }
-    return { ok: true, series: 'pauta', url, draft: true }
-  }
-
-  // Modo proposta: busca dados e envia ângulos para o editor escolher
+  // Sem ler a fila de matéria (ver cabeçalho), a rodada vai direto ao modo
+  // proposta: busca dados e envia ângulos para o editor escolher
   const rawData = await config.fetchData()
   if (!rawData) {
     if (tgConfigured()) await tgSendMessage(`⚠️ *${config.label}* sem dados hoje`)

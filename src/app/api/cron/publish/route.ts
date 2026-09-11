@@ -10,7 +10,8 @@
  * E a fila deixou de ser sugestão para virar a única fonte de pauta. Antes o
  * calendário escolhia categoria e a fila só sobrescrevia quando tinha item;
  * o resultado de 90 dias foi 975 posts para 26 com clique. Sem pauta aprovada
- * no Telegram, a rodada é pulada.
+ * no Telegram, a rodada é pulada. É o único cron que lê a fila de matéria — o
+ * /original deixou de ler; o motivo está no cabeçalho dele.
  *
  * Disparo manual (rejeitado / force_topic / inject_title) ignora os dois
  * gates: ali quem está pedindo é uma pessoa.
