@@ -191,7 +191,12 @@ export async function createSanityPost(post: GeneratedPost, photo: Photo, status
     ...(post.sources?.length ? { sources: post.sources.map(s => ({ _type: 'source', _key: nanoid(6), name: s.name, url: s.url })) } : {}),
   })
 
-  notifyGoogleIndexing(`${SITE}/blog/${slug}`)
+  // Só avisa o Google quando a página existe. Rascunho responde 404 (a página
+  // exige status aprovado), e o aviso fazia o Google rastrear e registrar o 404
+  // de todo post que nascia como rascunho — notícia e matéria do /original
+  // nascem assim. É a origem dos posts aprovados que o Search Console mostrava
+  // como "não encontrada": foram rastreados antes da aprovação e nunca de novo.
+  if (status === 'aprovado') notifyGoogleIndexing(`${SITE}/blog/${slug}`)
 
   return created
 }
