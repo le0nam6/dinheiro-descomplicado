@@ -1,7 +1,7 @@
 /**
  * Cron jornalístico, alimentado por RSS. O agendador (cron-job.org) bate de
- * hora em hora e a rota gera notícia em toda janela de 6h a 23h BRT, com trava
- * de recência de 50min para não duplicar dentro da mesma hora.
+ * hora em hora; a rota só age no slot de NEWS_PUBLISH_SLOTS (padrão: 12h BRT)
+ * e, na escolha automática, só sobre manchete que passa em noTerritorio.
  *
  * A fila editorial NÃO é consumida aqui: quem escreve as pautas aprovadas é o
  * /api/cron/publish, que roda nos horários fixos e tem o prompt educativo.
@@ -17,6 +17,7 @@ import {
   tgAlert, tgConfigured, tgSendMessage, humanizePostBody, blogApprovalKeyboard,
   nextQueueItem, markQueueUsed, parseJsonSafe,
 } from '@/lib/publish-core'
+import { noTerritorio } from '@/lib/territorio'
 
 const FEEDS = [
   { source: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
@@ -35,12 +36,16 @@ const FEEDS = [
 // Janelas de publicação (hora de Brasília). O agendador externo bate de hora em
 // hora; estes slots é que decidem em quais delas realmente se publica.
 //
-// Segue em 6h-23h (até 18/dia), que é cadência normal pra site de notícia. O
-// volume em si não é violação de política: o que pega é conteúdo duplicado e sem
-// valor agregado, e isso é tratado na janela de deduplicação lá embaixo.
+// Isto já foi 6h-23h, até 18 posts/dia, com a justificativa de que volume é
+// cadência normal para site de notícia. Os 90 dias seguintes mediram o que essa
+// hipótese valia: 737 notícias produziram 2.368 impressões e 24 cliques — 3,2
+// impressões por página. O conteúdo perene, com 205 páginas, fez quase as mesmas
+// impressões. A cadência não era normal para ESTE site, que disputa o mesmo fato
+// com G1 e InfoMoney sem ter a autoridade deles.
 //
-// NEWS_PUBLISH_SLOTS ajusta sem deploy, ex.: "8,12,16,20" para quatro por dia.
-const PUBLISH_SLOTS = (process.env.NEWS_PUBLISH_SLOTS || '6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23')
+// Um slot por dia, e só para fato que mexe no bolso do leitor (ver noTerritorio).
+// NEWS_PUBLISH_SLOTS ajusta sem deploy, ex.: "9,18" para dois por dia.
+const PUBLISH_SLOTS = (process.env.NEWS_PUBLISH_SLOTS || '12')
   .split(',')
   .map(h => Number(h.trim()))
   .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
@@ -319,8 +324,22 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
   }
 
 
-  const news = await fetchNews()
-  if (!news.length) return
+  const brutas = await fetchNews()
+  if (!brutas.length) return
+
+  // Pedido humano — a URL do /noticia ou a pauta que você enfileirou — não
+  // passa pelo filtro de território: quem escolheu o assunto foi você. Na
+  // primeira versão o filtro rodava antes de a fila ser lida, e uma rodada sem
+  // manchete no território descartava em silêncio a pauta enfileirada.
+  const pautaHumana = articleUrl ? null : await nextQueueItem('noticia')
+
+  // Na escolha automática, sem fato do território a rodada é pulada. Publicar o
+  // que sobrou do feed é como o acervo ganhou 737 notícias e 24 cliques.
+  const news = (articleUrl || pautaHumana) ? brutas : brutas.filter(noTerritorio)
+  if (!news.length) {
+    console.log(`[cron/news] ${brutas.length} manchetes, nenhuma no território — pulando`)
+    return
+  }
 
   // Títulos recentes para checar duplicata de assunto.
   //
@@ -355,8 +374,7 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
     }
   } else {
     // Pauta da fila do editor tem prioridade sobre a escolha automática
-    const queued = await nextQueueItem('noticia')
-    if (queued) editorBrief = queued.brief
+    if (pautaHumana) editorBrief = pautaHumana.brief
   }
 
   // A fila de 'materia' fica de fora aqui de propósito: o prompt deste cron é
@@ -364,7 +382,7 @@ async function processNews(skipRecencyLock = false, articleUrl?: string) {
   // sourceIndexes apontando para elas. Uma pauta perene escrita por ele sairia
   // com atribuição de fonte inventada. Quem consome 'materia' é o /original,
   // que tem generateFromBrief com o prompt certo.
-  const queued = articleUrl ? null : await nextQueueItem('noticia')
+  const queued = pautaHumana
 
   const recent = await getRecentTitles(20)
   const post = await generate(news, recent, saturatedThemes, editorBrief ?? queued?.brief)

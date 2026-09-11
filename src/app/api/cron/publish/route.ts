@@ -1,7 +1,19 @@
 /**
- * Vercel Cron: gera post no blog + publica no Instagram
- * Roda 4x/dia: 9h (notícia), 12h (evergreen), 15h (notícia), 18h (evergreen)
- * Configurado em vercel.json
+ * Matéria de fundo a partir da fila editorial + carrossel no Instagram.
+ *
+ * Duas coisas mudaram aqui e vale registrar por quê.
+ *
+ * A rota não está no vercel.json: quem dispara é o cron-job.org, de hora em
+ * hora. Por isso o gate de horário mora no código (PUBLISH_SLOTS), e não no
+ * painel do agendador — assim a cadência é versionada e revisável.
+ *
+ * E a fila deixou de ser sugestão para virar a única fonte de pauta. Antes o
+ * calendário escolhia categoria e a fila só sobrescrevia quando tinha item;
+ * o resultado de 90 dias foi 975 posts para 26 com clique. Sem pauta aprovada
+ * no Telegram, a rodada é pulada.
+ *
+ * Disparo manual (rejeitado / force_topic / inject_title) ignora os dois
+ * gates: ali quem está pedindo é uma pessoa.
  */
 import { askLLM } from '@/lib/llm'
 import { NextResponse, after } from 'next/server'
@@ -196,64 +208,64 @@ async function fetchGoogleSuggestions(query: string): Promise<string[]> {
 }
 
 // --- Calendário de conteúdo ---
-// Rebalanceado em 07/2026: dados mostraram 80% do blog como TOFU no geral, mas
-// as categorias de maior volume (investimentos, educação financeira) tinham só
-// 16% e 32% de conteúdo evergreen — o resto é notícia efêmera. E 3 categorias
-// inteiras (empréstimo, financiamento, previdência) praticamente não tinham
-// evergreen. Este calendário prioriza TOFU nas categorias de maior potencial de
-// busca e abre espaço regular pras categorias vazias.
+//
+// Antes daqui saíam 4 posts/dia escolhidos por um calendário fixo de categoria,
+// e a fila aprovada era só uma sugestão que sobrescrevia o tema quando existia.
+// Os números de 90 dias derrubaram esse desenho: 975 posts, 441 que apareceram
+// em alguma busca, 26 com algum clique. Publicar por calendário produz volume,
+// e volume é justamente o que fez o Google reavaliar o site para baixo.
+//
+// Agora o calendário não escolhe mais tema nenhum. Ele só diz em que horas a
+// rota pode agir; o que escrever vem exclusivamente da fila que você aprova no
+// Telegram. Sem pauta aprovada, a rodada é pulada — silêncio é melhor que mais
+// uma página que ninguém vai buscar.
+//
+// A categoria e o degrau de funil ainda existem porque o prompt os usa para
+// calibrar profundidade e formato, mas são derivados da pauta, não sorteados.
 type Funnel = 'tofu' | 'mofu' | 'bofu'
-const WEEKLY_SCHEDULE: Record<number, Record<number, { funnel: Funnel; category: string }>> = {
-  0: { // domingo
-    9:  { funnel: 'tofu', category: 'investimentos' },
-    12: { funnel: 'tofu', category: 'empréstimo' },
-    15: { funnel: 'mofu', category: 'educação financeira' },
-    18: { funnel: 'tofu', category: 'ganhar dinheiro' },
-  },
-  1: { // segunda
-    9:  { funnel: 'tofu', category: 'educação financeira' },
-    12: { funnel: 'mofu', category: 'investimentos' },
-    15: { funnel: 'tofu', category: 'financiamento' },
-    18: { funnel: 'mofu', category: 'empréstimo' },
-  },
-  2: { // terça
-    9:  { funnel: 'tofu', category: 'investimentos' },
-    12: { funnel: 'tofu', category: 'previdência' },
-    15: { funnel: 'mofu', category: 'educação financeira' },
-    18: { funnel: 'bofu', category: 'cartão de crédito' },
-  },
-  3: { // quarta
-    9:  { funnel: 'tofu', category: 'educação financeira' },
-    12: { funnel: 'tofu', category: 'financiamento' },
-    15: { funnel: 'mofu', category: 'investimentos' },
-    18: { funnel: 'mofu', category: 'previdência' },
-  },
-  4: { // quinta
-    9:  { funnel: 'tofu', category: 'investimentos' },
-    12: { funnel: 'tofu', category: 'empréstimo' },
-    15: { funnel: 'bofu', category: 'educação financeira' },
-    18: { funnel: 'mofu', category: 'ganhar dinheiro' },
-  },
-  5: { // sexta
-    9:  { funnel: 'tofu', category: 'educação financeira' },
-    12: { funnel: 'tofu', category: 'investimentos' },
-    15: { funnel: 'mofu', category: 'previdência' },
-    18: { funnel: 'bofu', category: 'financiamento' },
-  },
-  6: { // sábado
-    9:  { funnel: 'tofu', category: 'investimentos' },
-    12: { funnel: 'tofu', category: 'educação financeira' },
-    15: { funnel: 'mofu', category: 'empréstimo' },
-    18: { funnel: 'mofu', category: 'cartão de crédito' },
-  },
+type Schedule = { type: 'evergreen' | 'news'; funnel: Funnel; category: string; hour: number }
+
+/**
+ * Horas (BRT) em que a rota publica. O agendador externo bate de hora em hora,
+ * então o gate mora aqui e não no cron-job.org — assim a cadência é versionada
+ * junto do código, e não em um painel que ninguém revisa.
+ *
+ * MATERIA_PUBLISH_SLOTS ajusta sem deploy, ex.: "9" para uma vez por dia.
+ */
+const PUBLISH_SLOTS = (process.env.MATERIA_PUBLISH_SLOTS || '9,18')
+  .split(',')
+  .map(h => Number(h.trim()))
+  .filter(h => Number.isInteger(h) && h >= 0 && h <= 23)
+
+function horaBRT(): number {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getHours()
 }
 
-function getSchedule() {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-  const hour = now.getHours()
-  const day  = now.getDay()
-  const slot = WEEKLY_SCHEDULE[day]?.[hour] ?? { funnel: 'mofu' as Funnel, category: 'investimentos' }
-  return { type: 'evergreen', funnel: slot.funnel, category: slot.category, hour }
+/**
+ * Deduz categoria e degrau a partir do texto da pauta. É heurística simples e
+ * de propósito: errar a categoria custa um rótulo, e a alternativa seria mais
+ * uma chamada de LLM antes mesmo de saber se há o que escrever.
+ */
+function classificarPauta(brief: string): { funnel: Funnel; category: string } {
+  const b = brief.toLowerCase()
+  const porCategoria: [RegExp, string][] = [
+    [/cart(ã|a)o|fatura|limite|anuidade|milhas/, 'cartão de crédito'],
+    [/empr(é|e)stimo|consignado|d(í|i)vida|negocia(ç|c)(ã|a)o|nome sujo|serasa|score/, 'empréstimo'],
+    [/financiamento|im(ó|o)vel|casa pr(ó|o)pria|consórcio|ve(í|i)culo|carro/, 'financiamento'],
+    [/previd(ê|e)ncia|aposentadoria|inss|pgbl|vgbl/, 'previdência'],
+    [/investir|investimento|tesouro|cdb|a(ç|c)(õ|o)es|fii|renda fixa|d(ó|o)lar|bitcoin|cripto/, 'investimentos'],
+    [/ganhar|renda extra|freelan|mei|aut(ô|o)nomo|vender|quanto (se )?ganha|bico/, 'ganhar dinheiro'],
+  ]
+  const category = porCategoria.find(([re]) => re.test(b))?.[1] ?? 'educação financeira'
+
+  // BOFU quando a pauta compara ou decide; TOFU quando é "o que é / como
+  // funciona"; MOFU no resto, que é o passo a passo.
+  const funnel: Funnel =
+    /melhor|vale a pena|compensa|\bvs\b|comparativo|qual escolher/.test(b) ? 'bofu'
+    : /o que (é|e|s(ã|a)o)|como funciona|significa|para que serve/.test(b) ? 'tofu'
+    : 'mofu'
+
+  return { funnel, category }
 }
 
 // --- Buscar notícias ---
@@ -298,7 +310,7 @@ async function fetchNews(): Promise<string> {
 // --- Gerar post com Claude ---
 
 async function generatePost(
-  schedule: ReturnType<typeof getSchedule>,
+  schedule: Schedule,
   news: string,
   recentTitles: string[],
   rejectedTitle?: string | null,
@@ -585,22 +597,53 @@ export async function GET(request: Request) {
   // Responde 200 imediatamente e processa em background com after().
   const work = async () => {
     try {
-    const schedule = getSchedule()
+    // Disparo humano: rejeição pedindo alternativa, tema forçado, matéria
+    // injetada à mão. Esses valem em qualquer hora e sem fila, porque quem
+    // pediu foi você. A regra de fila governa o modo autônomo, que é onde o
+    // volume sem seleção nasceu.
+    const manual = Boolean(rejectedTitle || forceTopic || injectTitle || forceSync)
+    const hora = horaBRT()
 
-    // 1. Buscar notícias
+    // O agendador externo bate de hora em hora. O gate mora aqui.
+    if (!manual && !PUBLISH_SLOTS.includes(hora)) {
+      console.log(`[cron/publish] ${hora}h fora dos slots (${PUBLISH_SLOTS.join(', ')}), pulando`)
+      return NextResponse.json({ ok: true, skipped: 'fora-de-slot' })
+    }
+
+    // A fila manda. Sem pauta aprovada não há o que escrever — e escolher tema
+    // sozinho é exatamente o que encheu o acervo de página que ninguém busca.
+    //
+    // force_topic e inject_title pedem uma notícia específica; consumir uma
+    // pauta da fila ali gastaria em silêncio um item que você aprovou para
+    // outra coisa.
+    const modoNoticia = Boolean(forceTopic || injectTitle)
+    const daFila = modoNoticia ? null : await nextQueueItem('materia')
+    if (!daFila && !manual) {
+      console.log('[cron/publish] fila vazia, nada a publicar nesta rodada')
+      return NextResponse.json({ ok: true, skipped: 'fila-vazia' })
+    }
+
+    // Categoria e degrau saem da própria pauta, não de um calendário fixo.
+    const schedule: Schedule = {
+      type: 'evergreen',
+      hour: hora,
+      ...(daFila
+        ? classificarPauta(daFila.brief)
+        : { funnel: 'mofu' as Funnel, category: 'educação financeira' }),
+    }
+
+    // 1. Buscar notícias — só nos disparos manuais que pedem pauta de notícia
     let news: string
     if (injectTitle) {
       news = JSON.stringify([{ title: injectTitle, description: injectDesc || '', url: injectUrl || '' }])
-    } else if (schedule.type === 'news' || forceTopic) {
+    } else if (forceTopic) {
       news = await fetchNews()
-      if (forceTopic) {
-        try {
-          const all: Array<{ title: string; description: string; url: string; imageUrl?: string }> = JSON.parse(news)
-          const kw = forceTopic.toLowerCase()
-          const filtered = all.filter(n => n.title.toLowerCase().includes(kw) || n.description.toLowerCase().includes(kw))
-          if (filtered.length > 0) news = JSON.stringify(filtered)
-        } catch { /* mantém news original */ }
-      }
+      try {
+        const all: Array<{ title: string; description: string; url: string; imageUrl?: string }> = JSON.parse(news)
+        const kw = forceTopic.toLowerCase()
+        const filtered = all.filter(n => n.title.toLowerCase().includes(kw) || n.description.toLowerCase().includes(kw))
+        if (filtered.length > 0) news = JSON.stringify(filtered)
+      } catch { /* mantém news original */ }
     } else {
       news = ''
     }
@@ -611,11 +654,7 @@ export async function GET(request: Request) {
       getRecentPhotoUrls(30),
     ])
     const recentTitles = rejectedTitle ? [rejectedTitle, ...recentTitlesRaw] : recentTitlesRaw
-    const effectiveSchedule = (forceTopic || injectTitle) ? { ...schedule, type: 'news' as const } : schedule
-    // Fila primeiro: só cai na lista fixa quando não há pauta aprovada.
-    const daFila = effectiveSchedule.type === 'evergreen'
-      ? await nextQueueItem('materia')
-      : null
+    const effectiveSchedule: Schedule = (forceTopic || injectTitle) ? { ...schedule, type: 'news' } : schedule
     const post = await generatePost(effectiveSchedule, news, recentTitles, rejectedTitle, daFila?.brief)
     console.log(`[cron/publish] Post gerado: "${post.title}"`)
 
