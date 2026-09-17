@@ -32,6 +32,9 @@
     },
     "src/app/api/cron/pautas/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/cron/titulos/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -70,6 +73,10 @@
     {
       "path": "/api/cron/original",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/titulos",
+      "schedule": "0 12 * * 2"
     }
   ]
 }

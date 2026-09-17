@@ -90,6 +90,59 @@ export async function consultasDoSite(
   }))
 }
 
+export type LinhaPaginaConsulta = {
+  url: string
+  consulta: string
+  impressoes: number
+  cliques: number
+  posicao: number
+}
+
+/**
+ * Cruzamento de página com consulta. Serve para saber com que palavras a pessoa
+ * chegou em cada página — que é o que um título precisa responder.
+ *
+ * O Google oculta parte das consultas (volume baixo ou risco de identificar
+ * alguém), então a soma por página fica abaixo do total de impressões dela.
+ * Isso é esperado, não é erro de coleta.
+ */
+export async function consultasPorPagina(
+  { dias = 90, limite = 5000 } = {},
+): Promise<LinhaPaginaConsulta[]> {
+  const t = await token()
+  if (!t) return []
+
+  const res = await fetch(
+    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(SITE_GSC)}/searchAnalytics/query`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startDate: diasAtras(dias),
+        endDate: diasAtras(2),
+        dimensions: ['page', 'query'],
+        rowLimit: limite,
+        type: 'web',
+      }),
+      signal: AbortSignal.timeout(30_000),
+    },
+  )
+  if (!res.ok) {
+    console.error(`[gsc] page+query ${res.status}`)
+    return []
+  }
+  const d = await res.json() as {
+    rows?: { keys: string[]; impressions: number; clicks: number; position: number }[]
+  }
+  return (d.rows ?? []).map(r => ({
+    url: r.keys[0],
+    consulta: r.keys[1],
+    impressoes: r.impressions,
+    cliques: r.clicks,
+    posicao: r.position,
+  }))
+}
+
 /** true quando a API está habilitada e a service account tem acesso. */
 export async function gscDisponivel(): Promise<boolean> {
   return (await consultasDoSite({ dias: 7, limite: 1 })).length >= 0 && (await token()) !== null

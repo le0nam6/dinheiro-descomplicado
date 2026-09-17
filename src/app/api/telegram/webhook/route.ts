@@ -101,6 +101,55 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true })
       }
 
+      // --- Título sugerido: trocar (ta) ou manter (tr) ---
+      // O cron /api/cron/titulos acha a página que perde clique na busca e
+      // propõe outro título. Aqui a decisão vira patch no post.
+      if (action === 'ta' || action === 'tr') {
+        const trocar = action === 'ta'
+        const sug = await sanity.fetch(
+          `*[_type=="tituloSugerido" && _id==$id][0]{
+            _id, status, postId, slug, tituloAntes, excerptAntes, tituloDepois, excerptDepois,
+            impressoesAntes, cliquesAntes, posicaoAntes
+          }`, { id },
+        ).catch(() => null)
+
+        if (!sug) {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Sugestão não encontrada.' })
+          return NextResponse.json({ ok: true })
+        }
+        if (sug.status !== 'sugerido') {
+          await tg('answerCallbackQuery', { callback_query_id: cq.id, text: `Já ${sug.status}.` })
+          return NextResponse.json({ ok: true })
+        }
+
+        if (trocar) {
+          await sanity.patch(sug.postId).set({
+            title: sug.tituloDepois,
+            excerpt: sug.excerptDepois,
+            // O título antigo e as métricas do dia ficam no próprio post: é o
+            // marco zero para dizer, daqui a dois meses, se a troca funcionou.
+            tituloAnterior: sug.tituloAntes,
+            tituloTrocadoEm: new Date().toISOString(),
+            impressoesAntes: sug.impressoesAntes,
+            cliquesAntes: sug.cliquesAntes,
+            posicaoAntes: sug.posicaoAntes,
+            updatedAt: new Date().toISOString(),
+          }).commit()
+          try { revalidatePath(`/blog/${sug.slug}`); revalidatePath('/') } catch { /* ISR */ }
+        }
+
+        await sanity.patch(id).set({
+          status: trocar ? 'aplicado' : 'recusado',
+          decididaEm: new Date().toISOString(),
+        }).commit()
+
+        await tg('answerCallbackQuery', {
+          callback_query_id: cq.id,
+          text: trocar ? '✓ Título trocado' : '✕ Mantido',
+        })
+        return NextResponse.json({ ok: true })
+      }
+
       // --- IG: OK (já postou manualmente) ---
       if (action === 'iga') {
         await sanity.patch(id).set({ igQueued: true }).unset(['_igPhotoUrl']).commit()
