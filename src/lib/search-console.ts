@@ -13,6 +13,7 @@
  *   2. Adicionar o e-mail da service account como usuário no Search Console
  */
 import { GoogleAuth } from 'google-auth-library'
+import { sanity } from './publish-core'
 
 export const SITE_GSC = 'https://portalendinheirados.com.br/'
 
@@ -173,6 +174,41 @@ function agregar(linhas: LinhaConsulta[]) {
   return { impressoes, cliques, posicao, consultas: linhas.length }
 }
 
+type Secao = { impressoes: number; cliques: number; paginas: number }
+
+/**
+ * Separa o desempenho entre o que ficou na busca e o que saiu do índice na
+ * limpeza de 17/09/2026, depois do August 2026 Spam Update.
+ *
+ * Precisa existir aqui porque no Search Console isso é impossível: as duas
+ * seções não se distinguem por URL — as 282 mantidas e as 734 limpas são todas
+ * /blog/ —, e o painel não sabe da marcação. Só quem tem o dado consegue medir
+ * separado, e sem separar o total engana: notícia velha subindo parece melhora.
+ *
+ * O que esperar: a seção limpa cai para zero conforme o Google reprocessa, e a
+ * mantida volta a subir. As duas se movem em ritmos diferentes.
+ */
+async function porSecao(dias: number): Promise<{ mantidas: Secao; limpas: Secao; resto: Secao } | null> {
+  const fora: string[] = await sanity
+    .fetch(`*[_type=="post" && noindex == true].slug.current`)
+    .catch(() => [])
+  if (!fora.length) return null
+
+  const limpas = new Set(fora)
+  const linhas = await consultasDoSite({ dias, limite: 5000, dimensao: 'page' })
+  const vazia = (): Secao => ({ impressoes: 0, cliques: 0, paginas: 0 })
+  const r = { mantidas: vazia(), limpas: vazia(), resto: vazia() }
+
+  for (const l of linhas) {
+    const m = l.consulta.match(/\/blog\/([^/?#]+)/)
+    const alvo = !m ? r.resto : limpas.has(m[1]) ? r.limpas : r.mantidas
+    alvo.impressoes += l.impressoes
+    alvo.cliques += l.cliques
+    alvo.paginas++
+  }
+  return r
+}
+
 /**
  * Monta o relatório de busca em HTML do Telegram. Usado tanto pelo cron
  * semanal quanto pelo comando /busca, para os dois nunca divergirem.
@@ -226,6 +262,15 @@ export async function relatorioDeBusca(dias = 7): Promise<string> {
     out.push('', '<b>Tema central enterrado</b>')
     for (const l of enterrados) out.push(`${Math.round(l.posicao)}ª · ${l.impressoes} impr · ${esc(l.consulta.slice(0, 40))}`)
     out.push('<i>A página já existe. Reescrever costuma render mais que publicar tema novo.</i>')
+  }
+
+  const sec = await porSecao(dias)
+  if (sec) {
+    out.push('', '<b>Por seção</b>')
+    out.push(`Mantidas na busca: <b>${sec.mantidas.impressoes}</b> impr · ${sec.mantidas.cliques} cl · ${sec.mantidas.paginas} págs`)
+    out.push(`Fora do índice: ${sec.limpas.impressoes} impr · ${sec.limpas.paginas} págs`)
+    if (sec.resto.impressoes) out.push(`Resto do site: ${sec.resto.impressoes} impr · ${sec.resto.paginas} págs`)
+    out.push('<i>Sinal bom: a primeira linha sobe, a segunda cai para zero.</i>')
   }
 
   if (!agora.impressoes) {
