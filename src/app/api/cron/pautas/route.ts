@@ -19,10 +19,10 @@
  */
 import { NextResponse, after } from 'next/server'
 import { consultasDoSite } from '@/lib/search-console'
-import { ranquear, type Candidata, type PautaPontuada } from '@/lib/relevancia'
-import { expandir, tendenciasBrasil, SUFIXOS } from '@/lib/demanda-externa'
+import { ranquear, pontuar, type Candidata, type PautaPontuada } from '@/lib/relevancia'
+import { expandir, autocompletar, tendenciasBrasil, SUFIXOS } from '@/lib/demanda-externa'
 import { sanity, tgSendMessage, tgConfigured, tgAlert, tgEscape } from '@/lib/publish-core'
-import { analisarSerp, temDono, descrever, type Serp } from '@/lib/concorrencia'
+import { analisarSerp, temDono, descrever, pareceMarca, type Serp } from '@/lib/concorrencia'
 
 export const maxDuration = 300
 
@@ -115,23 +115,27 @@ function significativas(t: string): Set<string> {
   )
 }
 
-async function marcarCobertura(cs: Candidata[]): Promise<Candidata[]> {
+async function indiceDeTitulos(): Promise<Set<string>[]> {
   const titulos: string[] = await sanity.fetch(
     `*[_type=="post" && defined(title)]|order(publishedAt desc)[0...400].title`,
   ).catch(() => [])
-  const indice = titulos.map(significativas)
+  return titulos.map(significativas)
+}
 
-  return cs.map(c => {
-    const termo = significativas(c.termo)
-    if (!termo.size) return { ...c, jaCoberto: 0 }
-    let melhor = 0
-    for (const t of indice) {
-      const comuns = [...termo].filter(p => t.has(p)).length
-      melhor = Math.max(melhor, comuns / termo.size)
-      if (melhor === 1) break
-    }
-    return { ...c, jaCoberto: melhor }
-  })
+function cobertura(termo: string, indice: Set<string>[]): number {
+  const palavras = significativas(termo)
+  if (!palavras.size) return 0
+  let melhor = 0
+  for (const t of indice) {
+    const comuns = [...palavras].filter(p => t.has(p)).length
+    melhor = Math.max(melhor, comuns / palavras.size)
+    if (melhor === 1) break
+  }
+  return melhor
+}
+
+function marcarCobertura(cs: Candidata[], indice: Set<string>[]): Candidata[] {
+  return cs.map(c => ({ ...c, jaCoberto: cobertura(c.termo, indice) }))
 }
 
 /**
@@ -174,22 +178,83 @@ function cartao(p: Finalista, i: number): string {
  */
 const CHECAGENS = 12
 
+type Contexto = {
+  /** Assinaturas já sugeridas alguma vez. O resgate também respeita o histórico. */
+  jaVistos: Set<string>
+  indice: Set<string>[]
+  /** Chamadas ao Serper que ainda cabem nesta rodada. */
+  orcamento: { restante: number }
+}
+
+/** Sem orçamento ou com falha de API devolve null: nunca bloqueia a pauta. */
+async function verificar(termo: string, orcamento: { restante: number }): Promise<Serp | null> {
+  if (orcamento.restante <= 0) return null
+  orcamento.restante--
+  return analisarSerp(termo)
+}
+
+/**
+ * Quando a SERP tem dono, quem está tomada é a formulação — não o assunto.
+ * As pessoas procuram mesmo "empréstimo no nubank"; o que não existe é vaga
+ * nessa frase. As variantes da mesma base contam a história: "no mercado pago"
+ * pertence ao Mercado Pago, "na shopee" à Shopee, mas "como pedir empréstimo",
+ * "do FGTS" e "do Bolsa Família" estão livres, com 7 a 8 domínios disputando.
+ *
+ * Então antes de abandonar o tema, tenta o mesmo assunto por outro caminho.
+ * A variante resgatada passa pelos mesmos filtros de qualquer candidata:
+ * histórico, cobertura do acervo e território.
+ */
+async function resgatarVariante(p: PautaPontuada, ctx: Contexto): Promise<Finalista | null> {
+  if (!p.base) return null
+
+  const variantes = (await autocompletar(p.base))
+    .map((termo, i) => ({ termo, posicaoNaLista: i }))
+    .filter(v => assinatura(v.termo) !== assinatura(p.termo))
+    .filter(v => !ctx.jaVistos.has(assinatura(v.termo)))
+    // Quem não cita empresa vai primeiro: tem mais chance de estar livre, e
+    // cada tentativa custa uma chamada. Ordem, não veto.
+    .sort((a, b) => Number(pareceMarca(a.termo)) - Number(pareceMarca(b.termo)))
+
+  let tentativas = 0
+  for (const v of variantes) {
+    if (tentativas >= 2) break
+    const pontuada = pontuar({
+      termo: v.termo,
+      posicaoNaLista: v.posicaoNaLista,
+      base: p.base,
+      origem: 'busca-relacionada',
+      jaCoberto: cobertura(v.termo, ctx.indice),
+    })
+    if (!pontuada.nota) continue
+
+    const serp = await verificar(v.termo, ctx.orcamento)
+    tentativas++
+    if (serp && temDono(serp)) continue
+
+    ctx.jaVistos.add(assinatura(v.termo))
+    console.log(`[pautas] resgatada do mesmo tema: "${v.termo}" no lugar de "${p.termo}"`)
+    return { ...pontuada, serp }
+  }
+  return null
+}
+
 /**
  * Descarta pauta cuja primeira página já tem dono. É a pergunta que faltava no
  * critério — ele media demanda, proximidade, durabilidade e lacuna, e nenhuma
- * dessas percebe que "empréstimo no nubank" devolve seis resultados do próprio
+ * dessas percebe que "empréstimo no nubank" devolve oito resultados do próprio
  * Nubank. Roda só nas finalistas porque cada verificação custa uma chamada.
  */
-async function semDono(ranqueadas: PautaPontuada[], vagas: number): Promise<Finalista[]> {
+async function escolherFinalistas(
+  ranqueadas: PautaPontuada[], vagas: number, ctx: Contexto,
+): Promise<Finalista[]> {
   const escolhidas: Finalista[] = []
-  let gastas = 0
   for (const p of ranqueadas) {
     if (escolhidas.length >= vagas) break
-    if (gastas >= CHECAGENS) { escolhidas.push({ ...p, serp: null }); continue }
-    const serp = await analisarSerp(p.termo)
-    gastas++
+    const serp = await verificar(p.termo, ctx.orcamento)
     if (serp && temDono(serp)) {
       console.log(`[pautas] descartada: "${p.termo}" — ${descrever(serp)}`)
+      const resgatada = await resgatarVariante(p, ctx)
+      if (resgatada) escolhidas.push(resgatada)
       continue
     }
     escolhidas.push({ ...p, serp })
@@ -267,12 +332,16 @@ async function processar(manual = false) {
     return
   }
 
-  const comCobertura = await marcarCobertura(ineditos)
+  const indice = await indiceDeTitulos()
+  const comCobertura = marcarCobertura(ineditos, indice)
   // Sugere só o que falta para completar a fila, em vez de sempre 6.
   const vagas = manual ? QUANTAS : Math.min(QUANTAS, FILA_CHEIA - naFila)
   // Ranqueia com folga: a checagem de concorrência derruba parte das primeiras,
   // e sem reserva a rodada chegaria ao Telegram com menos pautas que o pedido.
-  const melhores = await semDono(ranquear(comCobertura, vagas * 3), vagas)
+  const melhores = await escolherFinalistas(
+    ranquear(comCobertura, vagas * 3), vagas,
+    { jaVistos, indice, orcamento: { restante: CHECAGENS } },
+  )
   if (!melhores.length) {
     if (manual && tgConfigured()) {
       await tgSendMessage(

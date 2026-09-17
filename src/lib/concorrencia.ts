@@ -89,6 +89,21 @@ export function temDono(s: Serp): boolean {
   return s.topo.length === 3 && new Set(s.topo).size === 1
 }
 
+/**
+ * Empresas cujo nome no termo costuma entregar a consulta para o site delas.
+ *
+ * Isto NÃO é veto. Serve só para escolher em que ordem gastar as chamadas ao
+ * tentar resgatar uma variante: quem não cita empresa vai primeiro, porque tem
+ * mais chance de estar livre. O veredito continua sendo da SERP. Como veto a
+ * lista erraria feio — "quanto ganha motorista de uber" cita empresa, tem sete
+ * domínios disputando, e é justamente onde o site ranqueia.
+ */
+const EMPRESAS = /\b(nubank|serasa|ita[uú]|bradesco|santander|banco do brasil|mercado pago|mercado livre|shopee|picpay|c6 bank|banco inter|will bank|pagbank|pagseguro|ifood|uber|magalu|americanas|btg|agibank|creditas|sicredi|sicoob|banco safra|banco bmg|banco pan)\b/i
+
+export function pareceMarca(termo: string): boolean {
+  return EMPRESAS.test(termo)
+}
+
 /** Frase curta para o cartão do Telegram. */
 export function descrever(s: Serp | null): string {
   if (!s) return 'concorrência não verificada'
