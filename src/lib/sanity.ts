@@ -12,11 +12,18 @@ export const client = isConfigured
     })
   : null
 
+/**
+ * As vitrines do site — listagem, home e relacionados — escondem o que saiu do
+ * índice na limpeza de 17/09/2026. Não faria sentido declarar 734 páginas peso
+ * morto e continuar oferecendo elas ao leitor e dando caminho de rastreio para
+ * elas. A página em si (getPostBySlug) não filtra de propósito: quem chega por
+ * link direto continua lendo, e é isso que separa noindex de exclusão.
+ */
 export async function getPosts(limit = 10) {
   if (!client) return []
   try {
     return await client.fetch(
-      `*[_type == "post" && publishedAt <= now() && status == "aprovado"] | order(publishedAt desc) [0...$limit] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
+      `*[_type == "post" && publishedAt <= now() && status == "aprovado" && noindex != true] | order(publishedAt desc) [0...$limit] { title, slug, publishedAt, funnel, category, excerpt, coverImage, readingTime }`,
       { limit },
       { next: { revalidate: 300, tags: ['post'] } }
     )
@@ -38,14 +45,14 @@ export async function getRelatedPosts(slug: string, category: string, limit = 4)
   if (!client) return []
   try {
     const sameCategory = await client.fetch(
-      `*[_type == "post" && publishedAt <= now() && status == "aprovado" && category == $category && slug.current != $slug] | order(publishedAt desc) [0...$limit] { title, slug, category }`,
+      `*[_type == "post" && publishedAt <= now() && status == "aprovado" && noindex != true && category == $category && slug.current != $slug] | order(publishedAt desc) [0...$limit] { title, slug, category }`,
       { category, slug, limit },
       { next: { revalidate: 600, tags: ['post'] } }
     )
     if (sameCategory.length >= limit) return sameCategory
     const fillIds = sameCategory.map((p: { slug: { current: string } }) => p.slug.current)
     const extra = await client.fetch(
-      `*[_type == "post" && publishedAt <= now() && status == "aprovado" && slug.current != $slug && !(slug.current in $exclude)] | order(publishedAt desc) [0...$n] { title, slug, category }`,
+      `*[_type == "post" && publishedAt <= now() && status == "aprovado" && noindex != true && slug.current != $slug && !(slug.current in $exclude)] | order(publishedAt desc) [0...$n] { title, slug, category }`,
       { slug, exclude: fillIds, n: limit - sameCategory.length },
       { next: { revalidate: 600, tags: ['post'] } }
     )
