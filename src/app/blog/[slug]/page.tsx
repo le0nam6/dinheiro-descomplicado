@@ -61,6 +61,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: `${SITE}/blog/${canonicalSlug(slug)}` },
     // Página fora do índice continua no ar e continua navegável — só não é
     // oferecida na busca. follow: true preserva os links internos que ela dá.
+    // É a única meta robots do site: o layout não declara padrão, para as duas
+    // não aparecerem juntas no HTML.
     ...(post.noindex ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       type: 'article',

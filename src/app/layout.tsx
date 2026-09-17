@@ -27,7 +27,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://portalendinheirados.com.br'),
   alternates: { canonical: 'https://portalendinheirados.com.br' },
   openGraph: { siteName: 'Endinheirados', locale: 'pt_BR', type: 'website' },
-  robots: { index: true, follow: true },
+  // Sem meta robots o padrão já é indexar, então declarar "index, follow" aqui
+  // não acrescentava nada — e colidia com o noindex das páginas limpas, que
+  // saíam com as duas marcações no HTML. Quem precisa de robots declara na
+  // própria página.
   verification: { google: 'PRO85KTW2EUojiO_FAINzk-rVkMu_TcNUGH7euZk22I', other: { 'p:domain_verify': '2765cecee42e5c4343c116c8e770ea27' } },
 }
 
