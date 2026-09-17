@@ -22,6 +22,7 @@ import { consultasDoSite } from '@/lib/search-console'
 import { ranquear, type Candidata, type PautaPontuada } from '@/lib/relevancia'
 import { expandir, tendenciasBrasil, SUFIXOS } from '@/lib/demanda-externa'
 import { sanity, tgSendMessage, tgConfigured, tgAlert, tgEscape } from '@/lib/publish-core'
+import { analisarSerp, temDono, descrever, type Serp } from '@/lib/concorrencia'
 
 export const maxDuration = 300
 
@@ -155,13 +156,45 @@ async function termosJaSugeridos(): Promise<Set<string>> {
 
 // ─── Telegram ────────────────────────────────────────────────────────────────
 
-function cartao(p: PautaPontuada, i: number): string {
+type Finalista = PautaPontuada & { serp?: Serp | null }
+
+function cartao(p: Finalista, i: number): string {
   const origem = p.origem === 'search-console' ? 'Search Console' : 'Busca do Google'
   return [
     `<b>${i + 1}. ${tgEscape(p.termo)}</b>`,
     `nota ${p.nota}/100 · ${origem}`,
     `<i>${tgEscape(p.porque)}</i>`,
+    `<i>${tgEscape(descrever(p.serp ?? null))}</i>`,
   ].join('\n')
+}
+
+/**
+ * Teto de chamadas ao Serper por rodada. Estourou o teto, a pauta segue sem
+ * checagem: mandar uma sugestão não verificada é melhor que não mandar nada.
+ */
+const CHECAGENS = 12
+
+/**
+ * Descarta pauta cuja primeira página já tem dono. É a pergunta que faltava no
+ * critério — ele media demanda, proximidade, durabilidade e lacuna, e nenhuma
+ * dessas percebe que "empréstimo no nubank" devolve seis resultados do próprio
+ * Nubank. Roda só nas finalistas porque cada verificação custa uma chamada.
+ */
+async function semDono(ranqueadas: PautaPontuada[], vagas: number): Promise<Finalista[]> {
+  const escolhidas: Finalista[] = []
+  let gastas = 0
+  for (const p of ranqueadas) {
+    if (escolhidas.length >= vagas) break
+    if (gastas >= CHECAGENS) { escolhidas.push({ ...p, serp: null }); continue }
+    const serp = await analisarSerp(p.termo)
+    gastas++
+    if (serp && temDono(serp)) {
+      console.log(`[pautas] descartada: "${p.termo}" — ${descrever(serp)}`)
+      continue
+    }
+    escolhidas.push({ ...p, serp })
+  }
+  return escolhidas
 }
 
 function teclado(ids: string[]): { inline_keyboard: { text: string; callback_data: string }[][] } {
@@ -236,7 +269,10 @@ async function processar(manual = false) {
 
   const comCobertura = await marcarCobertura(ineditos)
   // Sugere só o que falta para completar a fila, em vez de sempre 6.
-  const melhores = ranquear(comCobertura, manual ? QUANTAS : Math.min(QUANTAS, FILA_CHEIA - naFila))
+  const vagas = manual ? QUANTAS : Math.min(QUANTAS, FILA_CHEIA - naFila)
+  // Ranqueia com folga: a checagem de concorrência derruba parte das primeiras,
+  // e sem reserva a rodada chegaria ao Telegram com menos pautas que o pedido.
+  const melhores = await semDono(ranquear(comCobertura, vagas * 3), vagas)
   if (!melhores.length) {
     if (manual && tgConfigured()) {
       await tgSendMessage(
@@ -255,6 +291,7 @@ async function processar(manual = false) {
     porque: p.porque,
     origem: p.origem,
     fatores: p.fatores,
+    concorrencia: descrever(p.serp ?? null),
     status: 'sugerida',
     createdAt: new Date().toISOString(),
   })))
