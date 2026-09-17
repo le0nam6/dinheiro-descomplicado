@@ -63,6 +63,13 @@ export const postSchema = defineType({
       validation: r => r.required(),
       description: 'Apenas posts com status "Aprovado" aparecem no site.',
     }),
+    defineField({
+      name: 'noindex',
+      title: 'Fora do índice do Google',
+      type: 'boolean',
+      initialValue: false,
+      description: 'A página continua no ar e navegável, mas sai do sitemap e pede ao Google para não indexar. Usado na limpeza de setembro/2026, depois da atualização de spam do Google.',
+    }),
   ],
   preview: {
     select: { title: 'title', subtitle: 'funnel', status: 'status' },

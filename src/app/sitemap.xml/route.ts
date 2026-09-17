@@ -61,7 +61,7 @@ export async function GET() {
       // O mesmo filtro de src/lib/sanity.ts. Sem ele o sitemap anunciava
       // rascunho e post sem status, e o Google batia em 404 — 41 URLs assim,
       // 4% do sitemap. Sitemap que mente sobre o que existe custa rastreio.
-      `*[_type=="post" && defined(slug.current) && status=="aprovado" && publishedAt <= now()]|order(publishedAt desc){"slug":slug.current,publishedAt}`
+      `*[_type=="post" && defined(slug.current) && status=="aprovado" && publishedAt <= now() && noindex != true]|order(publishedAt desc){"slug":slug.current,publishedAt}`
     ).catch(() => [] as { slug: string; publishedAt: string }[]),
     sanity.fetch<{ slug: string; date: string }[]>(
       `*[_type=="edition" && defined(slug.current)]|order(date desc){"slug":slug.current,date}`

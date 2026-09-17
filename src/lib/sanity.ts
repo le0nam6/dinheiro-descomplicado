@@ -27,7 +27,7 @@ export async function getPostBySlug(slug: string) {
   if (!client) return null
   try {
     return await client.fetch(
-      `*[_type == "post" && slug.current == $slug && status == "aprovado"][0] { title, slug, publishedAt, updatedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime, articleType, sources, sponsored, sponsorName }`,
+      `*[_type == "post" && slug.current == $slug && status == "aprovado"][0] { title, slug, publishedAt, updatedAt, funnel, category, excerpt, coverImage, body, seoKeywords, readingTime, articleType, sources, sponsored, sponsorName, noindex }`,
       { slug },
       { next: { revalidate: 3600, tags: [`post:${slug}`] } }
     )

@@ -43,3 +43,6 @@ docs/
 
 # relatorio da varredura de capas
 capas-quebradas.json
+
+# backup da limpeza de indice (recuperavel pelo Sanity)
+limpeza-indice.json
