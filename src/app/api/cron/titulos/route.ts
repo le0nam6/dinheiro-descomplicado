@@ -14,6 +14,12 @@
  *
  * Só mexe entre a 4ª e a 10ª posição. Abaixo disso o problema não é título:
  * em página 2 quase ninguém chega, e reescrever ali é trabalho perdido.
+ *
+ * A janela é de 28 dias, e isso é deliberado. Com 90 dias, uma página que teve
+ * 755 impressões em julho e zero desde 21/08 aparecia como candidata perfeita
+ * — posição 9, CTR miserável — quando na verdade ela nem está sendo mostrada.
+ * Título não conserta página que o Google parou de exibir. Se o site inteiro
+ * estiver em queda, esta rotina fica quieta, e é o comportamento certo.
  */
 import { NextResponse, after } from 'next/server'
 import { askLLM } from '@/lib/llm'
@@ -27,6 +33,12 @@ const QUANTAS = 2
 
 /** Dias sem mexer de novo na mesma página, para dar tempo de medir o efeito. */
 const CARENCIA = 60
+
+/** Janela de análise. Curta de propósito: ver o presente, não a média do trimestre. */
+const JANELA = 28
+
+/** Piso de impressões na janela. Abaixo disso não há o que medir nem o que ganhar. */
+const MINIMO = 15
 
 /**
  * CTR que cada posição costuma render. São valores aproximados de mercado e é
@@ -60,12 +72,12 @@ function slugDaUrl(url: string): string {
 
 async function candidatas(): Promise<Alvo[]> {
   const [paginas, cruzamento] = await Promise.all([
-    consultasDoSite({ dias: 90, limite: 5000, dimensao: 'page' }),
-    consultasPorPagina({ dias: 90, limite: 5000 }),
+    consultasDoSite({ dias: JANELA, limite: 5000, dimensao: 'page' }),
+    consultasPorPagina({ dias: JANELA, limite: 5000 }),
   ])
 
   const brutas = paginas
-    .filter(l => l.consulta.includes('/blog/') && l.posicao >= 4 && l.posicao <= 10.5 && l.impressoes >= 20)
+    .filter(l => l.consulta.includes('/blog/') && l.posicao >= 4 && l.posicao <= 10.5 && l.impressoes >= MINIMO)
     .map(l => ({ ...l, esperado: ctrEsperado(l.posicao) }))
     .filter(l => l.ctr < l.esperado * 0.6)
     .map(l => ({ ...l, perdidos: l.impressoes * (l.esperado - l.ctr) }))
