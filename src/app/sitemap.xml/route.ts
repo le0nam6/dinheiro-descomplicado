@@ -15,6 +15,7 @@ const STATIC: [string, string, string][] = [
   [`${BASE}/ferramentas/calculadora-juros`,           'monthly', '0.7'],
   [`${BASE}/ferramentas/calculadora-consignado`,      'monthly', '0.7'],
   [`${BASE}/ferramentas/simulador-dividas`,           'monthly', '0.7'],
+  [`${BASE}/juros`,                                   'weekly',  '0.9'],
   [`${BASE}/glossario`,                               'monthly', '0.8'],
   [`${BASE}/guias`,                                   'monthly', '0.8'],
   [`${BASE}/guias/como-sair-das-dividas`,             'monthly', '0.7'],

@@ -139,6 +139,7 @@ function Header() {
         <div className="px-4 py-2.5 flex items-center gap-1 w-max sm:w-auto sm:max-w-4xl sm:mx-auto sm:justify-center">
           <a href="/edicao" className="inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><IconNews size={16} stroke={1.75} /> Edições</a>
           <a href="/cotacoes" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Cotações</a>
+          <a href="/juros" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Juros</a>
           <a href="/categoria/noticias" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Notícias</a>
           <a href="/blog" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Blog</a>
           <a href="/categoria/educacao-financeira" className="shrink-0 px-3 py-2 text-sm font-medium text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors">Educação Financeira</a>
